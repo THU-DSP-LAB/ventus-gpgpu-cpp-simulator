@@ -115,6 +115,9 @@ void BASE::LSU_CALC()
             external_addr = lsutmp1.rss1_data + lsutmp1.rss2_data;
             // external_mem[external_addr] = lsutmp1.rds1_data;
             writeBufferData(lsutmp1.rss3_data, *buffer_data, external_addr, mtd.num_buffer, mtd.buffer_base, mtd.buffer_allocsize, lsutmp1.ins);
+            cout << "SM" << sm_id << " warp " << lsutmp1.warp_id << " 0x" << std::hex << lsutmp1.ins.currentpc << " " << lsutmp1.ins << std::hex
+                 << " data=" << std::setw(8) << std::setfill('0') << lsutmp1.rss3_data << " addr=" << external_addr
+                 << std::setw(0) << std::setfill(' ') << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
             break;
         case VLE32_V_:
             lsutmp2.ins = lsutmp1.ins;

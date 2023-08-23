@@ -3,7 +3,7 @@ import os
 def filter_lines(input_file, output_file):
     with open(input_file, 'r') as infile, open(output_file, 'w') as outfile:
         for line in infile:
-            if line.strip().startswith("warp  0"):
+            if line.strip().startswith("warp 0"):
                 outfile.write(line)
 
 if __name__ == "__main__":

@@ -930,7 +930,7 @@ public:
     }
     friend ostream &operator<<(ostream &os, I_TYPE const &v)
     {
-        os << std::setw(18) << (magic_enum::enum_name((OP_TYPE)v.op)) << std::setfill('0') << std::setw(8) << std::hex << v.origin32bit << std::dec << std::setfill(' ') << std::setw(0);
+        os << std::setw(18) << (magic_enum::enum_name((OP_TYPE)v.op)) << "0x" << std::setfill('0') << std::setw(8) << std::hex << v.origin32bit << std::dec << std::setfill(' ') << std::setw(0);
         return os;
     }
     friend void sc_trace(sc_trace_file *tf, const I_TYPE &v, const std::string &NAME)

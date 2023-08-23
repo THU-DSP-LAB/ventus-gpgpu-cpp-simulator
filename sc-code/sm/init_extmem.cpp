@@ -135,7 +135,7 @@ void BASE::writeBufferData(int writevalue, std::vector<std::vector<uint8_t>> &bu
         buffers[bufferIndex][startIndex + i] = byte;
     }
 
-    std::cout << "SM" << sm_id << std::hex << " write extmem[" << virtualAddress << "]=" << writevalue << std::dec << ",ins=" << ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+    // std::cout << "SM" << sm_id << std::hex << " write extmem[" << virtualAddress << "]=" << writevalue << std::dec << ",ins=" << ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
 }
 
 void init_local_and_private_mem(std::vector<std::vector<uint8_t>> &buffers, meta_data mtd)
