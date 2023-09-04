@@ -232,7 +232,10 @@ void BASE::IBUF_ACTION(int warp_id)
 void BASE::cycle_UPDATE_SCORE(int warp_id, I_TYPE &tmpins, std::set<SCORE_TYPE>::iterator &it, REG_TYPE &regtype_, bool &insertscore)
 {
     if (wb_ena && wb_warpid == warp_id)
-    { // 写回阶段，删除score
+    {
+        //
+        // 写回阶段，删除score
+        //
         tmpins = wb_ins;
         // cout << "scoreboard: wb_ins is " << tmpins << " at " << sc_time_stamp() <<","<< sc_delta_count_at_current_time() << "\n";
         if (tmpins.ddd.wvd)
@@ -257,7 +260,10 @@ void BASE::cycle_UPDATE_SCORE(int warp_id, I_TYPE &tmpins, std::set<SCORE_TYPE>:
         }
         // cout << "warp" << warp_id << "_scoreboard: succesfully erased SCORE " << SCORE_TYPE(regtype_, tmpins.d) << ", wb_ins=" << wb_ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
     }
+
+    //
     // dispatch阶段，写入score
+    //
     tmpins = WARPS[warp_id]->ibuftop_ins; // this ibuftop_ins is the old data
     if (WARPS[warp_id]->branch_sig || WARPS[warp_id]->vbran_sig)
     {
@@ -349,6 +355,10 @@ void BASE::cycle_JUDGE_DISPATCH(int warp_id, I_TYPE &_readibuf)
             WARPS[warp_id]->can_dispatch = false;
         else if (_readibuf.ddd.sel_alu3 == DecodeParams::A3_PC && _readibuf.ddd.branch == DecodeParams::B_R && WARPS[warp_id]->score.find(SCORE_TYPE(s, _readibuf.s1)) != WARPS[warp_id]->score.end())
             WARPS[warp_id]->can_dispatch = false;
+        else if (_readibuf.ddd.sel_alu3 == DecodeParams::A3_SD && (_readibuf.ddd.isvec & (!_readibuf.ddd.readmask)) && WARPS[warp_id]->score.find(SCORE_TYPE(s, _readibuf.s3)) != WARPS[warp_id]->score.end())
+            WARPS[warp_id]->can_dispatch = false;
+        else if (_readibuf.ddd.sel_alu3 == DecodeParams::A3_SD && !(_readibuf.ddd.isvec & (!_readibuf.ddd.readmask)) && WARPS[warp_id]->score.find(SCORE_TYPE(s, _readibuf.s2)) != WARPS[warp_id]->score.end())
+            WARPS[warp_id]->can_dispatch = false;
 
         // if (sm_id == 0 && warp_id == 0)
         //     if (WARPS[warp_id]->can_dispatch == false)
@@ -358,6 +368,8 @@ void BASE::cycle_JUDGE_DISPATCH(int warp_id, I_TYPE &_readibuf)
         // if (sm_id == 0 && warp_id == 0 && WARPS[warp_id]->can_dispatch == false)
         //     cout << "SM" << sm_id << " warp" << warp_id << " JUDGE_DISPATCH meet ins.bit=" << std::hex << _readibuf.origin32bit << std::dec << ", can't dispatch, ins.d=" << _readibuf.d << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
     }
+    else if (WARPS[warp_id]->ififo.isempty())
+        WARPS[warp_id]->can_dispatch = false;
 }
 
 void BASE::JUDGE_DISPATCH(int warp_id)
