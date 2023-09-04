@@ -2,6 +2,7 @@ vecadd.metadata内容如下：
 
 ```c++
 struct meta_data{  // 这个metadata是供驱动使用的，而不是给硬件的
+    uint64_t start_addr;    // 指令起始地址
     uint64_t kernel_id;
     uint64_t kernel_size[3];///> 每个kernel的workgroup三维数目
     uint64_t wf_size; ///> 每个warp的thread数目
@@ -12,9 +13,10 @@ struct meta_data{  // 这个metadata是供驱动使用的，而不是给硬件�
     uint64_t sgprUsage;///> 每个workgroup使用的标量寄存器数目
     uint64_t vgprUsage;///> 每个thread使用的向量寄存器数目
     uint64_t pdsBaseAddr;///> private memory的基址，要转成每个workgroup的基地址， wf_size*wg_size*pdsSize
-    uint64_t num_buffer; ///> buffer的数目，包括pc
+    uint64_t num_buffer; ///> buffer的数目，包括指令buffer
     uint64_t buffer_base[num_buffer];//各buffer的基址。第一块buffer是给硬件用的metadata
     uint64_t buffer_size[num_buffer];//各buffer的size，以Bytes为单位
+    uint64_t buffer_allocsize[num_buffer];//各buffer的size，以Bytes为单位
 };
 
 ```
