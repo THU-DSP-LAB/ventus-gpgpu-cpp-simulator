@@ -1,0 +1,517 @@
+----------Simulation start----------
+finish reading .data file: buffers.allocsize=0x40 0x40 0x40 0xc 0x10000000 0x10000 0x40 0x1000 
+INIT_INSMEM: MAX_LINES of ins=16
+INIT_INSMEM: finish reading ins from datafile
+readInsBuffer Error: virtualAddr(pc)=0x7ffffffc at 15 ns,1
+SM0 warp0INS_REG error: pc out of range at 15 ns,1
+readInsBuffer Error: virtualAddr(pc)=0x7ffffffc at 15 ns,1
+SM0 warp1INS_REG error: pc out of range at 15 ns,1
+readInsBuffer Error: virtualAddr(pc)=0x7ffffffc at 15 ns,1
+SM0 warp2INS_REG error: pc out of range at 15 ns,1
+readInsBuffer Error: virtualAddr(pc)=0x7ffffffc at 15 ns,1
+SM0 warp3INS_REG error: pc out of range at 15 ns,1
+SM0 warp 0 0x80000000             AUIPC_0x00004197 x 003 80004000 at 75 ns,1
+SM0 warp 0 0x80000004              ADDI_0x80818193 x 003 80003808 at 155 ns,1
+SM0 warp 0 0x80000008              ADDI_0x02000e93 x 029 00000020 at 195 ns,1
+SM0 warp 0 0x8000000c           VSETVLI_0x0d0efed7 x 029 00000004 at 265 ns,1
+SM0 warp 0 0x80000010               LUI_0x00002eb7 x 029 00002000 at 315 ns,1
+SM0 warp0 write CSR[0x300]=0x3800 by ins            CSRRS_0x300eaef3 at 355 ns,1
+SM0 warp 0 0x80000014             CSRRS_0x300eaef3 x 029 00001800 at 375 ns,1
+SM0 warp2 write CSR[0x300]=0x3800 by ins            CSRRS_0x300eaef3 at 385 ns,1
+SM0 warp1 write CSR[0x300]=0x3800 by ins            CSRRS_0x300eaef3 at 405 ns,1
+SM0 warp0 write CSR[0x806]=0x70000000 by ins            CSRRS_0x80602173 at 425 ns,1
+SM0 warp 0 0x80000018              ADDI_0x00000e93 x 029 00000000 at 435 ns,1
+SM0 warp3 write CSR[0x300]=0x3800 by ins            CSRRS_0x300eaef3 at 435 ns,1
+SM0 warp 0 0x8000001c             CSRRS_0x80602173 x 002 70000000 at 445 ns,1
+SM0 warp 0 0x80000020              ADDI_0x00000213 x 004 00000000 at 465 ns,1
+SM0 warp1 write CSR[0x806]=0x70000000 by ins            CSRRS_0x80602173 at 495 ns,1
+SM0 warp2 write CSR[0x806]=0x70000000 by ins            CSRRS_0x80602173 at 515 ns,1
+SM0 warp 0 0x80000024             AUIPC_0x00003517 x 010 80003024 at 525 ns,1
+SM0 warp3 write CSR[0x806]=0x70000000 by ins            CSRRS_0x80602173 at 555 ns,1
+SM0 warp 0 0x80000028              ADDI_0xfe450513 x 010 80003008 at 665 ns,1
+SM0 warp 0 0x8000002c             AUIPC_0x00003617 x 012 8000302c at 705 ns,1
+SM0 warp 0 0x80000030              ADDI_0xfdc60613 x 012 80003008 at 825 ns,1
+SM0 warp 0 0x80000034               BEQ_0x00c50863 jump=true, jumpTO 0x80000044 at 895 ns,1
+SM0 warp 1 0x80000034               BEQ_0x00c50863 jump=true, jumpTO 0x80000044 at 935 ns,1
+SM0 warp 2 0x80000034               BEQ_0x00c50863 jump=true, jumpTO 0x80000044 at 955 ns,1
+SM0 warp 3 0x80000034               BEQ_0x00c50863 jump=true, jumpTO 0x80000044 at 975 ns,1
+SM0 warp0 write CSR[0x803]=0x90014000 by ins            CSRRS_0x803022f3 at 975 ns,1
+SM0 warp 0 0x80000044             CSRRS_0x803022f3 x 005 90014000 at 985 ns,1
+SM0 warp1 write CSR[0x803]=0x90014000 by ins            CSRRS_0x803022f3 at 1005 ns,1
+SM0 warp2 write CSR[0x803]=0x90014000 by ins            CSRRS_0x803022f3 at 1025 ns,1
+SM0 warp 0 0x80000048                LW_0x0002a303 LSU addr=90014000+00000000 at 1035 ns,1
+SM0 warp3 write CSR[0x803]=0x90014000 by ins            CSRRS_0x803022f3 at 1045 ns,1
+SM0 warp 0 0x80000050                LW_0x0302a383 LSU addr=90014000+00000030 at 1095 ns,1
+SM0 warp 1 0x80000048                LW_0x0002a303 LSU addr=90014000+00000000 at 1155 ns,1
+SM0 warp 0 0x80000048                LW_0x0002a303 x 006 80000098 at 1195 ns,1
+SM0 warp 0 0x8000004c                LW_0x0042a503 LSU addr=90014000+00000004 at 1215 ns,1
+SM0 warp 0 0x80000050                LW_0x0302a383 x 007 00000000 at 1255 ns,1
+SM0 warp 2 0x80000048                LW_0x0002a303 LSU addr=90014000+00000000 at 1275 ns,1
+SM0 warp 1 0x8000004c                LW_0x0042a503 LSU addr=90014000+00000004 at 1335 ns,1
+SM0 warp 0 0x8000004c                LW_0x0042a503 x 010 90003000 at 1375 ns,1
+SM0 warp 2 0x8000004c                LW_0x0042a503 LSU addr=90014000+00000004 at 1395 ns,1
+SM0 warp 3 0x80000048                LW_0x0002a303 LSU addr=90014000+00000000 at 1455 ns,1
+SM0 warp 0 0x80000054                LW_0x0342ae03 LSU addr=90014000+00000034 at 1515 ns,1
+SM0 warp 0 0x80000058             AUIPC_0x00003e97 x 029 80003058 at 1545 ns,1
+SM0 warp 1 0x80000050                LW_0x0302a383 LSU addr=90014000+00000030 at 1575 ns,1
+SM0 warp 2 0x80000050                LW_0x0302a383 LSU addr=90014000+00000030 at 1635 ns,1
+SM0 warp 0 0x80000054                LW_0x0342ae03 x 028 00000000 at 1675 ns,1
+SM0 warp 3 0x8000004c                LW_0x0042a503 LSU addr=90014000+00000004 at 1695 ns,1
+SM0 warp 0 0x8000005c              ADDI_0xfa8e8e93 x 029 80003000 at 1745 ns,1
+SM0 warp 1 0x80000054                LW_0x0342ae03 LSU addr=90014000+00000034 at 1755 ns,1
+SM0 warp 0 0x80000060             AUIPC_0x00003f17 x 030 80003060 at 1805 ns,1
+SM0 warp 3 0x80000054                LW_0x0342ae03 LSU addr=90014000+00000034 at 1815 ns,1
+SM0 warp 2 0x80000054                LW_0x0342ae03 LSU addr=90014000+00000034 at 1875 ns,1
+SM0 warp 0 0x80000064              ADDI_0xfa4f0f13 x 030 80003004 at 1925 ns,1
+SM0 warp 3 0x80000050                LW_0x0302a383 LSU addr=90014000+00000030 at 1935 ns,1
+SM0 warp 0 0x80000068                SW_0x007ea023 LSU addr=80003000+00000000 at 1995 ns,1
+SM0 warp 0 0x80000070             AUIPC_0x00000f97 x 031 80000070 at 2025 ns,1
+SM0 warp 1 0x8000006c                SW_0x01cf2023 LSU addr=80003004+00000000 at 2055 ns,1
+SM0 warp 0 DECODE: set regext(3,2,1,d)=0,0,0,1 at 2085 ns,1
+SM0 warp 0 0x8000006c                SW_0x01cf2023 LSU addr=80003004+00000000 at 2115 ns,1
+SM0 warp 0 0x80000074              ADDI_0x018f8f93 x 031 80000088 at 2145 ns,1
+SM0 warp 0 0x80000068                SW_0x007ea023 data=00000000 addr=80003000 at 2145 ns,1
+SM0 warp 1 0x80000068                SW_0x007ea023 LSU addr=80003000+00000000 at 2175 ns,1
+SM0 warp 1 0x8000006c                SW_0x01cf2023 data=00000000 addr=80003004 at 2205 ns,1
+SM0 warp0 write CSR[0x305]=0x80000088 by ins            CSRRW_0x305f9073 at 2205 ns,1
+SM0 warp 1 DECODE: set regext(3,2,1,d)=0,0,0,1 at 2205 ns,1
+SM0 warp 0 0x80000078             CSRRW_0x305f9073 x 000 00000000 at 2215 ns,1
+SM0 warp 2 0x80000068                SW_0x007ea023 LSU addr=80003000+00000000 at 2235 ns,1
+SM0 warp 0 0x8000006c                SW_0x01cf2023 data=00000000 addr=80003004 at 2265 ns,1
+SM0 warp 2 0x8000006c                SW_0x01cf2023 LSU addr=80003004+00000000 at 2295 ns,1
+SM0 warp 2 DECODE: set regext(3,2,1,d)=0,0,0,1 at 2305 ns,1
+SM0 warp 0 0x8000007c              JALR_0x000300e7 jump=true, jumpTO 0x80000098 at 2315 ns,1
+SM0 warp 0 0x8000007c              JALR_0x000300e7 x 001 80000080 at 2325 ns,1
+SM0 warp 1 0x80000068                SW_0x007ea023 data=00000000 addr=80003000 at 2325 ns,1
+SM0 warp1 write CSR[0x305]=0x80000088 by ins            CSRRW_0x305f9073 at 2325 ns,1
+SM0 warp 0 DECODE: set regext(3,2,1,d)=0,0,0,1 at 2355 ns,1
+SM0 warp 3 0x80000068                SW_0x007ea023 LSU addr=80003000+00000000 at 2365 ns,1
+SM0 warp 2 0x80000068                SW_0x007ea023 data=00000000 addr=80003000 at 2385 ns,1
+SM0 warp 1 0x8000007c              JALR_0x000300e7 jump=true, jumpTO 0x80000098 at 2385 ns,1
+SM0 warp2 write CSR[0x305]=0x80000088 by ins            CSRRW_0x305f9073 at 2395 ns,1
+SM0 warp 3 DECODE: set regext(3,2,1,d)=0,0,0,1 at 2395 ns,1
+SM0 warp 0 0x80000098              ADDI_0x01010113 x 002 70000010 at 2425 ns,1
+SM0 warp 1 DECODE: set regext(3,2,1,d)=0,0,0,1 at 2425 ns,1
+SM0 warp 3 0x8000006c                SW_0x01cf2023 LSU addr=80003004+00000000 at 2435 ns,1
+SM0 warp 2 0x8000006c                SW_0x01cf2023 data=00000000 addr=80003004 at 2445 ns,1
+SM0 warp 0 0x8000009c              ADDI_0x00820213 x 004 00000008 at 2465 ns,1
+SM0 warp 0 DECODE: set regext(3,2,1,d)=0,0,0,1 at 2465 ns,1
+SM0 warp 2 0x8000007c              JALR_0x000300e7 jump=true, jumpTO 0x80000098 at 2495 ns,1
+SM0 warp3 write CSR[0x305]=0x80000088 by ins            CSRRW_0x305f9073 at 2495 ns,1
+SM0 warp 3 0x80000068                SW_0x007ea023 data=00000000 addr=80003000 at 2515 ns,1
+SM0 warp 0 0x800000a8                SW_0xfe112823 LSU addr=70000010+fffffff0 at 2525 ns,1
+SM0 warp 1 DECODE: set regext(3,2,1,d)=0,0,0,1 at 2535 ns,1
+SM0 warp 2 DECODE: set regext(3,2,1,d)=0,0,0,1 at 2535 ns,1
+SM0 warp 3 0x8000007c              JALR_0x000300e7 jump=true, jumpTO 0x80000098 at 2545 ns,1
+SM0 warp 0 0x800000a4           VMV_S_X_0x42026057 v 032 00000008,00000008,00000008,00000008; mask=1111 at 2565 ns,1
+SM0 warp 1 0x800000a8                SW_0xfe112823 LSU addr=70000010+fffffff0 at 2585 ns,1
+SM0 warp 3 0x8000006c                SW_0x01cf2023 data=00000000 addr=80003004 at 2585 ns,1
+SM0 warp 3 DECODE: set regext(3,2,1,d)=0,0,0,1 at 2585 ns,1
+SM0 warp 1 0x800000ac                LW_0x00852283 LSU addr=90003000+00000008 at 2645 ns,1
+SM0 warp 2 DECODE: set regext(3,2,1,d)=0,0,0,1 at 2645 ns,1
+SM0 warp 0 0x800000a8                SW_0xfe112823 data=80000080 addr=70000000 at 2675 ns,1
+SM0 warp 3 DECODE: set regext(3,2,1,d)=0,0,0,1 at 2695 ns,1
+SM0 warp 0 0x800000ac                LW_0x00852283 LSU addr=90003000+00000008 at 2705 ns,1
+SM0 warp 1 0x800000a8                SW_0xfe112823 data=80000080 addr=70000000 at 2735 ns,1
+SM0 warp 2 0x800000a8                SW_0xfe112823 LSU addr=70000010+fffffff0 at 2765 ns,1
+SM0 warp 1 DECODE: set regext(3,2,1,d)=0,0,0,1 at 2815 ns,1
+SM0 warp 2 0x800000ac                LW_0x00852283 LSU addr=90003000+00000008 at 2825 ns,1
+SM0 warp 0 0x800000ac                LW_0x00852283 x 005 90002000 at 2865 ns,1
+SM0 warp 3 0x800000a8                SW_0xfe112823 LSU addr=70000010+fffffff0 at 2885 ns,1
+SM0 warp 0 DECODE: set regext(3,2,1,d)=0,0,0,1 at 2895 ns,1
+SM0 warp 2 0x800000a8                SW_0xfe112823 data=80000080 addr=70000000 at 2915 ns,1
+SM0 warp 3 0x800000ac                LW_0x00852283 LSU addr=90003000+00000008 at 2945 ns,1
+SM0 warp 1 0x800000b0                SW_0xfe512a23 LSU addr=70000010+fffffff4 at 3005 ns,1
+SM0 warp 2 DECODE: set regext(3,2,1,d)=0,0,0,1 at 3015 ns,1
+SM0 warp 3 0x800000a8                SW_0xfe112823 data=80000080 addr=70000000 at 3035 ns,1
+SM0 warp 1 0x800000b4                LW_0x00452283 LSU addr=90003000+00000004 at 3065 ns,1
+SM0 warp 0 0x800000b0                SW_0xfe512a23 LSU addr=70000010+fffffff4 at 3125 ns,1
+SM0 warp 3 DECODE: set regext(3,2,1,d)=0,0,0,1 at 3135 ns,1
+SM0 warp 1 0x800000b0                SW_0xfe512a23 data=90002000 addr=70000004 at 3155 ns,1
+SM0 warp 0 0x800000b4                LW_0x00452283 LSU addr=90003000+00000004 at 3185 ns,1
+SM0 warp 2 0x800000b0                SW_0xfe512a23 LSU addr=70000010+fffffff4 at 3245 ns,1
+SM0 warp 0 0x800000b0                SW_0xfe512a23 data=90002000 addr=70000004 at 3275 ns,1
+SM0 warp 2 0x800000b4                LW_0x00452283 LSU addr=90003000+00000004 at 3305 ns,1
+SM0 warp 1 DECODE: set regext(3,2,1,d)=0,1,1,0 at 3305 ns,1
+SM0 warp 0 0x800000b4                LW_0x00452283 x 005 90001000 at 3345 ns,1
+SM0 warp 3 0x800000b0                SW_0xfe512a23 LSU addr=70000010+fffffff4 at 3365 ns,1
+SM0 warp 2 0x800000b0                SW_0xfe512a23 data=90002000 addr=70000004 at 3395 ns,1
+SM0 warp 3 0x800000b4                LW_0x00452283 LSU addr=90003000+00000004 at 3425 ns,1
+SM0 warp 0 DECODE: set regext(3,2,1,d)=0,1,1,0 at 3425 ns,1
+SM0 warp 1 0x800000b8                SW_0xfe512c23 LSU addr=70000010+fffffff8 at 3485 ns,1
+SM0 warp 3 0x800000b0                SW_0xfe512a23 data=90002000 addr=70000004 at 3515 ns,1
+SM0 warp 1 0x800000bc                LW_0x00052283 LSU addr=90003000+00000000 at 3545 ns,1
+SM0 warp 2 DECODE: set regext(3,2,1,d)=0,1,1,0 at 3545 ns,1
+SM0 warp 0 0x800000b8                SW_0xfe512c23 LSU addr=70000010+fffffff8 at 3605 ns,1
+SM0 warp 1 0x800000b8                SW_0xfe512c23 data=90001000 addr=70000008 at 3635 ns,1
+SM0 warp 0 0x800000bc                LW_0x00052283 LSU addr=90003000+00000000 at 3665 ns,1
+SM0 warp 3 DECODE: set regext(3,2,1,d)=0,1,1,0 at 3665 ns,1
+SM0 warp 2 0x800000b8                SW_0xfe512c23 LSU addr=70000010+fffffff8 at 3725 ns,1
+SM0 warp 0 0x800000b8                SW_0xfe512c23 data=90001000 addr=70000008 at 3755 ns,1
+SM0 warp 2 0x800000bc                LW_0x00052283 LSU addr=90003000+00000000 at 3785 ns,1
+SM0 warp 0 0x800000bc                LW_0x00052283 x 005 90000000 at 3825 ns,1
+SM0 warp 1 0x800000c8               JAL_0x0dc000ef jump=true, jumpTO 0x800001a4 at 3835 ns,1
+SM0 warp 3 0x800000b8                SW_0xfe512c23 LSU addr=70000010+fffffff8 at 3845 ns,1
+SM0 warp 2 0x800000b8                SW_0xfe512c23 data=90001000 addr=70000008 at 3875 ns,1
+SM0 warp 0 0x800000c8               JAL_0x0dc000ef jump=true, jumpTO 0x800001a4 at 3895 ns,1
+SM0 warp 3 0x800000bc                LW_0x00052283 LSU addr=90003000+00000000 at 3905 ns,1
+SM0 warp 0 0x800000c8               JAL_0x0dc000ef x 001 800000cc at 3905 ns,1
+SM0 warp 0 0x800000c4           VMV_S_X_0x42006057 v 000 00000000,00000000,00000000,00000000; mask=1111 at 3915 ns,1
+SM0 warp 1 0x800000c0                SW_0xfe512e23 LSU addr=70000010+fffffffc at 3975 ns,1
+SM0 warp 0 0x800001a4              ADDI_0x00410113 x 002 70000014 at 3985 ns,1
+SM0 warp 3 0x800000b8                SW_0xfe512c23 data=90001000 addr=70000008 at 3995 ns,1
+SM0 warp 0 0x800000c0                SW_0xfe512e23 LSU addr=70000010+fffffffc at 4035 ns,1
+SM0 warp 0 0x800001a8                SW_0xfe112e23 LSU addr=70000014+fffffffc at 4095 ns,1
+SM0 warp 2 0x800000c8               JAL_0x0dc000ef jump=true, jumpTO 0x800001a4 at 4095 ns,1
+SM0 warp 1 0x800000c0                SW_0xfe512e23 data=90000000 addr=7000000c at 4125 ns,1
+SM0 warp 0 0x800001ac              ADDI_0x00200293 x 005 00000002 at 4145 ns,1
+SM0 warp 1 0x800001a8                SW_0xfe112e23 LSU addr=70000014+fffffffc at 4155 ns,1
+SM0 warp 0 0x800000c0                SW_0xfe512e23 data=90000000 addr=7000000c at 4185 ns,1
+SM0 warp 2 0x800000c0                SW_0xfe512e23 LSU addr=70000010+fffffffc at 4225 ns,1
+SM0 warp 0 0x800001b0           VMV_S_X_0x4202e0d7 v 001 00000002,00000002,00000002,00000002; mask=1111 at 4245 ns,1
+SM0 warp 0 0x800001a8                SW_0xfe112e23 data=800000cc addr=70000010 at 4245 ns,1
+SM0 warp 3 0x800000c8               JAL_0x0dc000ef jump=true, jumpTO 0x800001a4 at 4245 ns,1
+SM0 warp 0 0x800001b4             AUIPC_0x00000317 x 006 800001b4 at 4275 ns,1
+SM0 warp 3 0x800000c0                SW_0xfe512e23 LSU addr=70000010+fffffffc at 4285 ns,1
+SM0 warp 1 0x800001bc              VBEQ_0x0200885b join 1111 at 4305 ns,1
+SM0 warp 1 0x800001a8                SW_0xfe112e23 data=800000cc addr=70000010 at 4305 ns,1
+SM0 warp 2 0x800001a8                SW_0xfe112e23 LSU addr=70000014+fffffffc at 4345 ns,1
+SM0 warp 0 0x800001b8            SETRPC_0x04c3305b x 000 00000000 at 4345 ns,1
+SM0 warp 0 0x800001bc              VBEQ_0x0200885b join 1111 at 4375 ns,1
+SM0 warp 2 0x800000c0                SW_0xfe512e23 data=90000000 addr=7000000c at 4375 ns,1
+SM0 warp 3 0x800001a8                SW_0xfe112e23 LSU addr=70000014+fffffffc at 4405 ns,1
+SM0 warp 3 0x800000c0                SW_0xfe512e23 data=90000000 addr=7000000c at 4435 ns,1
+SM0 warp 0 0x800001c0              ADDI_0x00100293 x 005 00000001 at 4445 ns,1
+SM0 warp 2 0x800001a8                SW_0xfe112e23 data=800000cc addr=70000010 at 4495 ns,1
+SM0 warp 0 0x800001c8             AUIPC_0x00000317 x 006 800001c8 at 4515 ns,1
+SM0 warp 2 0x800001bc              VBEQ_0x0200885b join 1111 at 4525 ns,1
+SM0 warp 1 0x800001d0              VBEQ_0x0200825b join 1111 at 4555 ns,1
+SM0 warp 3 0x800001a8                SW_0xfe112e23 data=800000cc addr=70000010 at 4555 ns,1
+SM0 warp 0 0x800001c4           VMV_S_X_0x4202e0d7 v 001 00000001,00000001,00000001,00000001; mask=1111 at 4575 ns,1
+SM0 warp 0 0x800001cc            SETRPC_0x0383305b x 000 00000000 at 4585 ns,1
+SM0 warp 3 0x800001bc              VBEQ_0x0200885b join 1111 at 4595 ns,1
+SM0 warp 0 0x800001d0              VBEQ_0x0200825b join 1111 at 4675 ns,1
+SM0 warp 1 0x800001e0              VBNE_0x00009e5b join 1111 at 4735 ns,1
+SM0 warp 0 0x800001d8             AUIPC_0x00000317 x 006 800001d8 at 4775 ns,1
+SM0 warp 0 0x800001d4           VMV_S_X_0x420060d7 v 001 00000000,00000000,00000000,00000000; mask=1111 at 4785 ns,1
+SM0 warp 1 0x800001e4               JAL_0x150000ef jump=true, jumpTO 0x80000334 at 4785 ns,1
+SM0 warp 2 0x800001d0              VBEQ_0x0200825b join 1111 at 4805 ns,1
+SM0 warp 0 0x800001dc            SETRPC_0x0283305b x 000 00000000 at 4825 ns,1
+SM0 warp 3 0x800001d0              VBEQ_0x0200825b join 1111 at 4845 ns,1
+SM0 warp 0 0x800001e0              VBNE_0x00009e5b join 1111 at 4865 ns,1
+SM0 warp 0 0x800001e4               JAL_0x150000ef jump=true, jumpTO 0x80000334 at 4915 ns,1
+SM0 warp 0 0x800001e4               JAL_0x150000ef x 001 800001e8 at 4925 ns,1
+SM0 warp 1 0x80000338                SW_0xfe112e23 LSU addr=70000018+fffffffc at 4945 ns,1
+SM0 warp 1 0x8000033c               JAL_0xf71ff0ef jump=true, jumpTO 0x800002ac at 4975 ns,1
+SM0 warp 2 0x800001e0              VBNE_0x00009e5b join 1111 at 4995 ns,1
+SM0 warp 0 0x80000334              ADDI_0x00410113 x 002 70000018 at 5015 ns,1
+SM0 warp 3 0x800001e0              VBNE_0x00009e5b join 1111 at 5045 ns,1
+SM0 warp 2 0x800001e4               JAL_0x150000ef jump=true, jumpTO 0x80000334 at 5045 ns,1
+SM0 warp1 write CSR[0x803]=0x90014000 by ins            CSRRS_0x80302573 at 5045 ns,1
+SM0 warp 0 0x80000338                SW_0xfe112e23 LSU addr=70000018+fffffffc at 5065 ns,1
+SM0 warp 0 0x8000033c               JAL_0xf71ff0ef jump=true, jumpTO 0x800002ac at 5065 ns,1
+SM0 warp 0 0x8000033c               JAL_0xf71ff0ef x 001 80000340 at 5075 ns,1
+SM0 warp 3 0x800001e4               JAL_0x150000ef jump=true, jumpTO 0x80000334 at 5085 ns,1
+SM0 warp 1 0x80000338                SW_0xfe112e23 data=800001e8 addr=70000014 at 5095 ns,1
+SM0 warp0 DECODE: decoding ins 5208a157, isvec=0, sel_execunit=DecodeParams::VALU
+SM0 warp1 write CSR[0x800]=0x8 by ins            CSRRS_0x80002373 at 5125 ns,1
+SM0 warp0 write CSR[0x803]=0x90014000 by ins            CSRRS_0x80302573 at 5135 ns,1
+SM0 warp 1 0x800002b0                LW_0x00852283 LSU addr=90014000+00000008 at 5145 ns,1
+SM0 OPC: will emit ins 5208a157
+SM0 warp 0 0x800002ac             CSRRS_0x80302573 x 010 90014000 at 5155 ns,1
+SM0 OPC: will emit ins 5208a157
+SM0 warp 2 0x8000033c               JAL_0xf71ff0ef jump=true, jumpTO 0x800002ac at 5195 ns,1
+SM0 warp 0 0x800002b0                LW_0x00852283 LSU addr=90014000+00000008 at 5205 ns,1
+SM0 warp 0 0x80000338                SW_0xfe112e23 data=800001e8 addr=70000014 at 5215 ns,1
+SM0 warp0 write CSR[0x800]=0xc by ins            CSRRS_0x80002373 at 5215 ns,1
+SM0 warp0 DECODE: decoding ins 5208a157, isvec=0, sel_execunit=DecodeParams::VALU
+SM0 warp 0 0x800002b4             CSRRS_0x80002373 x 006 0000000c at 5225 ns,1
+SM0 warp 0 0x800002b8             VID_V_0x5208a157 v 002 00000000,00000001,00000002,00000003; mask=1111 at 5235 ns,1
+SM0 warp 3 0x8000033c               JAL_0xf71ff0ef jump=true, jumpTO 0x800002ac at 5235 ns,1
+SM0 warp 2 0x80000338                SW_0xfe112e23 LSU addr=70000018+fffffffc at 5265 ns,1
+SM0 warp2 write CSR[0x803]=0x90014000 by ins            CSRRS_0x80302573 at 5275 ns,1
+SM0 warp3 write CSR[0x803]=0x90014000 by ins            CSRRS_0x80302573 at 5315 ns,1
+SM0 warp 3 0x80000338                SW_0xfe112e23 LSU addr=70000018+fffffffc at 5325 ns,1
+SM0 warp 0 0x800002c0              ADDI_0x00100393 x 007 00000001 at 5325 ns,1
+SM0 warp 0 0x800002bc           VADD_VX_0x02234057 v 000 0000000c,0000000d,0000000e,0000000f; mask=1111 at 5335 ns,1
+SM0 OPC: will emit ins 5208a157
+SM0 warp 1 0x800002c4               BEQ_0x00728663 jump=false at 5355 ns,1
+SM0 warp 0 0x800002b0                LW_0x00852283 x 005 00000002 at 5365 ns,1
+SM0 warp2 write CSR[0x800]=0x4 by ins            CSRRS_0x80002373 at 5365 ns,1
+SM0 warp 3 0x800002b0                LW_0x00852283 LSU addr=90014000+00000008 at 5385 ns,1
+SM0 warp3 write CSR[0x800]=0x0 by ins            CSRRS_0x80002373 at 5395 ns,1
+SM0 OPC: will emit ins 5208a157
+SM0 warp 2 0x80000338                SW_0xfe112e23 data=800001e8 addr=70000014 at 5415 ns,1
+SM0 warp 0 0x800002c4               BEQ_0x00728663 jump=false at 5415 ns,1
+SM0 warp 1 0x800002c8                LW_0x01852e03 LSU addr=90014000+00000018 at 5445 ns,1
+SM0 warp 3 0x80000338                SW_0xfe112e23 data=800001e8 addr=70000014 at 5475 ns,1
+SM0 warp 0 0x800002c8                LW_0x01852e03 LSU addr=90014000+00000018 at 5505 ns,1
+SM0 warp 2 0x800002b0                LW_0x00852283 LSU addr=90014000+00000008 at 5565 ns,1
+SM0 warp 3 0x800002c4               BEQ_0x00728663 jump=false at 5595 ns,1
+SM0 warp 3 0x800002c8                LW_0x01852e03 LSU addr=90014000+00000018 at 5665 ns,1
+SM0 warp 0 0x800002c8                LW_0x01852e03 x 028 00000004 at 5665 ns,1
+SM0 warp 1 0x800002d0              JALR_0x00008067 jump=true, jumpTO 0x80000340 at 5685 ns,1
+SM0 warp 0 0x800002d0              JALR_0x00008067 jump=true, jumpTO 0x80000340 at 5735 ns,1
+SM0 warp 0 0x800002d0              JALR_0x00008067 x 000 800002d4 at 5745 ns,1
+SM0 warp 0 0x800002cc          VREMU_VX_0x8a0e6057 v 000 00000000,00000001,00000002,00000003; mask=1111 at 5755 ns,1
+SM0 warp1 write CSR[0x803]=0x900142d4 by ins            CSRRS_0x80302573 at 5755 ns,1
+SM0 warp 2 0x800002c4               BEQ_0x00728663 jump=false at 5775 ns,1
+SM0 warp1 write CSR[0x808]=0x800002d4 by ins            CSRRS_0x80802373 at 5775 ns,1
+SM0 warp0 write CSR[0x803]=0x900142d4 by ins            CSRRS_0x80302573 at 5805 ns,1
+SM0 warp 1 0x80000348                LW_0x01852e03 LSU addr=90014000+00000018 at 5815 ns,1
+SM0 warp 0 0x80000340             CSRRS_0x80302573 x 010 90014000 at 5815 ns,1
+SM0 warp0 write CSR[0x808]=0x800002d4 by ins            CSRRS_0x80802373 at 5835 ns,1
+SM0 warp 0 0x80000344             CSRRS_0x80802373 x 006 00000000 at 5845 ns,1
+SM0 warp 0 0x80000348                LW_0x01852e03 LSU addr=90014000+00000018 at 5875 ns,1
+SM0 warp 3 0x800002d0              JALR_0x00008067 jump=true, jumpTO 0x80000340 at 5895 ns,1
+SM0 warp 2 0x800002c8                LW_0x01852e03 LSU addr=90014000+00000018 at 5935 ns,1
+SM0 warp3 write CSR[0x803]=0x900142d4 by ins            CSRRS_0x80302573 at 5965 ns,1
+SM0 warp3 write CSR[0x808]=0x800002d4 by ins            CSRRS_0x80802373 at 5975 ns,1
+SM0 warp 3 0x80000348                LW_0x01852e03 LSU addr=90014000+00000018 at 6025 ns,1
+SM0 warp 0 0x80000348                LW_0x01852e03 x 028 00000004 at 6035 ns,1
+SM0 warp 1 0x80000354                LW_0xffc12083 LSU addr=70000018+fffffffc at 6105 ns,1
+SM0 warp 0 0x8000034c               MUL_0x03c30fb3 x 031 00000000 at 6115 ns,1
+SM0 warp 2 0x800002d0              JALR_0x00008067 jump=true, jumpTO 0x80000340 at 6165 ns,1
+SM0 warp 0 0x80000354                LW_0xffc12083 LSU addr=70000018+fffffffc at 6175 ns,1
+SM0 warp 0 0x80000358              ADDI_0xffc10113 x 002 70000014 at 6205 ns,1
+SM0 warp 0 0x80000350           VADD_VX_0x020fc057 v 000 00000000,00000001,00000002,00000003; mask=1111 at 6215 ns,1
+SM0 warp2 write CSR[0x803]=0x900142d4 by ins            CSRRS_0x80302573 at 6235 ns,1
+SM0 warp2 write CSR[0x808]=0x800002d4 by ins            CSRRS_0x80802373 at 6245 ns,1
+SM0 warp 2 0x80000348                LW_0x01852e03 LSU addr=90014000+00000018 at 6285 ns,1
+SM0 warp 1 0x8000035c              JALR_0x00008067 jump=true, jumpTO 0x800001e8 at 6315 ns,1
+SM0 warp 0 0x80000354                LW_0xffc12083 x 001 800001e8 at 6335 ns,1
+SM0 warp 3 0x80000354                LW_0xffc12083 LSU addr=70000018+fffffffc at 6345 ns,1
+SM0 warp 1 0x800001e8               JAL_0x0180006f jump=true, jumpTO 0x80000200 at 6375 ns,1
+SM0 warp 0 0x8000035c              JALR_0x00008067 jump=true, jumpTO 0x800001e8 at 6395 ns,1
+SM0 warp 0 0x8000035c              JALR_0x00008067 x 000 80000360 at 6405 ns,1
+SM0 warp 1 0x80000200 SIMT_STK receive join ins             JOIN_0x0000205b at 6425 ns,1
+SM0 warp 0 0x800001e8               JAL_0x0180006f jump=true, jumpTO 0x80000200 at 6455 ns,1
+SM0 warp 0 0x800001e8               JAL_0x0180006f x 000 800001ec at 6465 ns,1
+SM0 warp 1 0x80000204                LW_0xffc12083 LSU addr=70000014+fffffffc at 6475 ns,1
+SM0 warp 0 0x80000200 SIMT_STK receive join ins             JOIN_0x0000205b at 6505 ns,1
+SM0 warp0 DECODE: decoding ins 5208a157, isvec=0, sel_execunit=DecodeParams::VALU
+SM0 warp 0 0x80000204                LW_0xffc12083 LSU addr=70000014+fffffffc at 6555 ns,1
+SM0 warp 3 0x8000035c              JALR_0x00008067 jump=true, jumpTO 0x800001e8 at 6555 ns,1
+SM0 warp 0 0x80000208              ADDI_0xffc10113 x 002 70000010 at 6595 ns,1
+SM0 warp 2 0x80000354                LW_0xffc12083 LSU addr=70000018+fffffffc at 6625 ns,1
+SM0 warp 3 0x800001e8               JAL_0x0180006f jump=true, jumpTO 0x80000200 at 6625 ns,1
+SM0 warp 3 0x80000200 SIMT_STK receive join ins             JOIN_0x0000205b at 6675 ns,1
+SM0 warp 1 0x8000020c              JALR_0x00008067 jump=true, jumpTO 0x800000cc at 6695 ns,1
+SM0 warp 0 0x80000204                LW_0xffc12083 x 001 800000cc at 6715 ns,1
+SM0 warp 1 DECODE: set regext(3,2,1,d)=0,0,0,1 at 6715 ns,1
+SM0 warp 3 0x80000204                LW_0xffc12083 LSU addr=70000014+fffffffc at 6725 ns,1
+SM0 warp 0 0x8000020c              JALR_0x00008067 jump=true, jumpTO 0x800000cc at 6765 ns,1
+SM0 warp 1 DECODE: set regext(3,2,1,d)=0,0,0,1 at 6765 ns,1
+SM0 warp 0 0x8000020c              JALR_0x00008067 x 000 80000210 at 6775 ns,1
+SM0 warp 0 DECODE: set regext(3,2,1,d)=0,0,0,1 at 6785 ns,1
+SM0 warp 1 DECODE: set regext(3,2,1,d)=0,1,1,0 at 6805 ns,1
+SM0 warp 2 0x8000035c              JALR_0x00008067 jump=true, jumpTO 0x800001e8 at 6835 ns,1
+SM0 warp 0 DECODE: set regext(3,2,1,d)=0,0,0,1 at 6835 ns,1
+SM0 warp 0 DECODE: set regext(3,2,1,d)=0,1,1,0 at 6875 ns,1
+SM0 warp 0 0x800000d4              ADDI_0x00100293 x 005 80000211 at 6885 ns,1
+SM0 warp 0 0x800000d0           VADD_VX_0x020040d7 v 033 80000210,80000211,80000212,80000213; mask=1111 at 6895 ns,1
+SM0 warp 1 0x800000dc               JAL_0x0c8000ef jump=true, jumpTO 0x800001a4 at 6895 ns,1
+SM0 warp 2 0x800001e8               JAL_0x0180006f jump=true, jumpTO 0x80000200 at 6915 ns,1
+SM0 warp 0 0x800000dc               JAL_0x0c8000ef jump=true, jumpTO 0x800001a4 at 6945 ns,1
+SM0 warp 0 0x800000dc               JAL_0x0c8000ef x 001 800000e0 at 6955 ns,1
+SM0 warp 2 0x80000200 SIMT_STK receive join ins             JOIN_0x0000205b at 6965 ns,1
+SM0 warp 0 0x800000d8           VMV_S_X_0x4202e057 v 000 80000211,80000211,80000211,80000211; mask=1111 at 6965 ns,1
+SM0 warp 3 0x8000020c              JALR_0x00008067 jump=true, jumpTO 0x800000cc at 7005 ns,1
+SM0 warp 2 0x80000204                LW_0xffc12083 LSU addr=70000014+fffffffc at 7025 ns,1
+SM0 warp 3 DECODE: set regext(3,2,1,d)=0,0,0,1 at 7025 ns,1
+SM0 warp 0 0x800001a4              ADDI_0x00410113 x 002 70000014 at 7035 ns,1
+SM0 warp 3 DECODE: set regext(3,2,1,d)=0,0,0,1 at 7075 ns,1
+SM0 warp 1 0x800001a8                SW_0xfe112e23 LSU addr=70000014+fffffffc at 7085 ns,1
+SM0 warp 3 DECODE: set regext(3,2,1,d)=0,1,1,0 at 7115 ns,1
+SM0 warp 0 0x800001ac              ADDI_0x00200293 x 005 80000212 at 7125 ns,1
+SM0 warp 0 0x800001a8                SW_0xfe112e23 LSU addr=70000014+fffffffc at 7145 ns,1
+SM0 warp 0 0x800001b4             AUIPC_0x00000317 x 006 800001b4 at 7195 ns,1
+SM0 warp 0 0x800001b0           VMV_S_X_0x4202e0d7 v 001 80000212,80000212,80000212,80000212; mask=1111 at 7205 ns,1
+SM0 warp 3 0x800000dc               JAL_0x0c8000ef jump=true, jumpTO 0x800001a4 at 7205 ns,1
+SM0 warp 1 0x800001a8                SW_0xfe112e23 data=800000e0 addr=70000010 at 7235 ns,1
+SM0 warp 0 0x800001b8            SETRPC_0x04c3305b x 000 00000000 at 7255 ns,1
+SM0 warp 1 0x800001bc              VBEQ_0x0200885b join 1111 at 7265 ns,1
+SM0 warp 0 0x800001bc              VBEQ_0x0200885b join 1111 at 7285 ns,1
+SM0 warp 2 0x8000020c              JALR_0x00008067 jump=true, jumpTO 0x800000cc at 7285 ns,1
+SM0 warp 0 0x800001a8                SW_0xfe112e23 data=800000e0 addr=70000010 at 7295 ns,1
+SM0 warp 2 DECODE: set regext(3,2,1,d)=0,0,0,1 at 7305 ns,1
+SM0 warp 3 0x800001a8                SW_0xfe112e23 LSU addr=70000014+fffffffc at 7355 ns,1
+SM0 warp 0 0x800001c0              ADDI_0x00100293 x 005 00000001 at 7355 ns,1
+SM0 warp 2 DECODE: set regext(3,2,1,d)=0,0,0,1 at 7355 ns,1
+SM0 warp 2 DECODE: set regext(3,2,1,d)=0,1,1,0 at 7395 ns,1
+SM0 warp 0 0x800001c8             AUIPC_0x00000317 x 006 800001c8 at 7435 ns,1
+SM0 warp 0 0x800001c4           VMV_S_X_0x4202e0d7 v 001 00000001,00000001,00000001,00000001; mask=1111 at 7465 ns,1
+SM0 warp 2 0x800000dc               JAL_0x0c8000ef jump=true, jumpTO 0x800001a4 at 7465 ns,1
+SM0 warp 3 0x800001a8                SW_0xfe112e23 data=800000e0 addr=70000010 at 7505 ns,1
+SM0 warp 0 0x800001cc            SETRPC_0x0383305b x 000 00000000 at 7515 ns,1
+SM0 warp 0 0x800001d0              VBEQ_0x0200825b join 1111 at 7545 ns,1
+SM0 warp 3 0x800001bc              VBEQ_0x0200885b join 1111 at 7565 ns,1
+SM0 warp 1 0x800001d0              VBEQ_0x0200825b join 1111 at 7595 ns,1
+SM0 warp 2 0x800001a8                SW_0xfe112e23 LSU addr=70000014+fffffffc at 7605 ns,1
+SM0 warp 0 0x800001d4           VMV_S_X_0x420060d7 v 001 00000000,00000000,00000000,00000000; mask=1111 at 7645 ns,1
+SM0 warp 0 0x800001d8             AUIPC_0x00000317 x 006 800001d8 at 7675 ns,1
+SM0 warp 0 0x800001dc            SETRPC_0x0283305b x 000 00000000 at 7745 ns,1
+SM0 warp 2 0x800001a8                SW_0xfe112e23 data=800000e0 addr=70000010 at 7755 ns,1
+SM0 warp 1 0x800001e0              VBNE_0x00009e5b elsepath(jump) 1111 jumpTO 0x800001f4 at 7765 ns,1
+SM0 warp 0 0x800001e0              VBNE_0x00009e5b elsepath(jump) 1111 jumpTO 0x800001f4 at 7805 ns,1
+SM0 warp 3 0x800001d0              VBEQ_0x0200825b join 1111 at 7825 ns,1
+SM0 warp 1 0x800001f4               JAL_0x16c000ef jump=true, jumpTO 0x80000360 at 7825 ns,1
+SM0 warp 2 0x800001bc              VBEQ_0x0200885b join 1111 at 7865 ns,1
+SM0 warp 0 0x800001f4               JAL_0x16c000ef jump=true, jumpTO 0x80000360 at 7875 ns,1
+SM0 warp 0 0x800001f4               JAL_0x16c000ef x 001 800001f8 at 7885 ns,1
+SM0 warp 1 0x80000364                SW_0xfe112e23 LSU addr=70000018+fffffffc at 7965 ns,1
+SM0 warp 0 0x80000360              ADDI_0x00410113 x 002 70000018 at 7975 ns,1
+SM0 warp 1 0x80000368               JAL_0xf6dff0ef jump=true, jumpTO 0x800002d4 at 7985 ns,1
+SM0 warp 0 0x80000364                SW_0xfe112e23 LSU addr=70000018+fffffffc at 8025 ns,1
+SM0 warp 3 0x800001e0              VBNE_0x00009e5b elsepath(jump) 1111 jumpTO 0x800001ec at 8025 ns,1
+SM0 warp 0 0x80000368               JAL_0xf6dff0ef jump=true, jumpTO 0x800002d4 at 8025 ns,1
+SM0 warp 0 0x80000368               JAL_0xf6dff0ef x 001 8000036c at 8035 ns,1
+SM0 warp1 write CSR[0x803]=0x900142d4 by ins            CSRRS_0x80302573 at 8055 ns,1
+SM0 warp0 DECODE: decoding ins 5208a157, isvec=0, sel_execunit=DecodeParams::VALU
+SM0 warp 3 0x800001ec               JAL_0x19c000ef jump=true, jumpTO 0x80000388 at 8085 ns,1
+SM0 warp0 write CSR[0x803]=0x900142d4 by ins            CSRRS_0x80302573 at 8105 ns,1
+SM0 warp 1 0x800002d8                LW_0x00852283 LSU addr=900142d4+00000008 at 8115 ns,1
+SM0 warp 0 0x800002d4             CSRRS_0x80302573 x 010 900142d4 at 8115 ns,1
+SM0 warp 1 0x80000364                SW_0xfe112e23 data=800001f8 addr=70000014 at 8115 ns,1
+SM0 OPC: will emit ins 5208a157
+SM0 warp 2 0x800001d0              VBEQ_0x0200825b join 1111 at 8125 ns,1
+SM0 warp1 write CSR[0x800]=0x8 by ins            CSRRS_0x80002373 at 8135 ns,1
+SM0 warp 0 0x800002d8                LW_0x00852283 LSU addr=900142d4+00000008 at 8175 ns,1
+SM0 warp 0 0x80000364                SW_0xfe112e23 data=800001f8 addr=70000014 at 8175 ns,1
+SM0 warp0 write CSR[0x800]=0xc by ins            CSRRS_0x80002373 at 8205 ns,1
+SM0 OPC: will emit ins 5208a157
+SM0 warp 0 0x800002dc             CSRRS_0x80002373 x 006 0000000c at 8235 ns,1
+SM0 warp 3 0x80000390               JAL_0xf81ff0ef jump=true, jumpTO 0x80000310 at 8235 ns,1
+SM0 warp 3 0x8000038c                SW_0xfe112e23 LSU addr=70000018+fffffffc at 8245 ns,1
+SM0 warp 0 0x800002e0             VID_V_0x5208a157 v 002 00000000,00000001,00000002,00000003; mask=1111 at 8255 ns,1
+getBufferData Error: No buffer found for the given virtual address 0x900142dc for ins               LW_0x00852283 at 8265 ns,1
+SM0 LSU detect addrOutofRange, ins=               LW_0x00852283,addr=2416001756 at 8265 ns,1
+SM0 warp 1 0x800002e8                LW_0x01852e03 LSU addr=900142d4+00000018 at 8305 ns,1
+SM0 warp 2 0x800001e0              VBNE_0x00009e5b elsepath(jump) 1111 jumpTO 0x800001f4 at 8315 ns,1
+SM0 warp0 DECODE: decoding ins 5208a157, isvec=0, sel_execunit=DecodeParams::VALU
+getBufferData Error: No buffer found for the given virtual address 0x900142dc for ins               LW_0x00852283 at 8325 ns,1
+SM0 LSU detect addrOutofRange, ins=               LW_0x00852283,addr=2416001756 at 8325 ns,1
+SM0 warp3 write CSR[0x803]=0x900142d4 by ins            CSRRS_0x80302573 at 8325 ns,1
+SM0 warp 0 0x800002d8                LW_0x00852283 x 005 00000000 at 8335 ns,1
+SM0 warp3 write CSR[0x800]=0x0 by ins            CSRRS_0x80002373 at 8335 ns,1
+SM0 OPC: will emit ins 5208a157
+SM0 warp 0 0x800002e4           VADD_VX_0x02234057 v 000 0000000c,0000000d,0000000e,0000000f; mask=1111 at 8355 ns,1
+SM0 warp 0 0x800002ec              ADDI_0x00300393 x 007 00000003 at 8365 ns,1
+SM0 warp 0 0x800002e8                LW_0x01852e03 LSU addr=900142d4+00000018 at 8375 ns,1
+SM0 warp 1 0x800002f0               BEQ_0x00728663 jump=false at 8375 ns,1
+SM0 warp 3 0x8000038c                SW_0xfe112e23 data=800001f0 addr=70000014 at 8395 ns,1
+SM0 warp 2 0x800001f4               JAL_0x16c000ef jump=true, jumpTO 0x80000360 at 8395 ns,1
+SM0 warp 0 0x800002f0               BEQ_0x00728663 jump=false at 8415 ns,1
+SM0 warp 3 0x80000320                LW_0x01852e03 LSU addr=900142d4+00000018 at 8455 ns,1
+getBufferData Error: No buffer found for the given virtual address 0x900142ec for ins               LW_0x01852e03 at 8455 ns,1
+SM0 LSU detect addrOutofRange, ins=               LW_0x01852e03,addr=2416001772 at 8455 ns,1
+getBufferData Error: No buffer found for the given virtual address 0x900142ec for ins               LW_0x01852e03 at 8525 ns,1
+SM0 LSU detect addrOutofRange, ins=               LW_0x01852e03,addr=2416001772 at 8525 ns,1
+SM0 warp 3 0x80000324                LW_0x01c52e83 LSU addr=900142d4+0000001c at 8535 ns,1
+SM0 warp 0 0x800002e8                LW_0x01852e03 x 028 00000000 at 8535 ns,1
+SM0 warp 1 0x800002f8              JALR_0x00008067 jump=true, jumpTO 0x8000036c at 8535 ns,1
+SFU_CALC error: ins          VDIVU_VX_0x820e6057 rsv1_data[0]=0 at 8545 ns,1
+SFU_CALC error: ins          VDIVU_VX_0x820e6057 rsv1_data[1]=0 at 8545 ns,1
+SFU_CALC error: ins          VDIVU_VX_0x820e6057 rsv1_data[2]=0 at 8545 ns,1
+SFU_CALC error: ins          VDIVU_VX_0x820e6057 rsv1_data[3]=0 at 8545 ns,1
+SM0 warp 2 0x80000368               JAL_0xf6dff0ef jump=true, jumpTO 0x800002d4 at 8555 ns,1
+SM0 warp 2 0x80000364                SW_0xfe112e23 LSU addr=70000018+fffffffc at 8595 ns,1
+SM0 warp 0 0x800002f8              JALR_0x00008067 jump=true, jumpTO 0x8000036c at 8595 ns,1
+SM0 warp 0 0x800002f8              JALR_0x00008067 x 000 800002fc at 8605 ns,1
+getBufferData Error: No buffer found for the given virtual address 0x900142ec for ins               LW_0x01852e03 at 8605 ns,1
+SM0 LSU detect addrOutofRange, ins=               LW_0x01852e03,addr=2416001772 at 8605 ns,1
+SM0 warp1 write CSR[0x809]=0x800002fc by ins            CSRRS_0x80902373 at 8615 ns,1
+SM0 warp2 write CSR[0x803]=0x900142d4 by ins            CSRRS_0x80302573 at 8625 ns,1
+SFU_CALC error: ins          VDIVU_VX_0x820e6057 rsv1_data[0]=0 at 8635 ns,1
+SFU_CALC error: ins          VDIVU_VX_0x820e6057 rsv1_data[1]=0 at 8635 ns,1
+SFU_CALC error: ins          VDIVU_VX_0x820e6057 rsv1_data[2]=0 at 8635 ns,1
+SFU_CALC error: ins          VDIVU_VX_0x820e6057 rsv1_data[3]=0 at 8635 ns,1
+SM0 warp 0 0x800002f4          VDIVU_VX_0x820e6057 v 000 00000000,00000001,00000002,00000003; mask=1111 at 8645 ns,1
+SM0 warp 1 0x80000370                LW_0x01c52383 LSU addr=900142d4+0000001c at 8655 ns,1
+SM0 warp0 write CSR[0x809]=0x800002fc by ins            CSRRS_0x80902373 at 8665 ns,1
+SM0 warp 0 0x8000036c             CSRRS_0x80902373 x 006 00000000 at 8675 ns,1
+SM0 OPC: will emit ins 5208a157
+getBufferData Error: No buffer found for the given virtual address 0x900142f0 for ins               LW_0x01c52e83 at 8685 ns,1
+SM0 LSU detect addrOutofRange, ins=               LW_0x01c52e83,addr=2416001776 at 8685 ns,1
+SM0 warp2 write CSR[0x800]=0x4 by ins            CSRRS_0x80002373 at 8695 ns,1
+SM0 warp 0 0x80000370                LW_0x01c52383 LSU addr=900142d4+0000001c at 8715 ns,1
+SM0 warp 2 0x80000364                SW_0xfe112e23 data=800001f8 addr=70000014 at 8745 ns,1
+SM0 warp 2 0x800002d8                LW_0x00852283 LSU addr=900142d4+00000008 at 8775 ns,1
+getBufferData Error: No buffer found for the given virtual address 0x900142f0 for ins               LW_0x01c52383 at 8805 ns,1
+SM0 LSU detect addrOutofRange, ins=               LW_0x01c52383,addr=2416001776 at 8805 ns,1
+SM0 warp 2 0x800002e8                LW_0x01852e03 LSU addr=900142d4+00000018 at 8835 ns,1
+SM0 warp 3 0x80000330              JALR_0x00008067 jump=true, jumpTO 0x80000394 at 8835 ns,1
+SFU_CALC error: ins          VDIVU_VX_0x820ee057 rsv1_data[0]=0 at 8845 ns,1
+SFU_CALC error: ins          VDIVU_VX_0x820ee057 rsv1_data[1]=0 at 8845 ns,1
+SFU_CALC error: ins          VDIVU_VX_0x820ee057 rsv1_data[2]=0 at 8845 ns,1
+SFU_CALC error: ins          VDIVU_VX_0x820ee057 rsv1_data[3]=0 at 8845 ns,1
+getBufferData Error: No buffer found for the given virtual address 0x900142f0 for ins               LW_0x01c52383 at 8865 ns,1
+SM0 LSU detect addrOutofRange, ins=               LW_0x01c52383,addr=2416001776 at 8865 ns,1
+SM0 warp 0 0x80000370                LW_0x01c52383 x 007 00000000 at 8875 ns,1
+SM0 warp3 write CSR[0x803]=0x900143f4 by ins            CSRRS_0x80302573 at 8905 ns,1
+getBufferData Error: No buffer found for the given virtual address 0x900142dc for ins               LW_0x00852283 at 8925 ns,1
+SM0 LSU detect addrOutofRange, ins=               LW_0x00852283,addr=2416001756 at 8925 ns,1
+SM0 warp3 write CSR[0x80a]=0x80000334 by ins            CSRRS_0x80a02373 at 8925 ns,1
+SM0 warp 1 0x8000037c                LW_0xffc12083 LSU addr=70000018+fffffffc at 8955 ns,1
+SM0 warp 0 0x80000374               MUL_0x02730e33 x 028 00000000 at 8955 ns,1
+getBufferData Error: No buffer found for the given virtual address 0x900142ec for ins               LW_0x01852e03 at 8985 ns,1
+SM0 LSU detect addrOutofRange, ins=               LW_0x01852e03,addr=2416001772 at 8985 ns,1
+SM0 warp 2 0x800002f0               BEQ_0x00728663 jump=false at 8995 ns,1
+SM0 warp 3 0x8000039c                LW_0x02052383 LSU addr=900142d4+00000020 at 9015 ns,1
+SM0 warp 0 0x80000380              ADDI_0xffc10113 x 002 70000014 at 9045 ns,1
+SM0 warp 0 0x80000378           VADD_VX_0x020e4057 v 000 00000000,00000001,00000002,00000003; mask=1111 at 9055 ns,1
+SM0 warp 0 0x8000037c                LW_0xffc12083 LSU addr=70000018+fffffffc at 9075 ns,1
+SM0 warp 2 0x800002f8              JALR_0x00008067 jump=true, jumpTO 0x8000036c at 9075 ns,1
+SFU_CALC error: ins          VDIVU_VX_0x820e6057 rsv1_data[0]=0 at 9085 ns,1
+SFU_CALC error: ins          VDIVU_VX_0x820e6057 rsv1_data[1]=0 at 9085 ns,1
+SFU_CALC error: ins          VDIVU_VX_0x820e6057 rsv1_data[2]=0 at 9085 ns,1
+SFU_CALC error: ins          VDIVU_VX_0x820e6057 rsv1_data[3]=0 at 9085 ns,1
+SM0 warp2 write CSR[0x809]=0x800002fc by ins            CSRRS_0x80902373 at 9145 ns,1
+SM0 warp 2 0x80000370                LW_0x01c52383 LSU addr=900142d4+0000001c at 9165 ns,1
+getBufferData Error: No buffer found for the given virtual address 0x900142f4 for ins               LW_0x02052383 at 9165 ns,1
+SM0 LSU detect addrOutofRange, ins=               LW_0x02052383,addr=2416001780 at 9165 ns,1
+SM0 warp 1 0x80000384              JALR_0x00008067 jump=true, jumpTO 0x800001f8 at 9165 ns,1
+SM0 warp 1 0x800001f8               JAL_0x0080006f jump=true, jumpTO 0x80000200 at 9225 ns,1
+SM0 warp 0 0x8000037c                LW_0xffc12083 x 001 800001f8 at 9245 ns,1
+SM0 warp 1 0x80000200 SIMT_STK receive join ins             JOIN_0x0000205b at 9275 ns,1
+SM0 warp 0 0x80000384              JALR_0x00008067 jump=true, jumpTO 0x800001f8 at 9295 ns,1
+SM0 warp 0 0x80000384              JALR_0x00008067 x 000 80000388 at 9305 ns,1
+SM0 warp 3 0x800003a8                LW_0xffc12083 LSU addr=70000018+fffffffc at 9315 ns,1
+getBufferData Error: No buffer found for the given virtual address 0x900142f0 for ins               LW_0x01c52383 at 9315 ns,1
+SM0 LSU detect addrOutofRange, ins=               LW_0x01c52383,addr=2416001776 at 9315 ns,1
+SM0 warp 0 0x800001f8               JAL_0x0080006f jump=true, jumpTO 0x80000200 at 9365 ns,1
+SM0 warp 1 0x80000204                LW_0xffc12083 LSU addr=70000014+fffffffc at 9375 ns,1
+SM0 warp 0 0x800001f8               JAL_0x0080006f x 000 800001fc at 9375 ns,1
+SM0 warp 0 0x80000200 SIMT_STK receive join ins             JOIN_0x0000205b at 9415 ns,1
+SM0 warp0 DECODE: decoding ins 5208a157, isvec=0, sel_execunit=DecodeParams::VALU
+SM0 warp 0 0x80000204                LW_0xffc12083 LSU addr=70000014+fffffffc at 9465 ns,1
+SM0 warp 0 0x80000208              ADDI_0xffc10113 x 002 70000010 at 9505 ns,1
+SM0 warp 2 0x8000037c                LW_0xffc12083 LSU addr=70000018+fffffffc at 9525 ns,1
+SM0 warp 3 0x800003b0              JALR_0x00008067 jump=true, jumpTO 0x800001f8 at 9545 ns,1
+SM0 warp 1 0x8000020c              JALR_0x00008067 jump=true, jumpTO 0x800000e0 at 9585 ns,1
+SM0 warp 3 0x800001f8               JAL_0x0080006f jump=true, jumpTO 0x80000200 at 9605 ns,1
+SM0 warp 1 DECODE: set regext(3,2,1,d)=0,0,0,1 at 9605 ns,1
+SM0 warp 0 0x80000204                LW_0xffc12083 x 001 800000e0 at 9625 ns,1
+SM0 warp 1 DECODE: set regext(3,2,1,d)=0,1,1,0 at 9645 ns,1
+SM0 warp 3 0x80000200 SIMT_STK receive join ins             JOIN_0x0000205b at 9665 ns,1
+SM0 warp 0 0x8000020c              JALR_0x00008067 jump=true, jumpTO 0x800000e0 at 9685 ns,1
+SM0 warp 0 0x8000020c              JALR_0x00008067 x 000 80000210 at 9695 ns,1
+SM0 warp 1 0x800000ec               JAL_0x048000ef jump=true, jumpTO 0x80000134 at 9705 ns,1
+SM0 warp 0 DECODE: set regext(3,2,1,d)=0,0,0,1 at 9705 ns,1
+SM0 warp 3 0x80000204                LW_0xffc12083 LSU addr=70000014+fffffffc at 9715 ns,1
+SM0 warp 2 0x80000384              JALR_0x00008067 jump=true, jumpTO 0x800001f8 at 9735 ns,1
+SM0 warp 0 DECODE: set regext(3,2,1,d)=0,1,1,0 at 9745 ns,1
+SM0 warp 0 0x800000ec               JAL_0x048000ef jump=true, jumpTO 0x80000134 at 9785 ns,1
+SM0 warp 0 0x800000ec               JAL_0x048000ef x 001 800000f0 at 9795 ns,1
+SM0 warp 0 0x800000e4           VADD_VX_0x02004157 v 034 80000210,80000211,80000212,80000213; mask=1111 at 9825 ns,1
+SM0 warp 2 0x800001f8               JAL_0x0080006f jump=true, jumpTO 0x80000200 at 9825 ns,1
+SM0 warp 0 0x800000e8           VMV_S_X_0x42006057 v 000 80000210,80000210,80000210,80000210; mask=1111 at 9845 ns,1
+SM0 warp 1 0x80000138                SW_0xfe112e23 LSU addr=70000014+fffffffc at 9865 ns,1
+SM0 warp 0 0x80000134              ADDI_0x00410113 x 002 70000014 at 9875 ns,1
+SM0 warp 2 0x80000200 SIMT_STK receive join ins             JOIN_0x0000205b at 9875 ns,1
+SM0 warp 0 0x80000138                SW_0xfe112e23 LSU addr=70000014+fffffffc at 9925 ns,1
+SM0 warp 3 0x8000020c              JALR_0x00008067 jump=true, jumpTO 0x800000e0 at 9945 ns,1
+SM0 warp 3 DECODE: set regext(3,2,1,d)=0,0,0,1 at 9965 ns,1
+SM0 warp 2 0x80000204                LW_0xffc12083 LSU addr=70000014+fffffffc at 9985 ns,1
+SM0 warp 0 0x8000013c           VADD_VX_0x020040d7 v 001 00000420,00000420,00000420,00000420; mask=1111 at 9995 ns,1
+Time taken: 335 milliseconds
