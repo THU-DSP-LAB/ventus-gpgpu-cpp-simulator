@@ -1,0 +1,123 @@
+SM0 warp 0 0x80000000             AUIPC_0x00004197 x 003 80004000 at 75 ns,1
+SM0 warp 0 0x80000004              ADDI_0x80818193 x 003 80003808 at 155 ns,1
+SM0 warp 0 0x80000008              ADDI_0x02000e93 x 029 00000020 at 195 ns,1
+SM0 warp 0 0x8000000c           VSETVLI_0x0d0efed7 x 029 00000004 at 265 ns,1
+SM0 warp 0 0x80000010               LUI_0x00002eb7 x 029 00002000 at 315 ns,1
+SM0 warp 0 write CSR[0x300]=0x3800 by ins            CSRRS_0x300eaef3 at 355 ns,1
+SM0 warp 0 0x80000014             CSRRS_0x300eaef3 x 029 00001800 at 375 ns,1
+SM0 warp 0 write CSR[0x805]=0x3 by ins            CSRRS_0x80502373 at 425 ns,1
+SM0 warp 0 0x80000018              ADDI_0x00000e93 x 029 00000000 at 435 ns,1
+SM0 warp 0 0x8000001c             CSRRS_0x80502373 x 006 00000003 at 445 ns,1
+SM0 warp 0 write CSR[0x806]=0x70000000 by ins            CSRRS_0x806023f3 at 445 ns,1
+SM0 warp 0 0x80000020             CSRRS_0x806023f3 x 007 70000000 at 465 ns,1
+SM0 warp 0 0x80000024              ADDI_0x40000e13 x 028 00000400 at 495 ns,1
+SM0 warp 0 0x80000028               MUL_0x03c30333 x 006 00000c00 at 615 ns,1
+SM0 warp 0 0x8000002c               ADD_0x00730133 x 002 70000c00 at 675 ns,1
+SM0 warp 0 0x80000030              ADDI_0x00000213 x 004 00000000 at 695 ns,1
+SM0 warp 0 0x80000034             AUIPC_0x00003517 x 010 80003034 at 715 ns,1
+SM0 warp 0 0x80000038              ADDI_0xfd450513 x 010 80003008 at 855 ns,1
+SM0 warp 0 0x8000003c             AUIPC_0x00003617 x 012 8000303c at 935 ns,1
+SM0 warp 0 0x80000040              ADDI_0xfcc60613 x 012 80003008 at 995 ns,1
+SM0 warp 0 0x80000044               BEQ_0x00c50863 jump=true, jumpTO 0x80000054 at 1105 ns,1
+SM0 warp 0 write CSR[0x803]=0x90014000 by ins            CSRRS_0x803022f3 at 1185 ns,1
+SM0 warp 0 0x80000054             CSRRS_0x803022f3 x 005 90014000 at 1195 ns,1
+SM0 warp 0 0x80000058                LW_0x0002a303 LSU addr=90014000+00000000 at 1235 ns,1
+SM0 warp 0 0x80000060                LW_0x0302a383 LSU addr=90014000+00000030 at 1295 ns,1
+SM0 warp 0 0x80000058                LW_0x0002a303 x 006 800000a8 at 1395 ns,1
+SM0 warp 0 0x8000005c                LW_0x0042a503 LSU addr=90014000+00000004 at 1415 ns,1
+SM0 warp 0 0x80000068             AUIPC_0x00003e97 x 029 80003068 at 1445 ns,1
+SM0 warp 0 0x80000060                LW_0x0302a383 x 007 00000000 at 1455 ns,1
+SM0 warp 0 0x80000064                LW_0x0342ae03 LSU addr=90014000+00000034 at 1475 ns,1
+SM0 warp 0 0x8000005c                LW_0x0042a503 x 010 90003000 at 1575 ns,1
+SM0 warp 0 0x80000064                LW_0x0342ae03 x 028 00000000 at 1635 ns,1
+SM0 warp 0 0x8000006c              ADDI_0xf98e8e93 x 029 80003000 at 1645 ns,1
+SM0 warp 0 0x80000070             AUIPC_0x00003f17 x 030 80003070 at 1805 ns,1
+SM0 warp 0 0x80000074              ADDI_0xf94f0f13 x 030 80003004 at 1945 ns,1
+SM0 warp 0 0x8000007c                SW_0x01cf2023 LSU addr=80003004+00000000 at 2135 ns,1
+SM0 warp 0 0x80000080             AUIPC_0x00000f97 x 031 80000080 at 2205 ns,1
+SM0 warp 0 DECODE: set regext(3,2,1,d)=0,0,0,1 at 2255 ns,1
+SM0 warp 0 0x8000007c                SW_0x01cf2023 data=00000000 addr=80003004 at 2285 ns,1
+SM0 warp 0 0x80000084              ADDI_0x018f8f93 x 031 80000098 at 2305 ns,1
+SM0 warp 0 0x80000078                SW_0x007ea023 LSU addr=80003000+00000000 at 2315 ns,1
+SM0 warp 0 write CSR[0x305]=0x80000098 by ins            CSRRW_0x305f9073 at 2345 ns,1
+SM0 warp 0 0x80000088             CSRRW_0x305f9073 x 000 00000000 at 2365 ns,1
+SM0 warp 0 0x8000008c              JALR_0x000300e7 jump=true, jumpTO 0x800000a8 at 2395 ns,1
+SM0 warp 0 0x8000008c              JALR_0x000300e7 x 001 80000090 at 2405 ns,1
+SM0 warp 0 DECODE: set regext(3,2,1,d)=0,0,0,1 at 2435 ns,1
+SM0 warp 0 0x80000078                SW_0x007ea023 data=00000000 addr=80003000 at 2465 ns,1
+SM0 warp 0 0x800000a8              ADDI_0x01010113 x 002 70000c10 at 2495 ns,1
+SM0 warp 0 DECODE: set regext(3,2,1,d)=0,0,0,1 at 2545 ns,1
+SM0 warp 0 0x800000ac              ADDI_0x00820213 x 004 00000008 at 2585 ns,1
+SM0 warp 0 0x800000b4           VMV_V_X_0x5e024057 v 032 00000008,00000008,00000008,00000008; mask=1111 at 2665 ns,1
+SM0 warp 0 0x800000b8                SW_0xfe112823 LSU addr=70000c10+fffffff0 at 2685 ns,1
+SM0 warp 0 0x800000bc                LW_0x00852283 LSU addr=90003000+00000008 at 2745 ns,1
+SM0 warp 0 0x800000b8                SW_0xfe112823 data=80000090 addr=70000c00 at 2835 ns,1
+SM0 warp 0 0x800000bc                LW_0x00852283 x 005 90002000 at 2905 ns,1
+SM0 warp 0 DECODE: set regext(3,2,1,d)=0,0,0,1 at 2935 ns,1
+SM0 warp 0 0x800000c0                SW_0xfe512a23 LSU addr=70000c10+fffffff4 at 3165 ns,1
+SM0 warp 0 0x800000c4                LW_0x00452283 LSU addr=90003000+00000004 at 3225 ns,1
+SM0 warp 0 0x800000c0                SW_0xfe512a23 data=90002000 addr=70000c04 at 3315 ns,1
+SM0 warp 0 0x800000c4                LW_0x00452283 x 005 90001000 at 3385 ns,1
+SM0 warp 0 DECODE: set regext(3,2,1,d)=0,1,1,0 at 3465 ns,1
+SM0 warp 0 0x800000c8                SW_0xfe512c23 LSU addr=70000c10+fffffff8 at 3645 ns,1
+SM0 warp 0 0x800000cc                LW_0x00052283 LSU addr=90003000+00000000 at 3705 ns,1
+SM0 warp 0 0x800000c8                SW_0xfe512c23 data=90001000 addr=70000c08 at 3795 ns,1
+SM0 warp 0 0x800000cc                LW_0x00052283 x 005 90000000 at 3865 ns,1
+SM0 warp 0 0x800000d8               JAL_0x0e4000ef jump=true, jumpTO 0x800001bc at 3995 ns,1
+SM0 warp 0 0x800000d8               JAL_0x0e4000ef x 001 800000dc at 4005 ns,1
+SM0 warp 0 0x800000d4           VMV_V_X_0x5e004057 v 000 00000000,00000000,00000000,00000000; mask=1111 at 4015 ns,1
+SM0 warp 0 0x800001bc              ADDI_0x00410113 x 002 70000c14 at 4095 ns,1
+SM0 warp 0 0x800000d0                SW_0xfe512e23 LSU addr=70000c10+fffffffc at 4125 ns,1
+SM0 warp 0 0x800001c0                SW_0xfe112e23 LSU addr=70000c14+fffffffc at 4185 ns,1
+SM0 warp 0 0x800001c4              ADDI_0x00200293 x 005 00000002 at 4185 ns,1
+SM0 warp 0 0x800001c8           VMV_V_X_0x5e02c0d7 v 001 00000002,00000002,00000002,00000002; mask=1111 at 4265 ns,1
+SM0 warp 0 0x800000d0                SW_0xfe512e23 data=90000000 addr=70000c0c at 4275 ns,1
+SM0 warp 0 0x800001cc             AUIPC_0x00000317 x 006 800001cc at 4305 ns,1
+SM0 warp 0 0x800001c0                SW_0xfe112e23 data=800000dc addr=70000c10 at 4335 ns,1
+SM0 warp 00x800001d0            SETRPC_0x04c3305b CSR[0X80c]=80000218 at 4375 ns,1
+SM0 warp 0 0x800001d0            SETRPC_0x04c3305b x 000 00000000 at 4395 ns,1
+SM0 warp 0 0x800001d4              VBEQ_0x0200885b join 1111 at 4435 ns,1
+SM0 warp 0 0x800001d8              ADDI_0x00100293 x 005 00000001 at 4525 ns,1
+SM0 warp 0 0x800001e0             AUIPC_0x00000317 x 006 800001e0 at 4605 ns,1
+SM0 warp 0 0x800001dc           VMV_V_X_0x5e02c0d7 v 001 00000001,00000001,00000001,00000001; mask=1111 at 4615 ns,1
+SM0 warp 00x800001e4            SETRPC_0x0383305b CSR[0X80c]=80000218 at 4645 ns,1
+SM0 warp 0 0x800001e4            SETRPC_0x0383305b x 000 00000000 at 4665 ns,1
+SM0 warp 0 0x800001e8              VBEQ_0x0200825b join 1111 at 4695 ns,1
+SM0 warp 0 0x800001f0             AUIPC_0x00000317 x 006 800001f0 at 4775 ns,1
+SM0 warp 0 0x800001ec           VMV_V_X_0x5e0040d7 v 001 00000000,00000000,00000000,00000000; mask=1111 at 4785 ns,1
+SM0 warp 00x800001f4            SETRPC_0x0283305b CSR[0X80c]=80000218 at 4815 ns,1
+SM0 warp 0 0x800001f4            SETRPC_0x0283305b x 000 00000000 at 4825 ns,1
+SM0 warp 0 0x800001f8              VBNE_0x00009e5b join 1111 at 4895 ns,1
+SM0 warp 0 0x800001fc               JAL_0x168000ef jump=true, jumpTO 0x80000364 at 4945 ns,1
+SM0 warp 0 0x800001fc               JAL_0x168000ef x 001 80000200 at 4955 ns,1
+SM0 warp 0 0x80000364              ADDI_0x00410113 x 002 70000c18 at 5035 ns,1
+SM0 warp 0 0x80000368                SW_0xfe112e23 LSU addr=70000c18+fffffffc at 5095 ns,1
+SM0 warp 0 0x8000036c               JAL_0xf71ff0ef jump=true, jumpTO 0x800002dc at 5125 ns,1
+SM0 warp 0 0x8000036c               JAL_0xf71ff0ef x 001 80000370 at 5135 ns,1
+SM0 warp 0 write CSR[0x803]=0x90014000 by ins            CSRRS_0x80302573 at 5195 ns,1
+SM0 warp 0 0x800002dc             CSRRS_0x80302573 x 010 90014000 at 5205 ns,1
+SM0 warp 0 0x800002e0                LW_0x00852283 LSU addr=90014000+00000008 at 5245 ns,1
+SM0 warp 0 0x80000368                SW_0xfe112e23 data=80000200 addr=70000c14 at 5245 ns,1
+SM0 warp 0 write CSR[0x800]=0xc by ins            CSRRS_0x80002373 at 5275 ns,1
+SM0 warp 0 0x800002e4             CSRRS_0x80002373 x 006 0000000c at 5285 ns,1
+SM0 warp 0 0x800002e8             VID_V_0x5208a157 v 002 00000000,00000001,00000002,00000003; mask=1111 at 5305 ns,1
+SM0 warp 0 0x800002f0              ADDI_0x00100393 x 007 00000001 at 5405 ns,1
+SM0 warp 0 0x800002ec           VADD_VX_0x02234057 v 000 0000000c,0000000d,0000000e,0000000f; mask=1111 at 5415 ns,1
+SM0 warp 0 0x800002e0                LW_0x00852283 x 005 00000002 at 5435 ns,1
+SM0 warp 0 0x800002f4               BEQ_0x00728663 jump=false at 5485 ns,1
+SM0 warp 0 0x800002f8                LW_0x01852e03 LSU addr=90014000+00000018 at 5705 ns,1
+SM0 warp 0 0x800002f8                LW_0x01852e03 x 028 00000004 at 5865 ns,1
+SM0 warp 0 0x80000300              JALR_0x00008067 jump=true, jumpTO 0x80000370 at 5935 ns,1
+SM0 warp 0 0x80000300              JALR_0x00008067 x 000 80000304 at 5945 ns,1
+SM0 warp 0 0x800002fc          VREMU_VX_0x8a0e6057 v 000 00000000,00000001,00000002,00000003; mask=1111 at 5985 ns,1
+SM0 warp 0 write CSR[0x803]=0x90014304 by ins            CSRRS_0x80302573 at 6025 ns,1
+SM0 warp 0 0x80000370             CSRRS_0x80302573 x 010 90014000 at 6035 ns,1
+SM0 warp 0 write CSR[0x808]=0x80000304 by ins            CSRRS_0x80802373 at 6045 ns,1
+SM0 warp 0 0x80000374             CSRRS_0x80802373 x 006 00000000 at 6065 ns,1
+SM0 warp 0 0x80000378                LW_0x01852e03 LSU addr=90014000+00000018 at 6095 ns,1
+SM0 warp 0 0x80000378                LW_0x01852e03 x 028 00000004 at 6255 ns,1
+SM0 warp 0 0x8000037c               MUL_0x03c30fb3 x 031 00000000 at 6365 ns,1
+SM0 warp 0 0x80000384                LW_0xffc12083 LSU addr=70000c18+fffffffc at 6415 ns,1
+SM0 warp 0 0x80000380           VADD_VX_0x020fc057 v 000 00000000,00000001,00000002,00000003; mask=1111 at 6445 ns,1
+SM0 warp 0 0x8000038c              ADDI_0xffc10113 x 002 70000c14 at 6465 ns,1
+SM0 warp 0 0x80000384                LW_0xffc12083 x 001 80000200 at 6575 ns,1

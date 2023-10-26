@@ -827,6 +827,7 @@ namespace DecodeParams
         FN_A2ZERO,
         FN_SWAP,
         FN_AMOADD,
+        FN_VLS12,
     };
     enum mem_t
     {

@@ -72,9 +72,9 @@ void BASE::WRITE_REG(int warp_id)
                          << " " << wb_ins
                          << " v " << std::setfill('0') << std::setw(3) << rdv1_addr.read() << " "
                          << std::hex << std::setw(8);
-                    for (int j = 0; j < num_thread - 1; j++)
+                    for (int j = num_thread - 1; j > 0; j--)
                         cout << rdv1_data[j] << ",";
-                    cout << rdv1_data[num_thread - 1];
+                    cout << rdv1_data[0];
                     cout << std::dec << std::setfill(' ') << std::setw(0)
                          << "; mask=" << wb_ins.read().mask << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 }

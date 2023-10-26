@@ -7,10 +7,10 @@ from tabulate import tabulate
 pattern = r"^(\w+)\s*->\s*List\(([\w\s\.\,]+)\)"
 
 current_dir = os.path.dirname(__file__)
-txtfile = os.path.join(current_dir, "init_decodetable.txt")
+scalafile = os.path.join(current_dir, "DecodeUnit.scala")
 
 # 打开要读取的文件
-with open(txtfile, "r") as f:
+with open(scalafile, "r") as f:
     # 消除每行开头空行
     lines = [line.strip() for line in f if line.strip()]
     # 创建输出文件
