@@ -2,7 +2,6 @@
 
 void BASE::MUL_IN()
 {
-    I_TYPE new_ins;
     mul_in_t new_data;
     int a_delay, b_delay;
     while (true)
@@ -23,6 +22,7 @@ void BASE::MUL_IN()
                 {
                     new_data.rsv1_data[i] = tomul_data1[i];
                     new_data.rsv2_data[i] = tomul_data2[i];
+                    new_data.rsv3_data[i] = tomul_data3[i];
                 }
                 mul_dq.push(new_data);
                 a_delay = 3;
@@ -90,13 +90,28 @@ void BASE::MUL_CALC()
             switch (multmp1.ins.ddd.alu_fn)
             {
 
-            case DecodeParams::FN_MUL:
+            case DecodeParams::alu_fn_t::FN_MUL:
                 // VMUL.VV, VMUL.VX
                 for (int i = 0; i < num_thread; i++)
                 {
                     if (multmp2.ins.mask[i] == 1)
                         multmp2.rdv1_data[i] = multmp1.rsv1_data[i] * multmp1.rsv2_data[i];
                 }
+                break;
+
+            case DecodeParams::alu_fn_t::FN_MADD:
+                // VMADD
+                cout << "EXEC_MUL: FN_MADD,{thread,s1,s2,s3}: " << std::hex;
+                for (int i = 0; i < num_thread; i++)
+                {
+
+                    if (multmp2.ins.mask[i] == 1)
+                    {
+                        cout << "{" << i << "," << multmp1.rsv1_data[i] << "," << multmp1.rsv2_data[i] << "," << multmp1.rsv3_data[i] << "};";
+                        multmp2.rdv1_data[i] = multmp1.rsv1_data[i] * multmp1.rsv3_data[i] + multmp1.rsv2_data[i];
+                    }
+                }
+                cout << std::dec << "\n";
                 break;
 
             default:

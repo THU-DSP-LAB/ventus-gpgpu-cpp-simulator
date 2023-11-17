@@ -2,7 +2,6 @@
 
 void BASE::VFPU_IN()
 {
-    I_TYPE new_ins;
     vfpu_in_t new_data;
     int a_delay, b_delay;
     while (true)
@@ -18,21 +17,12 @@ void BASE::VFPU_IN()
             new_data.ins = emit_ins;
             new_data.warp_id = emitins_warpid;
 
-            if (new_data.ins.ddd.sel_alu1 == DecodeParams::A1_VRS1)
-                for (int j = 0; j < num_thread; j++)
-                    new_data.vfpuSdata1[j] = tovfpu_data1[j];
-            else if (new_data.ins.ddd.sel_alu1 == DecodeParams::A1_RS1)
-                new_data.vfpuSdata1[0] = tovfpu_data1[0];
-            if (new_data.ins.ddd.sel_alu2 == DecodeParams::A2_VRS2)
-                for (int j = 0; j < num_thread; j++)
-                    new_data.vfpuSdata2[j] = tovfpu_data2[j];
-            else if (new_data.ins.ddd.sel_alu2 == DecodeParams::A2_RS2)
-                new_data.vfpuSdata2[0] = tovfpu_data2[0];
-            if (new_data.ins.ddd.sel_alu3 == DecodeParams::A3_VRS3)
-                for (int j = 0; j < num_thread; j++)
-                    new_data.vfpuSdata3[j] = tovfpu_data3[j];
-            else if (new_data.ins.ddd.sel_alu3 == DecodeParams::A3_FRS3)
-                new_data.vfpuSdata3[0] = tovfpu_data3[0];
+            for (int i = 0; i < num_thread; i++)
+            {
+                new_data.vfpuSdata1[i] = tovfpu_data1[i];
+                new_data.vfpuSdata2[i] = tovfpu_data2[i];
+                new_data.vfpuSdata3[i] = tovfpu_data3[i];
+            }
 
             vfpu_dq.push(new_data);
             a_delay = 5;
@@ -91,7 +81,7 @@ void BASE::VFPU_CALC()
             vfputmp2.warp_id = vfputmp1.warp_id;
             switch (vfputmp1.ins.ddd.alu_fn)
             {
-            case DecodeParams::FN_FADD:
+            case DecodeParams::alu_fn_t::FN_FADD:
                 // VFADD.VF, VFADD.VV
                 for (int i = 0; i < num_thread; i++)
                     vfputmp2.rdf1_data[i] = std::bit_cast<int>(std::bit_cast<float>(vfputmp1.vfpuSdata1[i]) + std::bit_cast<float>(vfputmp1.vfpuSdata2[i]));

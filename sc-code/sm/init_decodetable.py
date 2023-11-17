@@ -2,6 +2,7 @@
 import re
 import os
 from tabulate import tabulate
+import openpyxl
 
 # 定义解析规则的正则表达式
 pattern = r"^(\w+)\s*->\s*List\(([\w\s\.\,]+)\)"
@@ -210,3 +211,21 @@ markdown_table = tabulate(table_data, headers, tablefmt="pipe")
 # 保存Markdown表格到文件
 with open(os.path.join(current_dir, "decodetable.md"), "w") as f:
     f.write(markdown_table)
+
+
+
+
+# 创建一个新的Excel工作簿
+workbook = openpyxl.Workbook()
+
+# 选择默认的工作表
+sheet = workbook.active
+
+sheet.append(headers)
+
+
+for row in table_data:
+    sheet.append(row)
+
+# 保存工作簿为Excel文件
+workbook.save(os.path.join(current_dir, "decodetable.xlsx"))

@@ -52,7 +52,7 @@ int sc_main(int argc, char *argv[])
         BASE_impl[i]->metafile = "../../testcase/" + metafile;
         BASE_impl[i]->datafile = "../../testcase/" + datafile;
         for (auto &warp_ : BASE_impl[i]->WARPS)
-            if (warp_->is_warp_activated)
+            if (warp_->will_warp_activate)
             {
                 BASE_impl[i]->ev_issue_list &= warp_->ev_issue;
             }
@@ -79,7 +79,7 @@ int sc_main(int argc, char *argv[])
         sc_trace(tf[i], rst_n, "Rst_n");
         sc_trace(tf[i], BASE_impl[0]->WARPS[i]->jump, "jump");
         sc_trace(tf[i], BASE_impl[0]->WARPS[i]->jump_addr, "jump_addr");
-        sc_trace(tf[i], BASE_impl[0]->WARPS[i]->branch_sig, "bramch_sig");
+        sc_trace(tf[i], BASE_impl[0]->WARPS[i]->branch_sig, "branch_sig");
         sc_trace(tf[i], BASE_impl[0]->WARPS[i]->fetch_valid, "fetch_valid");
         sc_trace(tf[i], BASE_impl[0]->WARPS[i]->fetch_valid2, "fetch_valid2");
         sc_trace(tf[i], BASE_impl[0]->WARPS[i]->pc, "pc");
@@ -178,7 +178,9 @@ int sc_main(int argc, char *argv[])
 
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-    std::cout << "Time taken: " << duration.count() / 1000 << " milliseconds" << std::endl;
+    std::cout << "Time taken: " << std::dec << duration.count() / 1000 << " milliseconds" << std::endl;
 
+    delete[] BASE_impl;
     return 0;
 }
+

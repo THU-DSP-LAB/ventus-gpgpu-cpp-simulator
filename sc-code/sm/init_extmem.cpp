@@ -69,7 +69,8 @@ uint32_t BASE::getBufferData(const std::vector<std::vector<uint8_t>> &buffers, u
 
     if (bufferIndex == -1)
     {
-        std::cerr << "getBufferData Error: No buffer found for the given virtual address 0x" << std::hex << virtualAddress << " for ins" << ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+        std::cerr << "getBufferData Error: No buffer found for the given virtual address 0x" << std::hex << virtualAddress
+                  << " for ins pc=0x" << ins.currentpc << ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n ";
         addrOutofRangeException = 1;
         return 0;
     }
@@ -142,8 +143,7 @@ void init_local_and_private_mem(std::vector<std::vector<uint8_t>> &buffers, meta
 {
     uint64_t ldsSize = mtd.ldsSize;
     uint64_t pdsSize = mtd.pdsSize;
-    buffers[mtd.num_buffer - 2].resize(ldsSize);
-    buffers[mtd.num_buffer - 1].resize(pdsSize);
+    buffers[mtd.num_buffer - 1].resize(ldsSize);
 }
 
 void BASE::INIT_EXTMEM()

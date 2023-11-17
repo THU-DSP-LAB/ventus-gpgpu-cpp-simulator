@@ -2,7 +2,6 @@
 
 void BASE::VALU_IN()
 {
-    I_TYPE new_ins;
     valu_in_t new_data;
     int a_delay, b_delay;
     sc_bv<num_thread> _velsemask;
@@ -15,9 +14,9 @@ void BASE::VALU_IN()
             if (valu_ready_old == false)
                 cout << "valu error: not ready at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
             valu_unready.notify();
-            switch (emit_ins.read().op)
+
+            if (emit_ins.read().ddd.branch != DecodeParams::branch_t::B_N)
             {
-            case VBEQ_:
                 new_data.ins = emit_ins;
                 new_data.warp_id = emitins_warpid;
                 for (int i = 0; i < num_thread; i++)
@@ -46,9 +45,9 @@ void BASE::VALU_IN()
                     valu_eqb.notify(sc_time((b_delay)*PERIOD, SC_NS));
                     ev_valuready_updated.notify();
                 }
-                break;
-
-            default:
+            }
+            else
+            {
                 new_data.ins = emit_ins;
                 new_data.warp_id = emitins_warpid;
                 for (int i = 0; i < num_thread; i++)
@@ -81,11 +80,6 @@ void BASE::VALU_IN()
                     valu_eqb.notify(sc_time((b_delay)*PERIOD, SC_NS));
                     ev_valuready_updated.notify();
                 }
-                break;
-
-                // default:
-                //     cout << "valu error: receive wrong ins " << emit_ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-                // break;
             }
         }
         else
@@ -130,7 +124,7 @@ void BASE::VALU_CALC()
             switch (valutmp1.ins.ddd.alu_fn)
             {
 
-            case DecodeParams::FN_ADD:
+            case DecodeParams::alu_fn_t::FN_ADD:
                 // VADD12.VI, VADD.VI, VADD.VV, VADD.VX
                 for (int i = 0; i < num_thread; i++)
                 {
@@ -139,7 +133,7 @@ void BASE::VALU_CALC()
                 }
                 break;
 
-            case DecodeParams::FN_AND:
+            case DecodeParams::alu_fn_t::FN_AND:
                 // VAND.VI, VAND.VV, VAND.VX
                 for (int i = 0; i < num_thread; i++)
                 {
@@ -148,7 +142,7 @@ void BASE::VALU_CALC()
                 }
                 break;
 
-            case DecodeParams::FN_SL:
+            case DecodeParams::alu_fn_t::FN_SL:
                 // VSLL.VI, VSLL.VV, VSLL.VX
                 if (!valutmp1.ins.ddd.reverse)
                     for (int i = 0; i < num_thread; i++)
@@ -164,7 +158,7 @@ void BASE::VALU_CALC()
                     }
                 break;
 
-            case DecodeParams::FN_SUB:
+            case DecodeParams::alu_fn_t::FN_SUB:
                 // VSUB12.VI, VSUB.VV, VSUB.VX
                 if (!valutmp1.ins.ddd.reverse)
                     for (int i = 0; i < num_thread; i++)
@@ -179,13 +173,13 @@ void BASE::VALU_CALC()
                             valutmp2.rdv1_data[i] = valutmp1.rsv2_data[i] - valutmp1.rsv1_data[i];
                     }
                 break;
-            case DecodeParams::FN_VID:
+            case DecodeParams::alu_fn_t::FN_VID:
                 // VID.V
                 for (int i = 0; i < num_thread; i++)
                     valutmp2.rdv1_data[i] = i;
                 break;
 
-            case DecodeParams::FN_A2ZERO:
+            case DecodeParams::alu_fn_t::FN_A2ZERO:
                 // VMV.S.X
                 // 由于指令编码错误 现在当成vmv.v.x
                 // cout << "VALU_CALC switch to FN_A2ZERO, RSDATA=" << valutmp1.rsv1_data[0]
@@ -214,7 +208,7 @@ void BASE::VALU_CALC()
                 }
                 branch_elsemask = _velsemask;
                 branch_ifmask = ~_velsemask;
-                branch_elsepc = valutmp1.ins.currentpc + valutmp1.ins.d;
+                branch_elsepc = valutmp1.rsv3_data[0];
                 valuto_simtstk = true;
                 vbranch_ins = valutmp1.ins;
                 vbranchins_warpid = valutmp1.warp_id;

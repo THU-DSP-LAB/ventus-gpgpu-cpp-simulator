@@ -1,19 +1,3 @@
-----------Initializing CTAs----------
-CTA: Finish readHexFile()
-CTA: assignMetadata, metadata size=35
-CTA: assign mtd.num_buffer=8(including the extra local memory buffer)
-CTA: mtd.buffer_base=90000000,90001000,90002000,90003000,80000000,90004000,90014000,70000000,
-CTA: mtd.buffer_size=40,40,40,c,4d8,0,40,0,
-CTA: mtd.buffer_allocsize=40,40,40,c,10000000,10000,40,1000,
-CTA: Finish assignMetadata()
-
-Info: CTA_Scheduler: Activating warps...
-CTA: knum_workgroup=1
-CTA: SM0 warp0 is activated
-CTA: SM0 warp1 is activated
-CTA: SM0 warp2 is activated
-CTA: SM0 warp3 is activated
-
 Info: (I703) tracing timescale unit set: 1 ns (BASE_wave_warp0.vcd)
 
 Info: (I703) tracing timescale unit set: 1 ns (BASE_wave_warp1.vcd)
@@ -202,40 +186,40 @@ SM0 warp 0 0x800001cc             AUIPC_0x00000317 x 006 800001cc at 4305 ns,1
 SM0 warp 0 0x800001c0                SW_0xfe112e23 data=800000dc addr=70000c10 at 4335 ns,1
 SM0 warp 1 0x800000d0                SW_0xfe512e23 LSU addr=70000810+fffffffc at 4365 ns,1
 SM0 warp 3 0x800000d8               JAL_0x0e4000ef jump=true, jumpTO 0x800001bc at 4365 ns,1
-SM0 warp 00x800001d0            SETRPC_0x04c3305b CSR[0X80c]=80000218 at 4375 ns,1
+SM0 warp 0 0x800001d0            SETRPC_0x04c3305b CSR[0X80c]=80000218 at 4375 ns,1
 SM0 warp 0 0x800001d0            SETRPC_0x04c3305b x 000 00000000 at 4395 ns,1
 SM0 warp 2 0x800001c0                SW_0xfe112e23 data=800000dc addr=70000410 at 4395 ns,1
 SM0 warp 2 0x800000d0                SW_0xfe512e23 LSU addr=70000410+fffffffc at 4425 ns,1
 SM0 warp 0 0x800001d4              VBEQ_0x0200885b join 1111 at 4435 ns,1
-SM0 warp 20x800001d0            SETRPC_0x04c3305b CSR[0X80c]=80000218 at 4445 ns,1
+SM0 warp 2 0x800001d0            SETRPC_0x04c3305b CSR[0X80c]=80000218 at 4445 ns,1
 SM0 warp 3 0x800000d0                SW_0xfe512e23 data=90000000 addr=7000000c at 4455 ns,1
 SM0 warp 1 0x800001c0                SW_0xfe112e23 LSU addr=70000814+fffffffc at 4495 ns,1
 SM0 warp 2 0x800001d4              VBEQ_0x0200885b join 1111 at 4495 ns,1
 SM0 warp 1 0x800000d0                SW_0xfe512e23 data=90000000 addr=7000080c at 4515 ns,1
 SM0 warp 0 0x800001d8              ADDI_0x00100293 x 005 00000001 at 4525 ns,1
-SM0 warp 10x800001d0            SETRPC_0x04c3305b CSR[0X80c]=80000218 at 4545 ns,1
+SM0 warp 1 0x800001d0            SETRPC_0x04c3305b CSR[0X80c]=80000218 at 4545 ns,1
 SM0 warp 3 0x800001c0                SW_0xfe112e23 LSU addr=70000014+fffffffc at 4565 ns,1
 SM0 warp 2 0x800000d0                SW_0xfe512e23 data=90000000 addr=7000040c at 4575 ns,1
 SM0 warp 0 0x800001e0             AUIPC_0x00000317 x 006 800001e0 at 4605 ns,1
 SM0 warp 0 0x800001dc           VMV_V_X_0x5e02c0d7 v 001 00000001,00000001,00000001,00000001; mask=1111 at 4615 ns,1
 SM0 warp 1 0x800001d4              VBEQ_0x0200885b join 1111 at 4635 ns,1
 SM0 warp 1 0x800001c0                SW_0xfe112e23 data=800000dc addr=70000810 at 4645 ns,1
-SM0 warp 00x800001e4            SETRPC_0x0383305b CSR[0X80c]=80000218 at 4645 ns,1
+SM0 warp 0 0x800001e4            SETRPC_0x0383305b CSR[0X80c]=80000218 at 4645 ns,1
 SM0 warp 0 0x800001e4            SETRPC_0x0383305b x 000 00000000 at 4665 ns,1
-SM0 warp 30x800001d0            SETRPC_0x04c3305b CSR[0X80c]=80000218 at 4665 ns,1
+SM0 warp 3 0x800001d0            SETRPC_0x04c3305b CSR[0X80c]=80000218 at 4665 ns,1
 SM0 warp 0 0x800001e8              VBEQ_0x0200825b join 1111 at 4695 ns,1
-SM0 warp 20x800001e4            SETRPC_0x0383305b CSR[0X80c]=80000218 at 4695 ns,1
+SM0 warp 2 0x800001e4            SETRPC_0x0383305b CSR[0X80c]=80000218 at 4695 ns,1
 SM0 warp 3 0x800001c0                SW_0xfe112e23 data=800000dc addr=70000010 at 4715 ns,1
 SM0 warp 3 0x800001d4              VBEQ_0x0200885b join 1111 at 4745 ns,1
 SM0 warp 2 0x800001e8              VBEQ_0x0200825b join 1111 at 4765 ns,1
 SM0 warp 0 0x800001f0             AUIPC_0x00000317 x 006 800001f0 at 4775 ns,1
 SM0 warp 0 0x800001ec           VMV_V_X_0x5e0040d7 v 001 00000000,00000000,00000000,00000000; mask=1111 at 4785 ns,1
-SM0 warp 00x800001f4            SETRPC_0x0283305b CSR[0X80c]=80000218 at 4815 ns,1
+SM0 warp 0 0x800001f4            SETRPC_0x0283305b CSR[0X80c]=80000218 at 4815 ns,1
 SM0 warp 0 0x800001f4            SETRPC_0x0283305b x 000 00000000 at 4825 ns,1
-SM0 warp 10x800001e4            SETRPC_0x0383305b CSR[0X80c]=80000218 at 4845 ns,1
+SM0 warp 1 0x800001e4            SETRPC_0x0383305b CSR[0X80c]=80000218 at 4845 ns,1
 SM0 warp 0 0x800001f8              VBNE_0x00009e5b join 1111 at 4895 ns,1
-SM0 warp 20x800001f4            SETRPC_0x0283305b CSR[0X80c]=80000218 at 4905 ns,1
-SM0 warp 30x800001e4            SETRPC_0x0383305b CSR[0X80c]=80000218 at 4925 ns,1
+SM0 warp 2 0x800001f4            SETRPC_0x0283305b CSR[0X80c]=80000218 at 4905 ns,1
+SM0 warp 3 0x800001e4            SETRPC_0x0383305b CSR[0X80c]=80000218 at 4925 ns,1
 SM0 warp 1 0x800001e8              VBEQ_0x0200825b join 1111 at 4935 ns,1
 SM0 warp 0 0x800001fc               JAL_0x168000ef jump=true, jumpTO 0x80000364 at 4945 ns,1
 SM0 warp 0 0x800001fc               JAL_0x168000ef x 001 80000200 at 4955 ns,1
@@ -243,9 +227,9 @@ SM0 warp 2 0x800001f8              VBNE_0x00009e5b join 1111 at 4955 ns,1
 SM0 warp 3 0x800001e8              VBEQ_0x0200825b join 1111 at 4995 ns,1
 SM0 warp 2 0x800001fc               JAL_0x168000ef jump=true, jumpTO 0x80000364 at 5005 ns,1
 SM0 warp 0 0x80000364              ADDI_0x00410113 x 002 70000c18 at 5035 ns,1
-SM0 warp 10x800001f4            SETRPC_0x0283305b CSR[0X80c]=80000218 at 5035 ns,1
+SM0 warp 1 0x800001f4            SETRPC_0x0283305b CSR[0X80c]=80000218 at 5035 ns,1
 SM0 warp 0 0x80000368                SW_0xfe112e23 LSU addr=70000c18+fffffffc at 5095 ns,1
-SM0 warp 30x800001f4            SETRPC_0x0283305b CSR[0X80c]=80000218 at 5105 ns,1
+SM0 warp 3 0x800001f4            SETRPC_0x0283305b CSR[0X80c]=80000218 at 5105 ns,1
 SM0 warp 1 0x800001f8              VBNE_0x00009e5b join 1111 at 5115 ns,1
 SM0 warp 0 0x8000036c               JAL_0xf71ff0ef jump=true, jumpTO 0x800002dc at 5125 ns,1
 SM0 warp 0 0x8000036c               JAL_0xf71ff0ef x 001 80000370 at 5135 ns,1
@@ -264,7 +248,7 @@ SM0 OPC: will emit ins 5208a157
 SM0 warp 0 write CSR[0x800]=0xc by ins            CSRRS_0x80002373 at 5275 ns,1
 SM0 warp0 DECODE: decoding ins 5208a157, isvec=0, sel_execunit=DecodeParams::VALU
 SM0 warp 0 0x800002e4             CSRRS_0x80002373 x 006 0000000c at 5285 ns,1
-SM0 warp 0 0x800002e8             VID_V_0x5208a157 v 002 00000000,00000001,00000002,00000003; mask=1111 at 5305 ns,1
+SM0 warp 0 0x800002e8             VID_V_0x5208a157 v 002 00000003,00000002,00000001,00000000; mask=1111 at 5305 ns,1
 SM0 warp 2 0x80000368                SW_0xfe112e23 data=80000200 addr=70000414 at 5305 ns,1
 SM0 warp 2 write CSR[0x800]=0x4 by ins            CSRRS_0x80002373 at 5305 ns,1
 SM0 warp 1 0x80000368                SW_0xfe112e23 LSU addr=70000818+fffffffc at 5315 ns,1
@@ -272,7 +256,7 @@ SM0 OPC: will emit ins 5208a157
 SM0 warp 1 0x8000036c               JAL_0xf71ff0ef jump=true, jumpTO 0x800002dc at 5345 ns,1
 SM0 warp 2 0x800002e0                LW_0x00852283 LSU addr=90014000+00000008 at 5375 ns,1
 SM0 warp 0 0x800002f0              ADDI_0x00100393 x 007 00000001 at 5405 ns,1
-SM0 warp 0 0x800002ec           VADD_VX_0x02234057 v 000 0000000c,0000000d,0000000e,0000000f; mask=1111 at 5415 ns,1
+SM0 warp 0 0x800002ec           VADD_VX_0x02234057 v 000 0000000f,0000000e,0000000d,0000000c; mask=1111 at 5415 ns,1
 SM0 warp 3 0x8000036c               JAL_0xf71ff0ef jump=true, jumpTO 0x800002dc at 5415 ns,1
 SM0 warp 1 write CSR[0x803]=0x90014000 by ins            CSRRS_0x80302573 at 5425 ns,1
 SM0 warp 0 0x800002e0                LW_0x00852283 x 005 00000002 at 5435 ns,1
@@ -300,7 +284,7 @@ SM0 warp 0 0x80000300              JALR_0x00008067 jump=true, jumpTO 0x80000370 
 SM0 warp 0 0x80000300              JALR_0x00008067 x 000 80000304 at 5945 ns,1
 SM0 warp 2 write CSR[0x803]=0x90014304 by ins            CSRRS_0x80302573 at 5955 ns,1
 SM0 warp 2 write CSR[0x808]=0x80000304 by ins            CSRRS_0x80802373 at 5965 ns,1
-SM0 warp 0 0x800002fc          VREMU_VX_0x8a0e6057 v 000 00000000,00000001,00000002,00000003; mask=1111 at 5985 ns,1
+SM0 warp 0 0x800002fc          VREMU_VX_0x8a0e6057 v 000 00000003,00000002,00000001,00000000; mask=1111 at 5985 ns,1
 SM0 warp 2 0x80000378                LW_0x01852e03 LSU addr=90014000+00000018 at 6015 ns,1
 SM0 warp 0 write CSR[0x803]=0x90014304 by ins            CSRRS_0x80302573 at 6025 ns,1
 SM0 warp 0 0x80000370             CSRRS_0x80302573 x 010 90014000 at 6035 ns,1
@@ -333,7 +317,7 @@ SM0 OPC_EMIT warning: ins=          BARRIER_0x0400c00b,400c00b but undefined EXE
 SM0 OPC_EMIT warning: ins=          BARRIER_0x0400c00b,400c00b but undefined EXECUNIT at 6415 ns,1
 SM0 OPC_EMIT warning: ins=          BARRIER_0x0400c00b,400c00b but undefined EXECUNIT at 6425 ns,1
 SM0 OPC_EMIT warning: ins=          BARRIER_0x0400c00b,400c00b but undefined EXECUNIT at 6425 ns,1
-SM0 warp 0 0x80000380           VADD_VX_0x020fc057 v 000 00000000,00000001,00000002,00000003; mask=1111 at 6445 ns,1
+SM0 warp 0 0x80000380           VADD_VX_0x020fc057 v 000 00000003,00000002,00000001,00000000; mask=1111 at 6445 ns,1
 SM0 OPC_EMIT warning: ins=          BARRIER_0x0400c00b,400c00b but undefined EXECUNIT at 6445 ns,1
 SM0 OPC_EMIT warning: ins=          BARRIER_0x0400c00b,400c00b but undefined EXECUNIT at 6445 ns,1
 SM0 OPC_EMIT warning: ins=          BARRIER_0x0400c00b,400c00b but undefined EXECUNIT at 6455 ns,1
@@ -382,3 +366,34 @@ SM0 warp 3 0x80000384                LW_0xffc12083 LSU addr=70000018+fffffffc at
 SM0 OPC_EMIT warning: ins=          BARRIER_0x0400c00b,400c00b but undefined EXECUNIT at 6595 ns,1
 SM0 OPC_EMIT warning: ins=          BARRIER_0x0400c00b,400c00b but undefined EXECUNIT at 6595 ns,1
 SM0 OPC_EMIT warning: ins=          BARRIER_0x0400c00b,400c00b but undefined EXECUNIT at 6595 ns,1
+SM0 OPC_EMIT warning: ins=          BARRIER_0x0400c00b,400c00b but undefined EXECUNIT at 6595 ns,1
+SM0 OPC_EMIT warning: ins=          BARRIER_0x0400c00b,400c00b but undefined EXECUNIT at 6605 ns,1
+SM0 OPC_EMIT warning: ins=          BARRIER_0x0400c00b,400c00b but undefined EXECUNIT at 6605 ns,1
+SM0 OPC_EMIT warning: ins=          BARRIER_0x0400c00b,400c00b but undefined EXECUNIT at 6605 ns,1
+SM0 OPC_EMIT warning: ins=          BARRIER_0x0400c00b,400c00b but undefined EXECUNIT at 6605 ns,1
+SM0 OPC_EMIT warning: ins=          BARRIER_0x0400c00b,400c00b but undefined EXECUNIT at 6615 ns,1
+SM0 OPC_EMIT warning: ins=          BARRIER_0x0400c00b,400c00b but undefined EXECUNIT at 6615 ns,1
+SM0 OPC_EMIT warning: ins=          BARRIER_0x0400c00b,400c00b but undefined EXECUNIT at 6615 ns,1
+SM0 OPC_EMIT warning: ins=          BARRIER_0x0400c00b,400c00b but undefined EXECUNIT at 6615 ns,1
+SM0 OPC_EMIT warning: ins=          BARRIER_0x0400c00b,400c00b but undefined EXECUNIT at 6625 ns,1
+SM0 OPC_EMIT warning: ins=          BARRIER_0x0400c00b,400c00b but undefined EXECUNIT at 6625 ns,1
+SM0 OPC_EMIT warning: ins=          BARRIER_0x0400c00b,400c00b but undefined EXECUNIT at 6625 ns,1
+SM0 OPC_EMIT warning: ins=          BARRIER_0x0400c00b,400c00b but undefined EXECUNIT at 6625 ns,1
+SM0 OPC_EMIT warning: ins=          BARRIER_0x0400c00b,400c00b but undefined EXECUNIT at 6635 ns,1
+SM0 OPC_EMIT warning: ins=          BARRIER_0x0400c00b,400c00b but undefined EXECUNIT at 6635 ns,1
+SM0 OPC_EMIT warning: ins=          BARRIER_0x0400c00b,400c00b but undefined EXECUNIT at 6635 ns,1
+SM0 OPC_EMIT warning: ins=          BARRIER_0x0400c00b,400c00b but undefined EXECUNIT at 6635 ns,1
+SM0 OPC_EMIT warning: ins=          BARRIER_0x0400c00b,400c00b but undefined EXECUNIT at 6645 ns,1
+SM0 OPC_EMIT warning: ins=          BARRIER_0x0400c00b,400c00b but undefined EXECUNIT at 6645 ns,1
+SM0 OPC_EMIT warning: ins=          BARRIER_0x0400c00b,400c00b but undefined EXECUNIT at 6645 ns,1
+SM0 OPC_EMIT warning: ins=          BARRIER_0x0400c00b,400c00b but undefined EXECUNIT at 6645 ns,1
+SM0 OPC_EMIT warning: ins=          BARRIER_0x0400c00b,400c00b but undefined EXECUNIT at 6655 ns,1
+SM0 OPC_EMIT warning: ins=          BARRIER_0x0400c00b,400c00b but undefined EXECUNIT at 6655 ns,1
+SM0 OPC_EMIT warning: ins=          BARRIER_0x0400c00b,400c00b but undefined EXECUNIT at 6655 ns,1
+SM0 OPC_EMIT warning: ins=          BARRIER_0x0400c00b,400c00b but undefined EXECUNIT at 6655 ns,1
+SM0 OPC_EMIT warning: ins=          BARRIER_0x0400c00b,400c00b but undefined EXECUNIT at 6665 ns,1
+SM0 OPC_EMIT warning: ins=          BARRIER_0x0400c00b,400c00b but undefined EXECUNIT at 6665 ns,1
+SM0 OPC_EMIT warning: ins=          BARRIER_0x0400c00b,400c00b but undefined EXECUNIT at 6665 ns,1
+SM0 OPC_EMIT warning: ins=          BARRIER_0x0400c00b,400c00b but undefined EXECUNIT at 6665 ns,1
+SM0 OPC_EMIT warning: ins=          BARRIER_0x0400c00b,400c00b but undefined EXECUNIT at 6675 ns,1
+SM0 OPC_EMIT warning: ins=          BARRIER_0x0400c00b,400c00b but undefined EXECUNIT at 6675 ns,1

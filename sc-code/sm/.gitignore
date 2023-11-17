@@ -1,0 +1,3 @@
+.cache
+*.bak
+compile_commands.json

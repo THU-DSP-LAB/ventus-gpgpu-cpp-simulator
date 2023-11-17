@@ -58,12 +58,11 @@ void BASE::DECODE(int warp_id)
                 ext2 = extractBits32(tmpins.origin32bit, 28, 26);
                 ext1 = extractBits32(tmpins.origin32bit, 25, 23);
                 extd = extractBits32(tmpins.origin32bit, 22, 20);
-                cout << "SM" << sm_id << " warp " << warp_id << " DECODE: set regext(3,2,1,d)=" << ext3 << "," << ext2 << "," << ext1 << "," << extd << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                cout << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex << tmpins.currentpc << tmpins << " DECODE: set regext(3,2,1,d)=" << ext3 << "," << ext2 << "," << ext1 << "," << extd << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
             }
             else
             {
                 WARPS[warp_id]->fetch_valid2 = WARPS[warp_id]->fetch_valid12;
-                // tmpins.ddd.mem = (tmpins.ddd.mem_cmd & 1) | ((tmpins.ddd.mem_cmd) >> 1 & 1);
                 if (tmpins.ddd.tc)
                     tmpins.ddd.sel_execunit = DecodeParams::TC;
                 else if (tmpins.ddd.sfu)
@@ -88,10 +87,6 @@ void BASE::DECODE(int warp_id)
                 else
                     tmpins.ddd.sel_execunit = DecodeParams::SALU;
 
-                if (sm_id == 0 && warp_id == 0 && tmpins.origin32bit == (uint32_t)0x5208a157)
-                    cout << "SM" << sm_id << " warp" << warp_id << " DECODE: decoding ins " << std::hex << tmpins.origin32bit << std::dec
-                         << ", isvec=" << WARPS[warp_id]->fetch_ins.ddd.isvec << ", sel_execunit=" << magic_enum::enum_name(tmpins.ddd.sel_execunit) << "\n";
-
                 tmpins.s1 = extractBits32(tmpins.origin32bit, 19, 15);
                 tmpins.s2 = extractBits32(tmpins.origin32bit, 24, 20);
                 tmpins.s3 = (tmpins.ddd.fp & !tmpins.ddd.isvec)
@@ -107,36 +102,38 @@ void BASE::DECODE(int warp_id)
                     WILLregext = false;
                 }
                 scinsbit = tmpins.origin32bit;
+                tmpins.ddd.mop = tmpins.ddd.readmask ? 3 : (scinsbit.range(27, 26)).to_uint();
+
                 switch (tmpins.ddd.sel_imm)
                 {
-                case DecodeParams::IMM_I:
+                case DecodeParams::sel_imm_t::IMM_I:
                     tmpins.imm = scinsbit.range(31, 20).to_int(); // to_int()会自动补符号位，to_uint()补0
                     break;
-                case DecodeParams::IMM_S:
+                case DecodeParams::sel_imm_t::IMM_S:
                     tmpins.imm = (scinsbit.range(31, 25), scinsbit.range(11, 7)).to_int();
                     break;
-                case DecodeParams::IMM_B:
+                case DecodeParams::sel_imm_t::IMM_B:
                     tmpins.imm = (scinsbit.range(31, 31), scinsbit.range(7, 7), scinsbit.range(30, 25), scinsbit.range(11, 8)).to_int() << 1;
                     break;
-                case DecodeParams::IMM_U:
+                case DecodeParams::sel_imm_t::IMM_U:
                     tmpins.imm = (scinsbit.range(31, 12)).to_int() << 12;
                     break;
-                case DecodeParams::IMM_J:
+                case DecodeParams::sel_imm_t::IMM_J:
                     tmpins.imm = (scinsbit.range(31, 31), scinsbit.range(19, 12), scinsbit.range(20, 20), scinsbit.range(30, 21)).to_int() << 1;
                     break;
-                case DecodeParams::IMM_Z:
+                case DecodeParams::sel_imm_t::IMM_Z:
                     tmpins.imm = (scinsbit.range(19, 15)).to_uint();
                     break;
-                case DecodeParams::IMM_2:
+                case DecodeParams::sel_imm_t::IMM_2:
                     tmpins.imm = (scinsbit.range(24, 20)).to_int();
                     break;
-                case DecodeParams::IMM_V: // 和scala不一样，需要修改，加位拓展
+                case DecodeParams::sel_imm_t::IMM_V: // 和scala不一样，需要修改，加位拓展
                     tmpins.imm = (scinsbit.range(19, 15)).to_int();
                     break;
-                case DecodeParams::IMM_L11:
+                case DecodeParams::sel_imm_t::IMM_L11:
                     tmpins.imm = (scinsbit.range(30, 20)).to_int();
                     break;
-                case DecodeParams::IMM_S11:
+                case DecodeParams::sel_imm_t::IMM_S11:
                     tmpins.imm = (scinsbit.range(30, 25), scinsbit.range(11, 7)).to_int();
                     break;
                 default:

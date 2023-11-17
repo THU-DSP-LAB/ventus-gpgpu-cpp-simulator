@@ -2,7 +2,6 @@
 
 void BASE::SALU_IN()
 {
-    I_TYPE new_ins;
     salu_in_t new_data;
     int a_delay, b_delay;
     while (true)
@@ -81,6 +80,7 @@ void BASE::SALU_CALC()
     salufifo_empty = 1;
     salueqa_triggered = false;
     bool succeed;
+    int jump_addr_tmp;
     while (true)
     {
         wait(salu_eva | salu_eqa.default_event());
@@ -106,53 +106,53 @@ void BASE::SALU_CALC()
             salutmp2.warp_id = salutmp1.warp_id;
             switch (salutmp1.ins.ddd.alu_fn)
             {
-            case DecodeParams::FN_ADD:
+            case DecodeParams::alu_fn_t::FN_ADD:
                 salutmp2.data = salutmp1.rss1_data + salutmp1.rss2_data;
 
-                if (salutmp1.ins.ddd.branch == DecodeParams::B_J) // jal
+                if (salutmp1.ins.ddd.branch == DecodeParams::branch_t::B_J) // jal
                 {
                     cout << "SM" << sm_id << " warp " << salutmp1.warp_id << " 0x" << std::hex << salutmp1.ins.currentpc << " " << salutmp1.ins << " jump=true, jumpTO 0x" << std::hex << salutmp1.rss3_data << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                     WARPS[salutmp1.warp_id]->branch_sig = true;
                     WARPS[salutmp1.warp_id]->jump = 1;
                     WARPS[salutmp1.warp_id]->jump_addr = salutmp1.rss3_data;
                 }
-                else if (salutmp1.ins.ddd.branch == DecodeParams::B_R) // jalr
+                else if (salutmp1.ins.ddd.branch == DecodeParams::branch_t::B_R) // jalr
                 {
-                    cout << "SM" << sm_id << " warp " << salutmp1.warp_id << " 0x" << std::hex << salutmp1.ins.currentpc << " " << salutmp1.ins << " jump=true, jumpTO 0x" << std::hex << salutmp1.rss3_data << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-
+                    jump_addr_tmp = (salutmp1.rss3_data + salutmp1.ins.imm) & (~1);
+                    cout << "SM" << sm_id << " warp " << salutmp1.warp_id << " 0x" << std::hex << salutmp1.ins.currentpc << " " << salutmp1.ins << " jump=true, jumpTO 0x" << std::hex << jump_addr_tmp << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                     WARPS[salutmp1.warp_id]->branch_sig = true;
                     WARPS[salutmp1.warp_id]->jump = 1;
-                    WARPS[salutmp1.warp_id]->jump_addr = (salutmp1.rss3_data + salutmp1.ins.imm) & (~1);
+                    WARPS[salutmp1.warp_id]->jump_addr = jump_addr_tmp;
                 }
 
                 break;
 
             // case AND_:
             // case ANDI_:
-            case DecodeParams::FN_AND:
+            case DecodeParams::alu_fn_t::FN_AND:
                 salutmp2.data = salutmp1.rss1_data & salutmp1.rss2_data;
                 break;
 
             // case LUI_:
-            case DecodeParams::FN_A1ZERO:
+            case DecodeParams::alu_fn_t::FN_A1ZERO:
                 salutmp2.data = salutmp1.rss2_data;
                 break;
 
             // case OR_:
             // case ORI_:
-            case DecodeParams::FN_OR:
+            case DecodeParams::alu_fn_t::FN_OR:
                 salutmp2.data = salutmp1.rss1_data | salutmp1.rss2_data;
                 break;
 
             // case SLL_:
             // case SLLI_:
-            case DecodeParams::FN_SL:
+            case DecodeParams::alu_fn_t::FN_SL:
                 salutmp2.data = salutmp1.rss1_data << salutmp1.rss2_data;
                 break;
 
             // case SLT_:
             // case SLTI_:
-            case DecodeParams::FN_SLT:
+            case DecodeParams::alu_fn_t::FN_SLT:
                 if (salutmp1.rss1_data < salutmp1.rss2_data)
                     salutmp2.data = 1;
                 else
@@ -161,7 +161,7 @@ void BASE::SALU_CALC()
 
             // case SLTIU_:
             // case SLTU_:
-            case DecodeParams::FN_SLTU:
+            case DecodeParams::alu_fn_t::FN_SLTU:
                 if (static_cast<unsigned int>(salutmp1.rss1_data) < static_cast<unsigned int>(salutmp1.rss2_data))
                     salutmp2.data = 1;
                 else
@@ -170,24 +170,24 @@ void BASE::SALU_CALC()
 
             // case SRA_:
             // case SRAI_:
-            case DecodeParams::FN_SRA:
+            case DecodeParams::alu_fn_t::FN_SRA:
                 salutmp2.data = salutmp1.rss1_data >> salutmp1.rss2_data;
                 break;
 
             // case SRL_:
             // case SRLI_:
-            case DecodeParams::FN_SR:
+            case DecodeParams::alu_fn_t::FN_SR:
                 salutmp2.data = static_cast<unsigned int>(salutmp1.rss1_data) >> salutmp1.rss2_data;
                 break;
 
             // case SUB_:
-            case DecodeParams::FN_SUB:
+            case DecodeParams::alu_fn_t::FN_SUB:
                 salutmp2.data = salutmp1.rss1_data - salutmp1.rss2_data;
                 break;
 
             // case XOR_:
             // case XORI_:
-            case DecodeParams::FN_XOR:
+            case DecodeParams::alu_fn_t::FN_XOR:
                 salutmp2.data = salutmp1.rss1_data ^ salutmp1.rss2_data;
                 break;
 
@@ -241,7 +241,7 @@ void BASE::SALU_CALC()
             switch (salutmp1.ins.ddd.alu_fn)
             {
             // case BEQ_:
-            case DecodeParams::FN_SEQ:
+            case DecodeParams::alu_fn_t::FN_SEQ:
                 WARPS[salutmp1.warp_id]->branch_sig = true;
                 if (salutmp1.rss1_data == salutmp1.rss2_data)
                 {
@@ -256,7 +256,7 @@ void BASE::SALU_CALC()
                 break;
 
             // case BGE_:
-            case DecodeParams::FN_SGE:
+            case DecodeParams::alu_fn_t::FN_SGE:
                 WARPS[salutmp1.warp_id]->branch_sig = true;
                 if (salutmp1.rss1_data >= salutmp1.rss2_data)
                 {
@@ -270,7 +270,7 @@ void BASE::SALU_CALC()
                 }
                 break;
             // case BGEU_:
-            case DecodeParams::FN_SGEU:
+            case DecodeParams::alu_fn_t::FN_SGEU:
                 WARPS[salutmp1.warp_id]->branch_sig = true;
                 if (static_cast<unsigned int>(salutmp1.rss1_data) >= static_cast<unsigned int>(salutmp1.rss2_data))
                 {
@@ -284,7 +284,7 @@ void BASE::SALU_CALC()
                 }
                 break;
             // case BLT_:
-            case DecodeParams::FN_SLT:
+            case DecodeParams::alu_fn_t::FN_SLT:
                 WARPS[salutmp1.warp_id]->branch_sig = true;
                 if (salutmp1.rss1_data < salutmp1.rss2_data)
                 {
@@ -298,7 +298,7 @@ void BASE::SALU_CALC()
                 }
                 break;
             // case BLTU_:
-            case DecodeParams::FN_SLTU:
+            case DecodeParams::alu_fn_t::FN_SLTU:
                 WARPS[salutmp1.warp_id]->branch_sig = true;
                 if (static_cast<unsigned int>(salutmp1.rss1_data) < static_cast<unsigned int>(salutmp1.rss2_data))
                 {
@@ -313,7 +313,7 @@ void BASE::SALU_CALC()
                 break;
 
             // case BNE_:
-            case DecodeParams::FN_SNE:
+            case DecodeParams::alu_fn_t::FN_SNE:
                 WARPS[salutmp1.warp_id]->branch_sig = true;
                 if (salutmp1.rss1_data != salutmp1.rss2_data)
                 {

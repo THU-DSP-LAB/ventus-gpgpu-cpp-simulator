@@ -4,15 +4,15 @@ bank_t BASE::bank_decode(int warp_id, int srcaddr)
 {
     bank_t tmp;
     tmp.bank_id = srcaddr % BANK_NUM;
-    tmp.addr = warp_id * 32 / BANK_NUM + srcaddr / BANK_NUM; // 32是每个warp寄存器有32个元素
+    tmp.addr = warp_id * num_register_per_warp / BANK_NUM + srcaddr / BANK_NUM;
     return tmp;
 }
 
 warpaddr_t BASE::bank_undecode(int bank_id, int bankaddr)
 {
     warpaddr_t tmp;
-    tmp.warp_id = bankaddr / 8;
-    tmp.addr = (bankaddr % (32 / BANK_NUM)) * BANK_NUM + bank_id;
+    tmp.warp_id = bankaddr / (num_register_per_warp / BANK_NUM);
+    tmp.addr = (bankaddr % (num_register_per_warp / BANK_NUM)) * BANK_NUM + bank_id;
     return tmp;
 }
 
@@ -53,6 +53,7 @@ void BASE::OPC_FIFO()
             {
                 _readdata4 = issue_ins.read();
                 _readwarpid = issueins_warpid;
+
                 in_ready = {1, 1, 1};
                 in_valid = {0, 0, 0}; // 要取操作数，则ready=0，valid=1
 
@@ -79,56 +80,55 @@ void BASE::OPC_FIFO()
                     newopcdat.data[0].fill(_readdata4.currentpc);
                 }
 
-                if (_readdata4.ddd.sel_alu2 == DecodeParams::A2_RS2)
+                if (_readdata4.ddd.sel_alu2 == DecodeParams::sel_alu2_t::A2_RS2)
                 {
                     in_ready[1] = 0;
                     in_valid[1] = 1;
                     in_srcaddr[1] = bank_decode(_readwarpid, _readdata4.s2);
                     in_banktype[1] = 0;
                 }
-                else if (_readdata4.ddd.sel_alu2 == DecodeParams::A2_VRS2)
+                else if (_readdata4.ddd.sel_alu2 == DecodeParams::sel_alu2_t::A2_VRS2)
                 {
                     in_ready[1] = 0;
                     in_valid[1] = 1;
                     in_srcaddr[1] = bank_decode(_readwarpid, _readdata4.s2);
                     in_banktype[1] = 1;
                 }
-                else if (_readdata4.ddd.sel_alu2 == DecodeParams::A2_IMM)
+                else if (_readdata4.ddd.sel_alu2 == DecodeParams::sel_alu2_t::A2_IMM)
                 {
                     newopcdat.data[1].fill(_readdata4.imm);
                 }
-                else if (_readdata4.ddd.sel_alu2 == DecodeParams::A2_SIZE)
+                else if (_readdata4.ddd.sel_alu2 == DecodeParams::sel_alu2_t::A2_SIZE)
                 {
                     newopcdat.data[1].fill(4);
                 }
 
-                if (_readdata4.ddd.sel_alu3 == DecodeParams::A3_FRS3)
+                if (_readdata4.ddd.sel_alu3 == DecodeParams::sel_alu3_t::A3_FRS3)
                 {
                     in_ready[2] = 0;
                     in_valid[2] = 1;
                     in_srcaddr[2] = bank_decode(_readwarpid, _readdata4.s3);
                     in_banktype[2] = 0;
                 }
-                else if (_readdata4.ddd.sel_alu3 == DecodeParams::A3_VRS3)
+                else if (_readdata4.ddd.sel_alu3 == DecodeParams::sel_alu3_t::A3_VRS3)
                 {
                     in_ready[2] = 0;
                     in_valid[2] = 1;
                     in_srcaddr[2] = bank_decode(_readwarpid, _readdata4.s3);
                     in_banktype[2] = 1;
                 }
-                else if (_readdata4.ddd.sel_alu3 == DecodeParams::A3_PC && _readdata4.ddd.branch != DecodeParams::B_R)
-                { // jal
-
+                else if (_readdata4.ddd.sel_alu3 == DecodeParams::sel_alu3_t::A3_PC && _readdata4.ddd.branch != DecodeParams::branch_t::B_R)
+                { // BEQ
                     newopcdat.data[2].fill(_readdata4.imm + _readdata4.currentpc);
                 }
-                else if (_readdata4.ddd.sel_alu3 == DecodeParams::A3_PC)
-                {
+                else if (_readdata4.ddd.sel_alu3 == DecodeParams::sel_alu3_t::A3_PC)
+                { // JALR
                     in_ready[2] = 0;
                     in_valid[2] = 1;
                     in_srcaddr[2] = bank_decode(_readwarpid, _readdata4.s1);
                     in_banktype[2] = 0;
                 }
-                else if (_readdata4.ddd.sel_alu3 == DecodeParams::A3_SD)
+                else if (_readdata4.ddd.sel_alu3 == DecodeParams::sel_alu3_t::A3_SD)
                 {
                     in_ready[2] = 0;
                     in_valid[2] = 1;
@@ -151,7 +151,6 @@ void BASE::OPC_FIFO()
                 //                        in_ready, in_valid, in_srcaddr, in_banktype));
 
                 opcfifo.push(newopcdat);
-
             }
         }
         opcfifo_elem_num = opcfifo.get_size();
@@ -197,7 +196,9 @@ void BASE::OPC_EMIT()
     {
         wait(ev_opc_pop & // 等opc当前cycle pop之后再判断下一cycle的pop
              ev_saluready_updated & ev_valuready_updated &
-             ev_vfpuready_updated & ev_lsuready_updated);
+             ev_vfpuready_updated & ev_lsuready_updated &
+             ev_csrready_updated & ev_mulready_updated &
+             ev_sfuready_updated);
         // cout << "OPC_EMIT start at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
         doemit = false;
         findemit = 0;
@@ -209,6 +210,7 @@ void BASE::OPC_EMIT()
         emito_csr = false;
         emito_mul = false;
         emito_sfu = false;
+        emito_warpscheduler = false;
         for (int i = last_emit_entryid; i < last_emit_entryid + OPCFIFO_SIZE; i++)
         {
             int entryidx = i % OPCFIFO_SIZE;
@@ -257,11 +259,11 @@ void BASE::OPC_EMIT()
                             tovalu_data3[j] = opcfifo[entryidx].data[2][j];
                         }
 
-                        // if (opcfifo[entryidx].ins.ddd.sel_alu2 == DecodeParams::A2_VRS2)
+                        // if (opcfifo[entryidx].ins.ddd.sel_alu2 == DecodeParams::sel_alu2_t::A2_VRS2)
                         //     for (int j = 0; j < num_thread; j++)
                         //         tovalu_data2[j] = opcfifo[entryidx].data[1][j];
-                        // else if (opcfifo[entryidx].ins.ddd.sel_alu2 == DecodeParams::A2_RS2 |
-                        //          opcfifo[entryidx].ins.ddd.sel_alu2 == DecodeParams::A2_IMM)
+                        // else if (opcfifo[entryidx].ins.ddd.sel_alu2 == DecodeParams::sel_alu2_t::A2_RS2 |
+                        //          opcfifo[entryidx].ins.ddd.sel_alu2 == DecodeParams::sel_alu2_t::A2_IMM)
                         //     tovalu_data2[0] = opcfifo[entryidx].data[1][0];
 
                         if (sm_id == 0 && opcfifo[entryidx].ins.origin32bit == (uint32_t)0x5208a157)
@@ -285,21 +287,13 @@ void BASE::OPC_EMIT()
                         findemit = 1;
                         doemit = true;
                         emito_vfpu = true;
-                        if (opcfifo[entryidx].ins.ddd.sel_alu1 == DecodeParams::A1_VRS1)
-                            for (int j = 0; j < num_thread; j++)
-                                tovfpu_data1[j] = opcfifo[entryidx].data[0][j];
-                        else if (opcfifo[entryidx].ins.ddd.sel_alu1 == DecodeParams::A1_RS1)
-                            tovfpu_data1[0] = opcfifo[entryidx].data[0][0];
-                        if (opcfifo[entryidx].ins.ddd.sel_alu2 == DecodeParams::A2_VRS2)
-                            for (int j = 0; j < num_thread; j++)
-                                tovfpu_data2[j] = opcfifo[entryidx].data[1][j];
-                        else if (opcfifo[entryidx].ins.ddd.sel_alu2 == DecodeParams::A2_RS2)
-                            tovfpu_data2[0] = opcfifo[entryidx].data[1][0];
-                        if (opcfifo[entryidx].ins.ddd.sel_alu3 == DecodeParams::A3_VRS3)
-                            for (int j = 0; j < num_thread; j++)
-                                tovfpu_data3[j] = opcfifo[entryidx].data[2][j];
-                        else if (opcfifo[entryidx].ins.ddd.sel_alu3 == DecodeParams::A3_FRS3)
-                            tovfpu_data3[0] = opcfifo[entryidx].data[2][0];
+
+                        for (int j = 0; j < num_thread; j++)
+                        {
+                            tovfpu_data1[j] = opcfifo[entryidx].data[0][j];
+                            tovfpu_data2[j] = opcfifo[entryidx].data[1][j];
+                            tovfpu_data3[j] = opcfifo[entryidx].data[2][j];
+                        }
                     }
                     break;
 
@@ -312,12 +306,12 @@ void BASE::OPC_EMIT()
                         doemit = true;
                         emito_lsu = true;
 
-                        for (int j = 0; j < num_thread; j++){
+                        for (int j = 0; j < num_thread; j++)
+                        {
                             tolsu_data1[j] = opcfifo[entryidx].data[0][j];
                             tolsu_data2[j] = opcfifo[entryidx].data[1][j];
                             tolsu_data3[j] = opcfifo[entryidx].data[2][j];
                         }
-
                     }
                     break;
 
@@ -330,6 +324,7 @@ void BASE::OPC_EMIT()
                         doemit = true;
                         emito_csr = true;
                         tocsr_data1 = opcfifo[entryidx].data[0][0];
+                        // cout << "opc: emito csr, tocsr_data1=opcfifo[entryidx].data[0][0]=0x" << std::hex << opcfifo[entryidx].data[0][0] << std::dec << "\n";
                         tocsr_data2 = opcfifo[entryidx].data[1][0];
                     }
                     break;
@@ -341,16 +336,13 @@ void BASE::OPC_EMIT()
                         findemit = 1;
                         doemit = true;
                         emito_mul = true;
-                        if (opcfifo[entryidx].ins.ddd.sel_alu1 == DecodeParams::A1_VRS1)
-                            for (int j = 0; j < num_thread; j++)
-                                tomul_data1[j] = opcfifo[entryidx].data[0][j];
-                        else if (opcfifo[entryidx].ins.ddd.sel_alu1 == DecodeParams::A1_RS1)
-                            tomul_data1[0] = opcfifo[entryidx].data[0][0];
-                        if (opcfifo[entryidx].ins.ddd.sel_alu2 == DecodeParams::A2_VRS2)
-                            for (int j = 0; j < num_thread; j++)
-                                tomul_data2[j] = opcfifo[entryidx].data[1][j];
-                        else if (opcfifo[entryidx].ins.ddd.sel_alu2 == DecodeParams::A2_RS2)
-                            tomul_data2[0] = opcfifo[entryidx].data[1][0];
+
+                        for (int j = 0; j < num_thread; j++)
+                        {
+                            tomul_data1[j] = opcfifo[entryidx].data[0][j];
+                            tomul_data2[j] = opcfifo[entryidx].data[1][j];
+                            tomul_data3[j] = opcfifo[entryidx].data[2][j];
+                        }
                     }
                     break;
                 case DecodeParams::SFU:
@@ -361,18 +353,22 @@ void BASE::OPC_EMIT()
                         findemit = 1;
                         doemit = true;
                         emito_sfu = true;
-                        if (opcfifo[entryidx].ins.ddd.sel_alu1 == DecodeParams::A1_VRS1)
-                            for (int j = 0; j < num_thread; j++)
-                                tosfu_data1[j] = opcfifo[entryidx].data[0][j];
-                        else if (opcfifo[entryidx].ins.ddd.sel_alu1 == DecodeParams::A1_RS1)
-                            tosfu_data1[0] = opcfifo[entryidx].data[0][0];
-                        if (opcfifo[entryidx].ins.ddd.sel_alu2 == DecodeParams::A2_VRS2)
-                            for (int j = 0; j < num_thread; j++)
-                                tosfu_data2[j] = opcfifo[entryidx].data[1][j];
-                        else if (opcfifo[entryidx].ins.ddd.sel_alu2 == DecodeParams::A2_RS2)
-                            tosfu_data2[0] = opcfifo[entryidx].data[1][0];
+
+                        for (int j = 0; j < num_thread; j++)
+                        {
+                            tosfu_data1[j] = opcfifo[entryidx].data[0][j];
+                            tosfu_data2[j] = opcfifo[entryidx].data[1][j];
+                        }
                     }
                     break;
+                case DecodeParams::WPSCHEDLER:
+                    emit_idx = entryidx;
+                    last_emit_entryid = entryidx + 1;
+                    findemit = 1;
+                    doemit = true;
+                    emito_warpscheduler = true;
+                    break;
+
                 case DecodeParams::INVALID_EXECUNIT:
                     cout << "SM" << sm_id << " OPC_EMIT error: ins=" << opcfifo[entryidx].ins << "," << std::hex << opcfifo[entryidx].ins.origin32bit << std::dec
                          << " but INVALID EXECUNIT at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";

@@ -2,7 +2,6 @@
 
 void BASE::SFU_IN()
 {
-    I_TYPE new_ins;
     sfu_in_t new_data;
     int a_delay, b_delay;
     while (true)
@@ -90,7 +89,7 @@ void BASE::SFU_CALC()
             switch (sfutmp1.ins.ddd.alu_fn)
             {
 
-            case DecodeParams::FN_REMU:
+            case DecodeParams::alu_fn_t::FN_REMU:
                 // VREMU.VV, VREMU.VX
                 if (sfutmp1.ins.ddd.isvec)
                 {
@@ -115,7 +114,8 @@ void BASE::SFU_CALC()
                                     if ((unsigned)sfutmp1.rsv1_data[i] != 0)
                                         sfutmp2.rdv1_data[i] = (unsigned)sfutmp1.rsv2_data[i] % sfutmp1.rsv1_data[i];
                                     else
-                                        cout << "SFU_CALC error: ins " << sfutmp1.ins << " rsv1_data[" << i << "]=0 at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                                        cout << "SFU_CALC error: warp " << sfutmp1.warp_id << " ins pc=0x" << std::hex << sfutmp1.ins.currentpc << sfutmp1.ins
+                                             << ", ins.s1=" << sfutmp1.ins.s1 << ", rsv1_data[" << i << "]=0 at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                                 }
                             }
                         }
@@ -133,7 +133,7 @@ void BASE::SFU_CALC()
                     sfutmp2.rdv1_data[0] = (unsigned)sfutmp1.rsv1_data[0] % sfutmp1.rsv2_data[0];
                 break;
 
-            case DecodeParams::FN_DIVU:
+            case DecodeParams::alu_fn_t::FN_DIVU:
                 // VDIVU.VV, VDIVU.VX
                 if (sfutmp1.ins.ddd.isvec)
                 {
@@ -145,7 +145,8 @@ void BASE::SFU_CALC()
                                 if ((unsigned)sfutmp1.rsv1_data[i] != 0)
                                     sfutmp2.rdv1_data[i] = (unsigned)sfutmp1.rsv2_data[i] / (unsigned)sfutmp1.rsv1_data[i];
                                 else
-                                    cout << "SFU_CALC error: ins " << sfutmp1.ins << " rsv1_data[" << i << "]=0 at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                                    cout << "SFU_CALC error: warp " << sfutmp1.warp_id << " ins pc=0x" << std::hex << sfutmp1.ins.currentpc << sfutmp1.ins
+                                         << ", ins.s1=" << sfutmp1.ins.s1 << ", rsv1_data[" << i << "]=0 at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                             }
                         }
                     else

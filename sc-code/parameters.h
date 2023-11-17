@@ -16,11 +16,12 @@
 #include <iomanip>
 #include <unordered_map>
 #include "magic_enum.hpp"
+#include <stdexcept> // For std::out_of_range
 
-inline constexpr int num_warp = 4;
+inline constexpr int num_warp = 8;
 inline constexpr int depth_warp = 2;
 inline constexpr int xLen = 32;
-inline constexpr long unsigned int num_thread = 4;
+inline constexpr long unsigned int num_thread = 8;
 inline constexpr int ireg_bitsize = 10;
 inline constexpr int ireg_size = 1 << ireg_bitsize;
 inline constexpr int INS_LENGTH = 32; // the length of per instruction
@@ -29,6 +30,20 @@ inline constexpr int IFIFO_SIZE = 10;
 inline constexpr int OPCFIFO_SIZE = 4;
 inline constexpr int BANK_NUM = 4;
 inline constexpr int NUM_SM = 1;
+inline constexpr int num_register_per_warp = 64; // 每个warp寄存器数目
+// 编译期计算整数的二进制对数向上取整
+constexpr int log2Ceil(int n)
+{
+    int log = 0;
+    n--;
+    while (n > 0)
+    {
+        log++;
+        n >>= 1;
+    }
+    return log;
+}
+inline constexpr int depth_thread = log2Ceil(num_thread);
 
 using reg_t = sc_int<32>;
 using v_regfile_t = std::array<reg_t, num_thread>;
@@ -46,14 +61,14 @@ struct vector_t : std::array<reg_t, num_thread>
     }
     bool operator==(const std::array<reg_t, num_thread> &other) const
     {
-        for (int i = 0; i < 8; ++i)
+        for (int i = 0; i < num_thread; ++i)
             if ((*this)[i] != other[i])
                 return false;
         return true;
     }
     v_regfile_t &operator=(const std::array<reg_t, num_thread> &other)
     {
-        for (int i = 0; i < 8; ++i)
+        for (int i = 0; i < num_thread; ++i)
         {
             (*this)[i] = other[i];
         }
@@ -860,8 +875,8 @@ public:
     bool fp;
     bool barrier;
     DecodeParams::branch_t branch;
-    bool simt_stack;
-    bool simt_stack_op;
+    bool IPDOM_stack;
+    bool IPDOM_stack_op;
     DecodeParams::csr_t csr;
     bool reverse;
     DecodeParams::sel_alu3_t sel_alu3;
@@ -881,16 +896,27 @@ public:
     bool wxd; // write scalar register file
     bool tc;
     bool disable_mask;
-    bool undefined1;
+    bool custom_signal_0;
     bool undefined2;
-
-    // 不在初始化列表里的信号
-    bool mem;
 
     // 自己加的decode信号
     DecodeParams::sel_execunit_t sel_execunit;
 
     decodedat &operator=(const decodedat &rhs) = default;
+
+    // 以下为chisel的其他decode信号
+
+    uint32_t mop;   //在decode函数中赋值
+    bool mem() const
+    {
+        int value = static_cast<int>(mem_cmd);
+        return (value & 1) | ((value >> 1) & 1);
+    }
+
+    bool is_vls12() const
+    {
+        return alu_fn == DecodeParams::alu_fn_t::FN_VLS12;
+    }
 };
 class I_TYPE // type of per instruction
 {
@@ -1348,9 +1374,8 @@ struct lsu_in_t
 {
     I_TYPE ins;
     int warp_id;
-    reg_t rss1_data;
-    int rss2_data;
-    int rss3_data;
+    std::array<reg_t, num_thread> rsv1_data, rsv2_data, rsv3_data;
+
     // below 3 data is to store
     reg_t rds1_data;
     std::array<reg_t, num_thread> rdv1_data;
@@ -1461,7 +1486,7 @@ struct mul_in_t
 {
     I_TYPE ins;
     int warp_id;
-    std::array<reg_t, num_thread> rsv1_data, rsv2_data;
+    std::array<reg_t, num_thread> rsv1_data, rsv2_data, rsv3_data;
     reg_t rss1_data;
 };
 struct mul_out_t
@@ -1570,7 +1595,8 @@ public:
         current_mask.write(~sc_bv<num_thread>());
     }
 
-    bool is_warp_activated;
+    sc_signal<bool> is_warp_activated;
+    bool will_warp_activate;
 
     // fetch
     sc_event ev_fetchpc, ev_decode;
@@ -1578,7 +1604,7 @@ public:
     sc_signal<bool> fetch_valid;
     sc_signal<bool, SC_MANY_WRITERS> fetch_valid2;                // 2是真正的valid，直接与ibuffer沟通
     bool fetch_valid12;                                           // 用于取指令和decode之间传递
-    sc_signal<bool, SC_MANY_WRITERS> jump, branch_sig, vbran_sig; // 无论是否jump，只要发生了分支判断，将branch_sig置为1
+    sc_signal<bool, SC_MANY_WRITERS> jump, branch_sig, vbran_sig; // 无论是否jump，只要发生了分支判断，将branch_sig置为1。其中branch_sig是标量分支，vbran_sig是向量分支
     sc_signal<int> jump_addr, pc;
     I_TYPE fetch_ins;
     sc_signal<I_TYPE> decode_ins;
@@ -1598,11 +1624,11 @@ public:
     // issue
     sc_event ev_issue;
     // regfile
-    std::array<reg_t, 0x40> s_regfile;
-    std::array<v_regfile_t, 0x40> v_regfile;
+    std::array<reg_t, num_register_per_warp> s_regfile;
+    std::array<v_regfile_t, num_register_per_warp> v_regfile;
     std::array<int, 0x820> CSR_reg;
     // simt-stack
-    std::stack<simtstack_t> simt_stack;
+    std::stack<simtstack_t> IPDOM_stack;
     sc_signal<sc_bv<num_thread>> current_mask; // 在dispatch时随指令存入OPC
     sc_signal<int> simtstk_jumpaddr;           // out_pc
     sc_signal<bool> simtstk_jump;              // fetch跳转的控制信号
@@ -1674,5 +1700,97 @@ std::string coutArray(const std::array<T, N> &arr)
     oss << ')';
     return oss.str();
 }
+
+template <size_t Size>
+class BoolArray
+{ // for wait_barrier
+public:
+    BoolArray() : array{} {} // 默认初始化所有值为false
+
+    // 重载下标操作符（非常量版本）
+    bool &operator[](size_t index)
+    {
+        return array[index];
+    }
+
+    // 重载下标操作符（常量版本）
+    const bool &operator[](size_t index) const
+    {
+        return array[index];
+    }
+
+    void set(size_t index, bool value)
+    {
+        if (index < Size)
+        {
+            array[index] = value;
+        }
+        else
+        {
+            throw std::out_of_range("Index out of bounds");
+        }
+    }
+
+    // 检查前n项是否都满足指定的布尔值
+    bool areFirstNValue(size_t n, bool value) const
+    {
+        if (n > Size)
+        {
+            throw std::out_of_range("Number of items to check exceeds array size");
+        }
+
+        for (size_t i = 0; i < n; ++i)
+        {
+            if (array[i] != value)
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    void fill(bool value)
+    {
+        array.fill(value);
+    }
+
+private:
+    std::array<bool, Size> array;
+};
+
+template <typename T, size_t N>
+class SafeArray
+{
+public:
+    T &operator[](size_t index)
+    {
+        checkIndex(index);
+        return array[index];
+    }
+
+    const T &operator[](size_t index) const
+    {
+        checkIndex(index);
+        return array[index];
+    }
+    void fill(const T &value)
+    {
+        array.fill(value);
+    }
+    auto begin() { return array.begin(); }
+    auto end() { return array.end(); }
+    auto begin() const { return array.begin(); }
+    auto end() const { return array.end(); }
+
+private:
+    std::array<T, N> array;
+    void checkIndex(size_t index) const
+    {
+        if (index >= N)
+        {
+            throw std::out_of_range("Array index out of bounds");
+        }
+    }
+};
 
 #endif

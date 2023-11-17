@@ -29,7 +29,7 @@ void CTA_Scheduler::readHexFile(const std::string &filename, int itemSize, std::
 
     char c;
     int bits = 0;
-    unsigned long long value = 0;
+    uint64_t value = 0;
     bool leftside = false;
 
     while (file.get(c))
@@ -49,7 +49,7 @@ void CTA_Scheduler::readHexFile(const std::string &filename, int itemSize, std::
 
         int hexValue = charToHex(c);
         if (leftside)
-            value = value | (hexValue << bits);
+            value = value | ((uint64_t)hexValue << (92 - bits));
         else
             value = (value << 4) | hexValue;
         bits += 4;
@@ -169,6 +169,7 @@ void CTA_Scheduler::activate_warp()
 
             cout << "CTA: SM" << i << " warp" << warp_counter << " is activated\n";
             sm_group[i]->WARPS[warp_counter]->is_warp_activated = true;
+            sm_group[i]->WARPS[warp_counter]->will_warp_activate = true;
 
             sm_group[i]->WARPS[warp_counter]->CSR_reg[0x300] = 0x00001800;
 
@@ -177,7 +178,7 @@ void CTA_Scheduler::activate_warp()
             sm_group[i]->WARPS[warp_counter]->CSR_reg[0x802] = num_thread;
             sm_group[i]->WARPS[warp_counter]->CSR_reg[0x803] = mtd.metaDataBaseAddr;
             sm_group[i]->WARPS[warp_counter]->CSR_reg[0x804] = 0;
-            sm_group[i]->WARPS[warp_counter]->CSR_reg[0x805] = (mtd.wg_size - warp_counter - 1);    // warp标号反了
+            sm_group[i]->WARPS[warp_counter]->CSR_reg[0x805] = (mtd.wg_size - warp_counter - 1); // warp标号反了
             sm_group[i]->WARPS[warp_counter]->CSR_reg[0x806] = 0x70000000;
             sm_group[i]->WARPS[warp_counter]->CSR_reg[0x807] = 0;
             sm_group[i]->WARPS[warp_counter]->CSR_reg[0x808] = 0;

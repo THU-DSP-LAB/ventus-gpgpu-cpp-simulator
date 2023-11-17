@@ -37,7 +37,6 @@ public:
     void cycle_IBUF_ACTION(int warp_id, I_TYPE &dispatch_ins_, I_TYPE &_readdata3);
     void IBUF_PARAM(int warp_id);
     // scoreboard
-    void UPDATE_SCORE(int warp_id);
     void cycle_UPDATE_SCORE(int warp_id, I_TYPE &tmpins, std::set<SCORE_TYPE>::iterator &it, REG_TYPE &regtype_, bool &insertscore);
     void JUDGE_DISPATCH(int warp_id);
     void cycle_JUDGE_DISPATCH(int warp_id, I_TYPE &_readibuf);
@@ -103,6 +102,7 @@ public:
     BASE(sc_core::sc_module_name name, std::string _inssrc, int _sm_id)
         : sc_module(name), inssrc(_inssrc), sm_id(_sm_id)
     {
+        WARPS.fill(nullptr);
         SC_HAS_PROCESS(BASE);
 
         SC_THREAD(debug_sti);
@@ -122,7 +122,6 @@ public:
             sc_spawn(sc_bind(&BASE::DECODE, this, i), ("warp" + std::to_string(i) + "_DECODE").c_str());
             // sc_spawn(sc_bind(&BASE::IBUF_ACTION, this, i), ("warp" + std::to_string(i) + "_IBUF_ACTION").c_str());
             // sc_spawn(sc_bind(&BASE::JUDGE_DISPATCH, this, i), ("warp" + std::to_string(i) + "_JUDGE_DISPATCH").c_str());
-            // sc_spawn(sc_bind(&BASE::UPDATE_SCORE, this, i), ("warp" + std::to_string(i) + "_UPDATE_SCORE").c_str());
             sc_spawn(sc_bind(&BASE::BEFORE_DISPATCH, this, i), ("warp" + std::to_string(i) + "_BEFORE_DISPATCH").c_str());
             // sc_spawn(sc_bind(&BASE::INIT_REG, this, i), ("warp" + std::to_string(i) + "_INIT_REG").c_str());
             sc_spawn(sc_bind(&BASE::SIMT_STACK, this, i), ("warp" + std::to_string(i) + "_SIMT_STACK").c_str());
@@ -194,7 +193,8 @@ public:
     std::map<OP_TYPE, decodedat> decode_table;
     std::vector<instable_t> instable_vec;
     /*** SIMT frontend ***/
-    std::array<WARP_BONE *, num_warp> WARPS;
+    SafeArray<WARP_BONE *, num_warp> WARPS;
+    // std::array<WARP_BONE *, num_warp> WARPS;
     // std::unordered_map<int, WARP_BONE*> WARPS;
 
     std::array<std::array<sc_core::sc_process_handle *, num_warp>, 9> warp_threads_group;
@@ -215,6 +215,9 @@ public:
     sc_signal<int> issueins_warpid;
     sc_signal<int> last_dispatch_warpid{"last_dispatch_warpid"}; // 需要设为sc_signal，否则ISSUE_ACTION对i的循环边界【i < last_dispatch_warpid + num_warp】会变化
     sc_signal<bool> dispatch_valid{"dispatch_valid"};
+    BoolArray<num_warp> wait_barrier; // true为等待barrier
+    sc_signal<bool> emito_warpscheduler{"emito_wrpschdler"};
+
     // warp scheduler
     sc_event ev_warp_assigned;
     // opc
@@ -243,7 +246,10 @@ public:
     sc_signal<reg_t> rds1_data{"rds1_data"};
     sc_vector<sc_signal<reg_t>> rdv1_data{"rdv1_data", num_thread};
 
+    //
     // exec
+    //
+    // salu
     sc_signal<bool> emito_salu{"emito_salu"};
     sc_signal<reg_t> tosalu_data1{"tosalu_data1"}, tosalu_data2{"tosalu_data2"}, tosalu_data3{"tosalu_data3"}; // OPC TO SALU
     bool salu_ready;
@@ -261,6 +267,7 @@ public:
     sc_signal<bool> salueqa_triggered, salueqb_triggered; // 例如eqa_triggered，仅在eqa被触发时，delta 0变为1，delta 1给SALU_IN看，同时又变回0
     sc_signal<bool> execpop_salu;
 
+    // valu
     sc_signal<bool> emito_valu{"emito_valu"};
     sc_vector<sc_signal<reg_t>> tovalu_data1{"tovalu_data1", num_thread}, // OPC TO VALU
         tovalu_data2{"tovalu_data2", num_thread}, tovalu_data3{"tovalu_data3", num_thread};
@@ -277,6 +284,7 @@ public:
     sc_signal<bool> valueqa_triggered, valueqb_triggered;
     sc_signal<bool> execpop_valu;
 
+    // vfpu
     sc_signal<bool> emito_vfpu{"emito_vfpu"};
     sc_vector<sc_signal<int32_t>> tovfpu_data1{"tovfpu_data1", num_thread}, // OPC TO VFPU
         tovfpu_data2{"tovfpu_data2", num_thread}, tovfpu_data3{"tovfpu_data3", num_thread};
@@ -293,6 +301,7 @@ public:
     sc_signal<bool> vfpueqa_triggered, vfpueqb_triggered;
     sc_signal<bool> execpop_vfpu;
 
+    // lsu
     sc_signal<bool> emito_lsu{"emito_lsu"};
     sc_vector<sc_signal<int32_t>> tolsu_data1{"emitolsu_data1", num_thread}, // OPC TO LSU
         tolsu_data2{"emitolsu_data2", num_thread}, tolsu_data3{"emitolsu_data3", num_thread};
@@ -309,16 +318,18 @@ public:
     sc_signal<bool> lsueqa_triggered, lsueqb_triggered;
     sc_signal<bool> execpop_lsu;
 
+    // simt stack
     sc_signal<bool> emito_simtstk{"emito_simtstk"};                    // 对应join，由于wait_bran的存在，这两个不会同时为1
     sc_signal<bool, SC_MANY_WRITERS> valuto_simtstk{"valuto_simtstk"}; // 对应beq类，由于wait_bran的存在，这两个不会同时为1
     simtstack_t simtstk_newelem;                                       // from VALU to SIMT-stack
     sc_signal<int> simtstk_new_warpid{"simtstk_new_warpid"};           // newelem对应的warp
-    sc_signal<sc_bv<num_thread>> branch_elsemask{"branch_elsemask"};   // VALU计算出的elsemask，将发给SIMT-stack
+    sc_signal<sc_bv<num_thread>> branch_elsemask{"branch_elsemask"};   // VALU计算出的elsemask，将发给SIMT-stack，elsemask为1表示判断跳转
     sc_signal<sc_bv<num_thread>> branch_ifmask{"branch_ifmask"};       // 与elsemask相反
-    sc_signal<uint32_t> branch_elsepc{"branch_elsepc"};                     // VALU处理分支跳转的else分支pc
+    sc_signal<uint32_t> branch_elsepc{"branch_elsepc"};                // VALU处理分支跳转的else分支pc
     sc_signal<I_TYPE> vbranch_ins{"vbranch_ins"};
     sc_signal<int> vbranchins_warpid{"vbranchins_warpid"};
 
+    // csr
     sc_signal<bool> emito_csr{"emito_csr"};
     sc_signal<int32_t> tocsr_data1{"tocsr_data1"}, tocsr_data2{"tocsr_data2"}; // OPC TO CSR
     bool csr_ready;
@@ -334,9 +345,10 @@ public:
     sc_signal<bool> csreqa_triggered, csreqb_triggered;
     sc_signal<bool> execpop_csr;
 
+    // mul
     sc_signal<bool> emito_mul{"emito_mul"};
     sc_vector<sc_signal<reg_t>> tomul_data1{"tomul_data1", num_thread},
-        tomul_data2{"tomul_data2", num_thread};
+        tomul_data2{"tomul_data2", num_thread}, tomul_data3{"tomul_data3", num_thread};
     bool mul_ready;
     sc_signal<bool> mul_ready_old{"mul_ready_old"};
     sc_event_queue mul_eqa, mul_eqb;
@@ -350,6 +362,7 @@ public:
     sc_signal<bool> muleqa_triggered, muleqb_triggered;
     sc_signal<bool> execpop_mul;
 
+    // sfu
     sc_signal<bool> emito_sfu{"emito_sfu"};
     sc_vector<sc_signal<reg_t>> tosfu_data1{"tosfu_data1", num_thread},
         tosfu_data2{"tosfu_data2", num_thread};

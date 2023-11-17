@@ -75,8 +75,8 @@ void BASE::WRITE_BACK()
             wb_ena = true;
             execpop_salu = true;
             wb_ins = salutop_dat.ins;
-            rds1_addr = salutop_dat.ins.d;
-            rds1_data = salutop_dat.data;
+            rdv1_addr = salutop_dat.ins.d;
+            rdv1_data[0] = salutop_dat.data;
             wb_warpid = salutop_dat.warp_id;
         }
         else if (valufifo_empty == false)
@@ -106,8 +106,8 @@ void BASE::WRITE_BACK()
                 //     cout << "SM" << sm_id << " WB judge popvfpu, write_s=true at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 write_s = true;
                 write_v = false;
-                rds1_addr = vfputop_dat.ins.d;
-                rds1_data = vfputop_dat.rds1_data;
+                rdv1_addr = vfputop_dat.ins.d;
+                rdv1_data[0] = vfputop_dat.rds1_data;
             }
             else
             {
@@ -132,32 +132,24 @@ void BASE::WRITE_BACK()
             // if (sm_id == 0)
             //     cout << "SM" << sm_id << " WB judge poplsu, at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
             execpop_lsu = true;
-            switch (lsutop_dat.ins.op)
+            if (lsutop_dat.ins.ddd.wxd)
             {
-            case LW_:
                 write_s = true;
                 write_v = false;
-                wb_ena = true;
-                wb_ins = lsutop_dat.ins;
-                rds1_addr = lsutop_dat.ins.d;
-                rds1_data = lsutop_dat.rds1_data;
-                // cout << "WB: arbit LW_ writeback, ins=" << lsutop_dat.ins << "warp" << lsutop_dat.warp_id << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-                break;
-            case VLE32_V_:
+            }
+            else if (lsutop_dat.ins.ddd.wvd)
+            {
                 write_s = false;
                 write_v = true;
-                wb_ena = true;
-                wb_ins = lsutop_dat.ins;
-                rdv1_addr = lsutop_dat.ins.d;
-                for (int i = 0; i < num_thread; i++)
-                {
-                    rdv1_data[i] = lsutop_dat.rdv1_data[i];
-                }
-                break;
-            default:
-                cout << "wb error: lsu unrecognized ins\n";
-                break;
             }
+
+            wb_ena = true;
+            wb_ins = lsutop_dat.ins;
+
+            rdv1_addr = lsutop_dat.ins.d;
+            for (int i = 0; i < num_thread; i++)
+                rdv1_data[i] = lsutop_dat.rdv1_data[i];
+
             wb_warpid = lsutop_dat.warp_id;
         }
         else if (csrfifo_empty == false)
@@ -169,8 +161,8 @@ void BASE::WRITE_BACK()
             wb_ena = true;
             execpop_csr = true;
             wb_ins = csrtop_dat.ins;
-            rds1_addr = csrtop_dat.ins.d;
-            rds1_data = csrtop_dat.data;
+            rdv1_addr = csrtop_dat.ins.d;
+            rdv1_data[0] = csrtop_dat.data;
             wb_warpid = csrtop_dat.warp_id;
         }
         else if (mulfifo_empty == false)
@@ -185,8 +177,8 @@ void BASE::WRITE_BACK()
             {
                 write_s = true;
                 write_v = false;
-                rds1_addr = multop_dat.ins.d;
-                rds1_data = multop_dat.rdv1_data[0];
+                rdv1_addr = multop_dat.ins.d;
+                rdv1_data[0] = multop_dat.rdv1_data[0];
             }
             else if (multop_dat.ins.ddd.wvd)
             {
@@ -211,8 +203,8 @@ void BASE::WRITE_BACK()
             {
                 write_s = true;
                 write_v = false;
-                rds1_addr = sfutop_dat.ins.d;
-                rds1_data = sfutop_dat.rdv1_data[0];
+                rdv1_addr = sfutop_dat.ins.d;
+                rdv1_data[0] = sfutop_dat.rdv1_data[0];
             }
             else if (sfutop_dat.ins.ddd.wvd)
             {

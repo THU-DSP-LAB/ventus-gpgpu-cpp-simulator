@@ -2,7 +2,6 @@
 
 void BASE::CSR_IN()
 {
-    I_TYPE new_ins;
     csr_in_t new_data;
     int a_delay, b_delay;
     while (true)
@@ -82,40 +81,46 @@ void BASE::CSR_CALC()
             switch (csrtmp1.ins.op)
             {
             case CSRRW_:
-                // case DecodeParams::FN_ADD:
                 t = WARPS[csrtmp1.warp_id]->CSR_reg[csr_addr];
                 csrtmp2.data = t;
                 WARPS[csrtmp1.warp_id]->CSR_reg[csr_addr] = csrtmp1.csrSdata1;
-                cout << "SM" << sm_id << " warp " << csrtmp1.warp_id << " write CSR[0x" << std::hex << csr_addr << "]=0x" << WARPS[csrtmp1.warp_id]->CSR_reg[csr_addr] << std::dec << " by ins" << csrtmp1.ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                cout << "SM" << sm_id << " warp " << csrtmp1.warp_id << " write CSR[0x" << std::hex << csr_addr << "]=0x" << WARPS[csrtmp1.warp_id]->CSR_reg[csr_addr]
+                     << " by ins pc=0x" << csrtmp1.ins.currentpc << csrtmp1.ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 break;
             case CSRRS_:
                 t = WARPS[csrtmp1.warp_id]->CSR_reg[csr_addr];
                 csrtmp2.data = t;
                 WARPS[csrtmp1.warp_id]->CSR_reg[csr_addr] = t | csrtmp1.csrSdata1;
-                cout << "SM" << sm_id << " warp " << csrtmp1.warp_id << " write CSR[0x" << std::hex << csr_addr << "]=0x" << WARPS[csrtmp1.warp_id]->CSR_reg[csr_addr] << std::dec << " by ins" << csrtmp1.ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                // cout << "CSRRS, t=" << std::hex << t << ", csrSdata1=" << csrtmp1.csrSdata1 << std::dec << ", ins.s1=" << csrtmp1.ins.s1 << "\n";
+                cout << "SM" << sm_id << " warp " << csrtmp1.warp_id << " write CSR[0x" << std::hex << csr_addr << "]=0x" << WARPS[csrtmp1.warp_id]->CSR_reg[csr_addr]
+                     << " by ins pc=0x" << csrtmp1.ins.currentpc << csrtmp1.ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 break;
             case CSRRC_:
                 t = WARPS[csrtmp1.warp_id]->CSR_reg[csr_addr];
                 csrtmp2.data = t;
                 WARPS[csrtmp1.warp_id]->CSR_reg[csr_addr] = t & ~csrtmp1.csrSdata1;
-                cout << "SM" << sm_id << " warp " << csrtmp1.warp_id << " write CSR[0x" << std::hex << csr_addr << "]=0x" << WARPS[csrtmp1.warp_id]->CSR_reg[csr_addr] << std::dec << " by ins" << csrtmp1.ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                cout << "SM" << sm_id << " warp " << csrtmp1.warp_id << " write CSR[0x" << std::hex << csr_addr << "]=0x" << WARPS[csrtmp1.warp_id]->CSR_reg[csr_addr]
+                     << " by ins pc=0x" << csrtmp1.ins.currentpc << csrtmp1.ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 break;
             case CSRRWI_:
                 csrtmp2.data = WARPS[csrtmp1.warp_id]->CSR_reg[csr_addr];
                 WARPS[csrtmp1.warp_id]->CSR_reg[csr_addr] = csrtmp1.ins.s1;
-                cout << "SM" << sm_id << " warp " << csrtmp1.warp_id << " write CSR[0x" << std::hex << csr_addr << "]=0x" << WARPS[csrtmp1.warp_id]->CSR_reg[csr_addr] << std::dec << " by ins" << csrtmp1.ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                cout << "SM" << sm_id << " warp " << csrtmp1.warp_id << " write CSR[0x" << std::hex << csr_addr << "]=0x" << WARPS[csrtmp1.warp_id]->CSR_reg[csr_addr]
+                     << " by ins pc=0x" << csrtmp1.ins.currentpc << csrtmp1.ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 break;
             case CSRRSI_:
                 t = WARPS[csrtmp1.warp_id]->CSR_reg[csr_addr];
                 csrtmp2.data = t;
                 WARPS[csrtmp1.warp_id]->CSR_reg[csr_addr] = csrtmp1.ins.s1;
-                cout << "SM" << sm_id << " warp " << csrtmp1.warp_id << " write CSR[0x" << std::hex << csr_addr << "]=0x" << WARPS[csrtmp1.warp_id]->CSR_reg[csr_addr] << std::dec << " by ins" << csrtmp1.ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                cout << "SM" << sm_id << " warp " << csrtmp1.warp_id << " write CSR[0x" << std::hex << csr_addr << "]=0x" << WARPS[csrtmp1.warp_id]->CSR_reg[csr_addr]
+                     << " by ins pc=0x" << csrtmp1.ins.currentpc << csrtmp1.ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 break;
             case CSRRCI_:
                 t = WARPS[csrtmp1.warp_id]->CSR_reg[csr_addr];
                 csrtmp2.data = t;
                 WARPS[csrtmp1.warp_id]->CSR_reg[csr_addr] = t & ~csrtmp1.ins.s1;
-                cout << "SM" << sm_id << " warp " << csrtmp1.warp_id << " write CSR[0x" << std::hex << csr_addr << "]=0x" << WARPS[csrtmp1.warp_id]->CSR_reg[csr_addr] << std::dec << " by ins" << csrtmp1.ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                cout << "SM" << sm_id << " warp " << csrtmp1.warp_id << " write CSR[0x" << std::hex << csr_addr << "]=0x" << WARPS[csrtmp1.warp_id]->CSR_reg[csr_addr]
+                     << " by ins pc=0x" << csrtmp1.ins.currentpc << csrtmp1.ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 break;
             case VSETVLI_:
                 csrtmp2.data = mtd.wf_size;

@@ -65,7 +65,8 @@ void BASE::PROGRAM_COUNTER(int warp_id)
             {
                 WARPS[warp_id]->pc = WARPS[warp_id]->jump_addr;
                 WARPS[warp_id]->fetch_valid = true;
-                // cout << "pc jumps to addr " << jump_addr.read() << " at " << sc_time_stamp() <<","<< sc_delta_count_at_current_time() << "\n";
+                cout << "SM" << sm_id << " warp " << warp_id << " pc jumps to 0x" << std::hex << WARPS[warp_id]->jump_addr << std::dec
+                     << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
             }
             else if (WARPS[warp_id]->simtstk_jump == 1)
             {
@@ -181,8 +182,8 @@ void BASE::cycle_IBUF_ACTION(int warp_id, I_TYPE &dispatch_ins_, I_TYPE &_readda
             {
                 WARPS[warp_id]->ififo.push(WARPS[warp_id]->decode_ins.read());
                 WARPS[warp_id]->ibuf_swallow = true;
-                // if (sm_id == 0 && warp_id == 1)
-                //     cout << "SM" << sm_id << " warp" << warp_id << " IFIFO push decode_ins.bit=" << std::hex << WARPS[warp_id]->decode_ins.read().origin32bit << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                // if (WARPS[warp_id]->decode_ins.read().op == OP_TYPE::ENDPRG_)
+                //     cout << "SM" << sm_id << " warp " << warp_id << " IFIFO push decode_ins=" << WARPS[warp_id]->decode_ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
             }
             // cout << "before put, ififo has " << ififo.used() << " elems at " << sc_time_stamp() <<","<< sc_delta_count_at_current_time() << "\n";
             // cout << "after put, ififo has " << ififo.used() << " elems at " << sc_time_stamp() <<","<< sc_delta_count_at_current_time() << "\n";
@@ -274,11 +275,17 @@ void BASE::cycle_UPDATE_SCORE(int warp_id, I_TYPE &tmpins, std::set<SCORE_TYPE>:
         WARPS[warp_id]->wait_bran = 0;
     }
     else if ((tmpins.ddd.branch != 0) &&
-             WARPS[warp_id]->dispatch_warp_valid && (!opc_full | doemit))
+             WARPS[warp_id]->dispatch_warp_valid && (!opc_full | doemit)) // 表示将要dispatch
     {
         // cout << "ibuf let wait_bran=1 at " << sc_time_stamp() <<","<< sc_delta_count_at_current_time() << "\n";
         WARPS[warp_id]->wait_bran = 1;
     }
+    else if (tmpins.op == OP_TYPE::ENDPRG_ && WARPS[warp_id]->dispatch_warp_valid && (!opc_full | doemit))
+    { // 权宜之计，让endprg后暂停dispatch
+        // cout << "SM" << sm_id << " warp " << warp_id << " UPDATE_SCORE detect ENDPRG, suspend to dispatch at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+        WARPS[warp_id]->wait_bran = 1;
+    }
+
     if (WARPS[warp_id]->dispatch_warp_valid && (!opc_full | doemit))
     { // 加入 score
         insertscore = true;
@@ -299,27 +306,6 @@ void BASE::cycle_UPDATE_SCORE(int warp_id, I_TYPE &tmpins, std::set<SCORE_TYPE>:
         // if (sm_id == 0)
         //     cout << "SM0 warp" << warp_id << "_scoreboard: insert " << SCORE_TYPE(regtype_, tmpins.d)
         //          << " because of dispatch " << tmpins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-    }
-}
-
-void BASE::UPDATE_SCORE(int warp_id)
-{
-    I_TYPE tmpins;
-    std::set<SCORE_TYPE>::iterator it;
-    REG_TYPE regtype_;
-    bool insertscore = false;
-    while (true)
-    {
-        // cout << "SM" << sm_id << " warp" << warp_id << " UPDATE_SCORE: finish at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-        wait(clk.posedge_event());
-        // cout << "SM" << sm_id << " warp" << warp_id << " UPDATE_SCORE: start at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-        if (WARPS[warp_id]->is_warp_activated)
-        {
-
-            cycle_UPDATE_SCORE(warp_id, tmpins, it, regtype_, insertscore);
-
-            WARPS[warp_id]->ev_judge_dispatch.notify();
-        }
     }
 }
 
@@ -345,19 +331,19 @@ void BASE::cycle_JUDGE_DISPATCH(int warp_id, I_TYPE &_readibuf)
             WARPS[warp_id]->can_dispatch = false;
         else if (_readibuf.ddd.sel_alu1 == DecodeParams::A1_VRS1 && WARPS[warp_id]->score.find(SCORE_TYPE(v, _readibuf.s1)) != WARPS[warp_id]->score.end())
             WARPS[warp_id]->can_dispatch = false;
-        else if (_readibuf.ddd.sel_alu2 == DecodeParams::A2_RS2 && WARPS[warp_id]->score.find(SCORE_TYPE(s, _readibuf.s2)) != WARPS[warp_id]->score.end())
+        else if (_readibuf.ddd.sel_alu2 == DecodeParams::sel_alu2_t::A2_RS2 && WARPS[warp_id]->score.find(SCORE_TYPE(s, _readibuf.s2)) != WARPS[warp_id]->score.end())
             WARPS[warp_id]->can_dispatch = false;
-        else if (_readibuf.ddd.sel_alu2 == DecodeParams::A2_VRS2 && WARPS[warp_id]->score.find(SCORE_TYPE(v, _readibuf.s2)) != WARPS[warp_id]->score.end())
+        else if (_readibuf.ddd.sel_alu2 == DecodeParams::sel_alu2_t::A2_VRS2 && WARPS[warp_id]->score.find(SCORE_TYPE(v, _readibuf.s2)) != WARPS[warp_id]->score.end())
             WARPS[warp_id]->can_dispatch = false;
-        else if (_readibuf.ddd.sel_alu3 == DecodeParams::A3_FRS3 && WARPS[warp_id]->score.find(SCORE_TYPE(s, _readibuf.s3)) != WARPS[warp_id]->score.end())
+        else if (_readibuf.ddd.sel_alu3 == DecodeParams::sel_alu3_t::A3_FRS3 && WARPS[warp_id]->score.find(SCORE_TYPE(s, _readibuf.s3)) != WARPS[warp_id]->score.end())
             WARPS[warp_id]->can_dispatch = false;
-        else if (_readibuf.ddd.sel_alu3 == DecodeParams::A3_VRS3 && WARPS[warp_id]->score.find(SCORE_TYPE(v, _readibuf.s3)) != WARPS[warp_id]->score.end())
+        else if (_readibuf.ddd.sel_alu3 == DecodeParams::sel_alu3_t::A3_VRS3 && WARPS[warp_id]->score.find(SCORE_TYPE(v, _readibuf.s3)) != WARPS[warp_id]->score.end())
             WARPS[warp_id]->can_dispatch = false;
-        else if (_readibuf.ddd.sel_alu3 == DecodeParams::A3_PC && _readibuf.ddd.branch == DecodeParams::B_R && WARPS[warp_id]->score.find(SCORE_TYPE(s, _readibuf.s1)) != WARPS[warp_id]->score.end())
+        else if (_readibuf.ddd.sel_alu3 == DecodeParams::sel_alu3_t::A3_PC && _readibuf.ddd.branch == DecodeParams::branch_t::B_R && WARPS[warp_id]->score.find(SCORE_TYPE(s, _readibuf.s1)) != WARPS[warp_id]->score.end())
             WARPS[warp_id]->can_dispatch = false;
-        else if (_readibuf.ddd.sel_alu3 == DecodeParams::A3_SD && (_readibuf.ddd.isvec & (!_readibuf.ddd.readmask)) && WARPS[warp_id]->score.find(SCORE_TYPE(s, _readibuf.s3)) != WARPS[warp_id]->score.end())
+        else if (_readibuf.ddd.sel_alu3 == DecodeParams::sel_alu3_t::A3_SD && (_readibuf.ddd.isvec & (!_readibuf.ddd.readmask)) && WARPS[warp_id]->score.find(SCORE_TYPE(s, _readibuf.s3)) != WARPS[warp_id]->score.end())
             WARPS[warp_id]->can_dispatch = false;
-        else if (_readibuf.ddd.sel_alu3 == DecodeParams::A3_SD && !(_readibuf.ddd.isvec & (!_readibuf.ddd.readmask)) && WARPS[warp_id]->score.find(SCORE_TYPE(s, _readibuf.s2)) != WARPS[warp_id]->score.end())
+        else if (_readibuf.ddd.sel_alu3 == DecodeParams::sel_alu3_t::A3_SD && !(_readibuf.ddd.isvec & (!_readibuf.ddd.readmask)) && WARPS[warp_id]->score.find(SCORE_TYPE(s, _readibuf.s2)) != WARPS[warp_id]->score.end())
             WARPS[warp_id]->can_dispatch = false;
 
         // if (sm_id == 0 && warp_id == 0)
@@ -412,54 +398,13 @@ void BASE::BEFORE_DISPATCH(int warp_id)
             cycle_JUDGE_DISPATCH(warp_id, _readibuf);
             WARPS[warp_id]->ev_issue.notify();
         }
-    }
-}
-void BASE::WARP_SCHEDULER()
-{
-    bool find_dispatchwarp = 0;
-    last_dispatch_warpid = 0;
-    I_TYPE _newissueins;
-    while (true)
-    {
-        wait(clk.posedge_event());
-
-        // handle warp end
-
-        ev_warp_assigned.notify();
-
-        wait(ev_issue_list);
-
-        // cycle_ISSUE_ACTION();
-
-        if (!opc_full | doemit) // 这是dispatch_ready (ready-valid机制)
-        {
-            find_dispatchwarp = 0;
-            for (int i = last_dispatch_warpid; i < last_dispatch_warpid + num_warp_activated; i++)
-            {
-                if (!find_dispatchwarp && WARPS[i % num_warp_activated]->can_dispatch)
-                {
-                    // cout << "ISSUE: opc_full=" << opc_full << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-                    WARPS[i % num_warp_activated]->dispatch_warp_valid = true;
-                    dispatch_valid = true;
-                    _newissueins = WARPS[i % num_warp_activated]->ififo.front();
-                    _newissueins.mask = WARPS[i % num_warp_activated]->current_mask;
-                    // cout << "let issue_ins mask=" << _newissueins.mask << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-                    issue_ins = _newissueins;
-                    issueins_warpid = i % num_warp_activated;
-                    find_dispatchwarp = true;
-                    last_dispatch_warpid = i % num_warp_activated + 1;
-                }
-                else
-                {
-                    WARPS[i % num_warp_activated]->dispatch_warp_valid = false;
-                    // cout << "ISSUE: let warp" << i % num_warp_activated << " dispatch_warp_valid=false at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-                }
-            }
-            if (!find_dispatchwarp)
-                dispatch_valid = false;
+        else
+        { // 某个warp结束后，依然出发issue_list，否则warp_scheduler无法运行
+            WARPS[warp_id]->ev_issue.notify();
         }
     }
 }
+
 void BASE::cycle_ISSUE_ACTION()
 {
     bool find_dispatchwarp = 0;
