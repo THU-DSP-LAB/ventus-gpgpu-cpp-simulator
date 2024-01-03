@@ -8,13 +8,38 @@ void BASE::WARP_SCHEDULER()
     uint32_t wait_barrier_ins_pc;
     I_TYPE new_ins; // from opc, barrier ins
     int new_ins_warpid;
+    bool end_this_kernel;
+    bool reset_flush_pipeline[hw_num_warp];
     while (true)
     {
         wait(clk.posedge_event());
 
+        for(int i = 0; i < hw_num_warp; i++){
+            if(reset_flush_pipeline[i]){
+                m_hw_warps[i]->flush_pipeline.write(false);
+                reset_flush_pipeline[i] = false;
+            }
+        }
+
         // cout << "SM" << sm_id << " WARP SCHEDULER start at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
 
         // handle warp end
+
+        if (m_kernel && m_kernel->no_more_ctas_to_run() && m_current_kernel_running.read())
+        {
+            end_this_kernel = true;
+            for (auto &warp : m_hw_warps)
+            {
+                if (warp->is_warp_activated.read() == true)
+                    end_this_kernel = false;
+            }
+            if (end_this_kernel)
+            {
+                m_current_kernel_running.write(false);
+                m_current_kernel_completed.write(true);
+                cout << "SM" << sm_id << " Warp Scheduler: finish current kernel at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+            }
+        }
 
         ev_warp_assigned.notify();
 
@@ -27,8 +52,8 @@ void BASE::WARP_SCHEDULER()
             new_ins_warpid = emitins_warpid;
             switch (new_ins.op)
             {
-            case OP_TYPE::BARRIER_:
-                if (wait_barrier.areFirstNValue(num_warp_activated, false)) // 未设置barrier
+            case OP_TYPE::BARRIER_:     // m_num_warp_activated情况变复杂，待修改
+                if (wait_barrier.areFirstNValue(m_num_warp_activated, false)) // 未设置barrier
                 {
                     wait_barrier[new_ins_warpid] = true;
                     wait_barrier_ins_pc = new_ins.currentpc;
@@ -38,22 +63,25 @@ void BASE::WARP_SCHEDULER()
                     if (new_ins.currentpc == wait_barrier_ins_pc)
                     {
                         wait_barrier[new_ins_warpid] = true;
-                        if (wait_barrier.areFirstNValue(num_warp_activated, true))
+                        if (wait_barrier.areFirstNValue(m_num_warp_activated, true))
                         {
                             wait_barrier.fill(false);
-                            std::cout << "warp scheduler: all warps reach barrier pc=0x" << std::hex << new_ins.currentpc << " " << new_ins << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                            std::cout << "SM" << sm_id << " warp scheduler: all warps reach barrier pc=0x" << std::hex << new_ins.currentpc << " " << new_ins << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                         }
                     }
                     else
                     {
-                        std::cout << "WARP_SCHEDULER ERROR: Barrier pc not match at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                        std::cout << "SM" << sm_id << " WARP_SCHEDULER ERROR: Barrier pc not match at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                     }
                 }
                 break;
 
             case OP_TYPE::ENDPRG_:
-                if (WARPS[new_ins_warpid]->is_warp_activated)
-                    WARPS[new_ins_warpid]->is_warp_activated = false;
+                if (m_hw_warps[new_ins_warpid]->is_warp_activated)
+                    m_hw_warps[new_ins_warpid]->is_warp_activated = false;
+                m_num_warp_activated--;
+                m_hw_warps[new_ins_warpid]->initwarp();
+                reset_flush_pipeline[new_ins_warpid] = true;
                 cout << "SM" << sm_id << " warp " << new_ins_warpid << " 0x" << std::hex << new_ins.currentpc
                      << " " << new_ins << " endprg"
                      << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
@@ -72,24 +100,24 @@ void BASE::WARP_SCHEDULER()
         if (!opc_full | doemit) // 这是dispatch_ready，来自opc (ready-valid机制)
         {
             find_dispatchwarp = false; // 是否已经确定要dispatch的warp
-            for (int i = last_dispatch_warpid; i < last_dispatch_warpid + num_warp_activated; i++)
+            for (int i = last_dispatch_warpid; i < last_dispatch_warpid + hw_num_warp; i++)
             {
-                if (!find_dispatchwarp && WARPS[i % num_warp_activated]->can_dispatch && !wait_barrier[i % num_warp_activated] && WARPS[i % num_warp_activated]->is_warp_activated)
+                if (!find_dispatchwarp && m_hw_warps[i % hw_num_warp]->can_dispatch && !wait_barrier[i % hw_num_warp] && m_hw_warps[i % hw_num_warp]->is_warp_activated)
                 {
-                    WARPS[i % num_warp_activated]->dispatch_warp_valid = true;
+                    m_hw_warps[i % hw_num_warp]->dispatch_warp_valid = true;
                     dispatch_valid = true;
-                    _newissueins = WARPS[i % num_warp_activated]->ififo.front();
-                    _newissueins.mask = WARPS[i % num_warp_activated]->current_mask;
+                    _newissueins = m_hw_warps[i % hw_num_warp]->ififo.front();
+                    _newissueins.mask = m_hw_warps[i % hw_num_warp]->current_mask;
                     // cout << "let issue_ins mask=" << _newissueins.mask << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                     issue_ins = _newissueins;
-                    issueins_warpid = i % num_warp_activated;
+                    issueins_warpid = i % hw_num_warp;
                     find_dispatchwarp = true;
-                    last_dispatch_warpid = i % num_warp_activated + 1;
+                    last_dispatch_warpid = i % hw_num_warp + 1;
                 }
                 else
                 {
-                    WARPS[i % num_warp_activated]->dispatch_warp_valid = false;
-                    // cout << "ISSUE: let warp" << i % num_warp_activated << " dispatch_warp_valid=false at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                    m_hw_warps[i % hw_num_warp]->dispatch_warp_valid = false;
+                    // cout << "ISSUE: let warp" << i % hw_num_warp << " dispatch_warp_valid=false at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 }
             }
             if (!find_dispatchwarp)

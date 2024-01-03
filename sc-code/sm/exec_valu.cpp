@@ -4,8 +4,8 @@ void BASE::VALU_IN()
 {
     valu_in_t new_data;
     int a_delay, b_delay;
-    sc_bv<num_thread> _velsemask;
-    sc_bv<num_thread> _vifmask;
+    sc_bv<hw_num_thread> _velsemask;
+    sc_bv<hw_num_thread> _vifmask;
     while (true)
     {
         wait();
@@ -19,7 +19,7 @@ void BASE::VALU_IN()
             {
                 new_data.ins = emit_ins;
                 new_data.warp_id = emitins_warpid;
-                for (int i = 0; i < num_thread; i++)
+                for (int i = 0; i < hw_num_thread; i++)
                 {
                     new_data.rsv1_data[i] = tovalu_data1[i];
                     new_data.rsv2_data[i] = tovalu_data2[i];
@@ -50,7 +50,7 @@ void BASE::VALU_IN()
             {
                 new_data.ins = emit_ins;
                 new_data.warp_id = emitins_warpid;
-                for (int i = 0; i < num_thread; i++)
+                for (int i = 0; i < hw_num_thread; i++)
                 {
                     new_data.rsv1_data[i] = tovalu_data1[i];
                     new_data.rsv2_data[i] = tovalu_data2[i];
@@ -103,7 +103,7 @@ void BASE::VALU_CALC()
     valu_in_t valutmp1;
     valu_out_t valutmp2;
     bool succeed;
-    sc_bv<num_thread> _velsemask;
+    sc_bv<hw_num_thread> _velsemask, _vifmask;
     while (true)
     {
         wait(valu_eva | valu_eqa.default_event());
@@ -126,7 +126,7 @@ void BASE::VALU_CALC()
 
             case DecodeParams::alu_fn_t::FN_ADD:
                 // VADD12.VI, VADD.VI, VADD.VV, VADD.VX
-                for (int i = 0; i < num_thread; i++)
+                for (int i = 0; i < hw_num_thread; i++)
                 {
                     if (valutmp2.ins.mask[i] == 1)
                         valutmp2.rdv1_data[i] = valutmp1.rsv1_data[i] + valutmp1.rsv2_data[i];
@@ -135,7 +135,7 @@ void BASE::VALU_CALC()
 
             case DecodeParams::alu_fn_t::FN_AND:
                 // VAND.VI, VAND.VV, VAND.VX
-                for (int i = 0; i < num_thread; i++)
+                for (int i = 0; i < hw_num_thread; i++)
                 {
                     if (valutmp2.ins.mask[i] == 1)
                         valutmp2.rdv1_data[i] = valutmp1.rsv1_data[i] & valutmp1.rsv2_data[i];
@@ -145,13 +145,13 @@ void BASE::VALU_CALC()
             case DecodeParams::alu_fn_t::FN_SL:
                 // VSLL.VI, VSLL.VV, VSLL.VX
                 if (!valutmp1.ins.ddd.reverse)
-                    for (int i = 0; i < num_thread; i++)
+                    for (int i = 0; i < hw_num_thread; i++)
                     {
                         if (valutmp2.ins.mask[i] == 1)
                             valutmp2.rdv1_data[i] = valutmp1.rsv1_data[i] << valutmp1.rsv2_data[i];
                     }
                 else
-                    for (int i = 0; i < num_thread; i++)
+                    for (int i = 0; i < hw_num_thread; i++)
                     {
                         if (valutmp2.ins.mask[i] == 1)
                             valutmp2.rdv1_data[i] = valutmp1.rsv2_data[i] << valutmp1.rsv1_data[i];
@@ -161,13 +161,13 @@ void BASE::VALU_CALC()
             case DecodeParams::alu_fn_t::FN_SUB:
                 // VSUB12.VI, VSUB.VV, VSUB.VX
                 if (!valutmp1.ins.ddd.reverse)
-                    for (int i = 0; i < num_thread; i++)
+                    for (int i = 0; i < hw_num_thread; i++)
                     {
                         if (valutmp2.ins.mask[i] == 1)
                             valutmp2.rdv1_data[i] = valutmp1.rsv1_data[i] - valutmp1.rsv2_data[i];
                     }
                 else
-                    for (int i = 0; i < num_thread; i++)
+                    for (int i = 0; i < hw_num_thread; i++)
                     {
                         if (valutmp2.ins.mask[i] == 1)
                             valutmp2.rdv1_data[i] = valutmp1.rsv2_data[i] - valutmp1.rsv1_data[i];
@@ -175,7 +175,7 @@ void BASE::VALU_CALC()
                 break;
             case DecodeParams::alu_fn_t::FN_VID:
                 // VID.V
-                for (int i = 0; i < num_thread; i++)
+                for (int i = 0; i < hw_num_thread; i++)
                     valutmp2.rdv1_data[i] = i;
                 break;
 
@@ -184,7 +184,7 @@ void BASE::VALU_CALC()
                 // 由于指令编码错误 现在当成vmv.v.x
                 // cout << "VALU_CALC switch to FN_A2ZERO, RSDATA=" << valutmp1.rsv1_data[0]
                 //      << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-                for (int i = 0; i < num_thread; i++)
+                for (int i = 0; i < hw_num_thread; i++)
                     valutmp2.rdv1_data[i] = valutmp1.rsv1_data[0];
                 break;
 
@@ -196,33 +196,47 @@ void BASE::VALU_CALC()
         }
         else
         {
+            _velsemask = 0;
+            _vifmask = 0;
             switch (valutmp1.ins.op)
             {
             case VBEQ_:
-                for (int i = 0; i < num_thread; i++)
-                {
+                for (int i = 0; i < m_hw_warps[valutmp1.warp_id]->CSR_reg[0x802]; i++)
+                { // mask低位对应有效线程数
                     if (valutmp1.rsv1_data[i] == valutmp1.rsv2_data[i])
+                    {
                         _velsemask[i] = 1;
+                        _vifmask[i] = 0;
+                    }
                     else
+                    {
                         _velsemask[i] = 0;
+                        _vifmask[i] = 1;
+                    }
                 }
                 branch_elsemask = _velsemask;
-                branch_ifmask = ~_velsemask;
+                branch_ifmask = _vifmask;
                 branch_elsepc = valutmp1.rsv3_data[0];
                 valuto_simtstk = true;
                 vbranch_ins = valutmp1.ins;
                 vbranchins_warpid = valutmp1.warp_id;
                 break;
             case VBNE_:
-                for (int i = 0; i < num_thread; i++)
+                for (int i = 0; i < hw_num_thread; i++)
                 {
-                    if (valutmp1.rsv1_data[i] == valutmp1.rsv2_data[i])
-                        _velsemask[i] = 0;
-                    else
+                    if (valutmp1.rsv1_data[i] != valutmp1.rsv2_data[i])
+                    {
                         _velsemask[i] = 1;
+                        _vifmask[i] = 0;
+                    }
+                    else
+                    {
+                        _velsemask[i] = 0;
+                        _vifmask[i] = 1;
+                    }
                 }
                 branch_elsemask = _velsemask;
-                branch_ifmask = ~_velsemask;
+                branch_ifmask = _vifmask;
                 branch_elsepc = valutmp1.rsv3_data[0];
                 valuto_simtstk = true;
                 vbranch_ins = valutmp1.ins;

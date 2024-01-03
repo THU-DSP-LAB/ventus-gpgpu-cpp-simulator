@@ -89,10 +89,8 @@ void BASE::WRITE_BACK()
             execpop_valu = true;
             wb_ins = valutop_dat.ins;
             rdv1_addr = valutop_dat.ins.d;
-            for (int i = 0; i < num_thread; i++)
-            {
+            for (int i = 0; i < hw_num_thread; i++)
                 rdv1_data[i] = valutop_dat.rdv1_data[i];
-            }
             wb_warpid = valutop_dat.warp_id;
         }
         else if (vfpufifo_empty == false)
@@ -117,12 +115,8 @@ void BASE::WRITE_BACK()
                 write_v = true;
                 rdv1_addr = vfputop_dat.ins.d;
                 // cout << "WB: let wb_ins=" << vfputop_dat.ins << "warp" << vfputop_dat.warp_id << ", rdf1_data={";
-                for (int i = 0; i < num_thread; i++)
-                {
-                    // newFI.f = vfputop_dat.rdf1_data[i];
-                    // cout << std::hex << newFI.i << std::dec << ",";
+                for (int i = 0; i < hw_num_thread; i++)
                     rdv1_data[i].write(vfputop_dat.rdf1_data[i]);
-                }
             }
             wb_warpid = vfputop_dat.warp_id;
             // cout << "} at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
@@ -147,7 +141,7 @@ void BASE::WRITE_BACK()
             wb_ins = lsutop_dat.ins;
 
             rdv1_addr = lsutop_dat.ins.d;
-            for (int i = 0; i < num_thread; i++)
+            for (int i = 0; i < hw_num_thread; i++)
                 rdv1_data[i] = lsutop_dat.rdv1_data[i];
 
             wb_warpid = lsutop_dat.warp_id;
@@ -185,10 +179,8 @@ void BASE::WRITE_BACK()
                 write_s = false;
                 write_v = true;
                 rdv1_addr = multop_dat.ins.d;
-                for (int i = 0; i < num_thread; i++)
-                {
+                for (int i = 0; i < hw_num_thread; i++)
                     rdv1_data[i] = multop_dat.rdv1_data[i];
-                }
             }
         }
         else if (sfufifo_empty == false)
@@ -211,7 +203,7 @@ void BASE::WRITE_BACK()
                 write_s = false;
                 write_v = true;
                 rdv1_addr = sfutop_dat.ins.d;
-                for (int i = 0; i < num_thread; i++)
+                for (int i = 0; i < hw_num_thread; i++)
                     rdv1_data[i] = sfutop_dat.rdv1_data[i];
             }
         }

@@ -11,7 +11,7 @@
 // std::vector<std::vector<uint8_t>> buffer_data(num_buffer);
 
 // 读取外部文本文件并将数据存入缓冲区
-void BASE::readTextFile(const std::string &filename, std::vector<std::vector<uint8_t>> &buffers, meta_data mtd)
+void BASE::readTextFile(const std::string &filename, std::vector<std::vector<uint8_t>> &buffers, meta_data_t mtd)
 {
 
     std::ifstream file(filename);
@@ -103,7 +103,7 @@ uint32_t BASE::readInsBuffer(unsigned int virtualAddr, bool &addrOutofRangeExcep
     uint32_t data = 0;
     for (int i = 0; i < 4; i++)
     {
-        uint8_t byte = (*buffer_data)[mtd.insBufferIndex][startIndex + i];
+        uint8_t byte = (*m_kernel->m_buffer_data)[mtd.insBufferIndex][startIndex + i];
         data |= static_cast<uint32_t>(byte) << (i * 8);
     }
     return data;
@@ -139,7 +139,7 @@ void BASE::writeBufferData(int writevalue, std::vector<std::vector<uint8_t>> &bu
     // std::cout << "SM" << sm_id << std::hex << " write extmem[" << virtualAddress << "]=" << writevalue << std::dec << ",ins=" << ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
 }
 
-void init_local_and_private_mem(std::vector<std::vector<uint8_t>> &buffers, meta_data mtd)
+void init_local_and_private_mem(std::vector<std::vector<uint8_t>> &buffers, meta_data_t mtd)
 {
     uint64_t ldsSize = mtd.ldsSize;
     uint64_t pdsSize = mtd.pdsSize;
@@ -148,7 +148,7 @@ void init_local_and_private_mem(std::vector<std::vector<uint8_t>> &buffers, meta
 
 void BASE::INIT_EXTMEM()
 {
-    buffer_data = new std::vector<std::vector<uint8_t>>(mtd.num_buffer); // 此时num_buffer已经是.meta文件里的num_buffer+1，包含了末尾的local buffer
-    readTextFile(datafile, *buffer_data, mtd);
-    init_local_and_private_mem(*buffer_data, mtd);
+    // buffer_data = new std::vector<std::vector<uint8_t>>(mtd.num_buffer); // 此时num_buffer已经是.meta文件里的num_buffer+1，包含了末尾的local buffer
+    // readTextFile(datafile, *buffer_data, mtd);
+    // init_local_and_private_mem(*buffer_data, mtd);
 }

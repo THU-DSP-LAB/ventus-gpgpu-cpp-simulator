@@ -252,22 +252,12 @@ void BASE::OPC_EMIT()
                         doemit = true;
                         emito_valu = true;
 
-                        for (int j = 0; j < num_thread; j++)
+                        for (int j = 0; j < hw_num_thread; j++)
                         {
                             tovalu_data1[j] = opcfifo[entryidx].data[0][j];
                             tovalu_data2[j] = opcfifo[entryidx].data[1][j];
                             tovalu_data3[j] = opcfifo[entryidx].data[2][j];
                         }
-
-                        // if (opcfifo[entryidx].ins.ddd.sel_alu2 == DecodeParams::sel_alu2_t::A2_VRS2)
-                        //     for (int j = 0; j < num_thread; j++)
-                        //         tovalu_data2[j] = opcfifo[entryidx].data[1][j];
-                        // else if (opcfifo[entryidx].ins.ddd.sel_alu2 == DecodeParams::sel_alu2_t::A2_RS2 |
-                        //          opcfifo[entryidx].ins.ddd.sel_alu2 == DecodeParams::sel_alu2_t::A2_IMM)
-                        //     tovalu_data2[0] = opcfifo[entryidx].data[1][0];
-
-                        if (sm_id == 0 && opcfifo[entryidx].ins.origin32bit == (uint32_t)0x5208a157)
-                            cout << "SM" << sm_id << " OPC: will emit ins " << std::hex << opcfifo[entryidx].ins.origin32bit << std::dec << "\n";
                     }
                     break;
 
@@ -288,7 +278,7 @@ void BASE::OPC_EMIT()
                         doemit = true;
                         emito_vfpu = true;
 
-                        for (int j = 0; j < num_thread; j++)
+                        for (int j = 0; j < hw_num_thread; j++)
                         {
                             tovfpu_data1[j] = opcfifo[entryidx].data[0][j];
                             tovfpu_data2[j] = opcfifo[entryidx].data[1][j];
@@ -306,7 +296,7 @@ void BASE::OPC_EMIT()
                         doemit = true;
                         emito_lsu = true;
 
-                        for (int j = 0; j < num_thread; j++)
+                        for (int j = 0; j < hw_num_thread; j++)
                         {
                             tolsu_data1[j] = opcfifo[entryidx].data[0][j];
                             tolsu_data2[j] = opcfifo[entryidx].data[1][j];
@@ -337,7 +327,7 @@ void BASE::OPC_EMIT()
                         doemit = true;
                         emito_mul = true;
 
-                        for (int j = 0; j < num_thread; j++)
+                        for (int j = 0; j < hw_num_thread; j++)
                         {
                             tomul_data1[j] = opcfifo[entryidx].data[0][j];
                             tomul_data2[j] = opcfifo[entryidx].data[1][j];
@@ -354,7 +344,7 @@ void BASE::OPC_EMIT()
                         doemit = true;
                         emito_sfu = true;
 
-                        for (int j = 0; j < num_thread; j++)
+                        for (int j = 0; j < hw_num_thread; j++)
                         {
                             tosfu_data1[j] = opcfifo[entryidx].data[0][j];
                             tosfu_data2[j] = opcfifo[entryidx].data[1][j];

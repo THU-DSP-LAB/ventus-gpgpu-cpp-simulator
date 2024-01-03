@@ -10,14 +10,23 @@ struct meta_data{  // 这个metadata是供驱动使用的，而不是给硬件�
     uint64_t metaDataBaseAddr;///> CSR_KNL的值，
     uint64_t ldsSize;///> 每个workgroup使用的local memory的大小
     uint64_t pdsSize;///> 每个thread用到的private memory大小
-    uint64_t sgprUsage;///> 每个workgroup使用的标量寄存器数目
-    uint64_t vgprUsage;///> 每个thread使用的向量寄存器数目
+    uint64_t sgprUsage;///> 每个warp使用的标量寄存器数目
+    uint64_t vgprUsage;///> 每个warp使用的向量寄存器数目
     uint64_t pdsBaseAddr;///> private memory的基址，要转成每个workgroup的基地址， wf_size*wg_size*pdsSize
-    uint64_t num_buffer; ///> buffer的数目，包括指令buffer
+    uint64_t num_buffer; ///> buffer的数目，包括指令buffer、privatemem
     uint64_t buffer_base[num_buffer];//各buffer的基址。第一块buffer是给硬件用的metadata
     uint64_t buffer_size[num_buffer];//各buffer的size，以Bytes为单位
     uint64_t buffer_allocsize[num_buffer];//各buffer的size，以Bytes为单位
 };
+
+// CSR是每个workgroup一个，所以pdsBaseAddr转换成CSR_PDS，每个workgroup有自己的pdsbaseaddr（分配block时计算偏移）。
+// 硬件保证每个线程访问privatemem映射到相应地址。用专用指令访问。
+// allocSize是整个kernel的privatemem的大小。matadd例子因为只有一个workgroup所以其大小等于wf_size*wg_size*pdsSize
+// privatemem和globalmem是一个层级的，需要用L2cache访问
+
+// localmem是SM内共享的空间，每个workgroup的CSR的CSR_LDS在block分配时加上偏移量。编译器保证访存时加上偏移。
+
+// SM内寄存器总数固定，每次分配block占用一定的寄存器
 
 ```
 

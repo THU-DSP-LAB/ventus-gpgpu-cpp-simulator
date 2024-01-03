@@ -30,8 +30,22 @@ make run
 gdb ./ventus.out ./core.debug
 ```
 
+或者可以用写好的Makefile，运行【make gdb】进入gdb。  
+根据行号设置断点：
+```text
+(gdb) b 5
+```
+运行和继续：
+```text
+运行 r
+继续单步调试 n
+继续执行到下一个断点 c
+```
+
 ---
 
 To configure systemc, you can refer to my [blog post](https://zhuanlan.zhihu.com/p/638360098) (I also referred to the experience of many others, but this one is more suitable for this project).
 
 The main program is currently in sc-code/sm, run [make -j $(nproc) && ./ventus.out --inssrc imem --metafile matadd/matadd.metadata --datafile matadd/matadd.data --numcycle 10000] to compile the program and get the output under the sm folder.
+
+acknowledgement: [ventus-gpgpu](https://github.com/THU-DSP-LAB/ventus-gpgpu), [GPGPU-Sim](https://github.com/accel-sim/gpgpu-sim_distribution)

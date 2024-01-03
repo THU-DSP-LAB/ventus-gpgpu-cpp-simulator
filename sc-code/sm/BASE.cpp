@@ -44,45 +44,50 @@ void BASE::debug_display3()
 
 void BASE::PROGRAM_COUNTER(int warp_id)
 {
-    WARPS[warp_id]->pc = 0x80000000 - 4;
+    // m_hw_warps[warp_id]->pc = 0x80000000 - 4;
     while (true)
     {
         // cout << "SM" << sm_id << " warp" << warp_id << " PC: finish at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
         wait(clk.posedge_event());
         // cout << "SM" << sm_id << " warp" << warp_id << " PC: start at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
         // cout << "PC warp" << warp_id << " start at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-        // wait(WARPS[warp_id]->ev_ibuf_inout); // ibuf判断swallow后，fetch新指令
+        // wait(m_hw_warps[warp_id]->ev_ibuf_inout); // ibuf判断swallow后，fetch新指令
         // cout << "PC start, ibuf_swallow=" << ibuf_swallow << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-
-        if (WARPS[warp_id]->is_warp_activated)
+        if (m_hw_warps[warp_id]->is_warp_activated.read())
         {
+            // cout << "warp " << warp_id << " sup at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
             if (rst_n == 0)
             {
-                WARPS[warp_id]->pc = 0x80000000 - 4;
-                WARPS[warp_id]->fetch_valid = false;
+                m_hw_warps[warp_id]->pc = 0;
+                m_hw_warps[warp_id]->fetch_valid = false;
             }
-            else if (WARPS[warp_id]->jump == 1)
+            else if (m_hw_warps[warp_id]->jump == 1)
             {
-                WARPS[warp_id]->pc = WARPS[warp_id]->jump_addr;
-                WARPS[warp_id]->fetch_valid = true;
-                cout << "SM" << sm_id << " warp " << warp_id << " pc jumps to 0x" << std::hex << WARPS[warp_id]->jump_addr << std::dec
+                m_hw_warps[warp_id]->pc = m_hw_warps[warp_id]->jump_addr;
+                m_hw_warps[warp_id]->fetch_valid = true;
+                cout << "SM" << sm_id << " warp " << warp_id << " pc jumps to 0x" << std::hex << m_hw_warps[warp_id]->jump_addr << std::dec
                      << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
             }
-            else if (WARPS[warp_id]->simtstk_jump == 1)
+            else if (m_hw_warps[warp_id]->simtstk_jump == 1)
             {
-                WARPS[warp_id]->pc = WARPS[warp_id]->simtstk_jumpaddr;
-                WARPS[warp_id]->fetch_valid = true;
+                m_hw_warps[warp_id]->pc = m_hw_warps[warp_id]->simtstk_jumpaddr;
+                m_hw_warps[warp_id]->fetch_valid = true;
             }
-            else if (WARPS[warp_id]->ibuf_empty |
-                     (!WARPS[warp_id]->ibuf_full |
-                      (WARPS[warp_id]->dispatch_warp_valid && (!opc_full | doemit))))
+            else if (m_hw_warps[warp_id]->ibuf_empty |
+                     (!m_hw_warps[warp_id]->ibuf_full |
+                      (m_hw_warps[warp_id]->dispatch_warp_valid && (!opc_full | doemit))))
             {
                 // cout << "pc will +1 at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-                WARPS[warp_id]->pc = WARPS[warp_id]->pc.read() + 4;
-                WARPS[warp_id]->fetch_valid = true;
+                m_hw_warps[warp_id]->pc = m_hw_warps[warp_id]->pc.read() + 4;
+                m_hw_warps[warp_id]->fetch_valid = true;
             }
         }
-        WARPS[warp_id]->ev_fetchpc.notify();
+        m_hw_warps[warp_id]->ev_fetchpc.notify();
+        if (m_hw_warps[warp_id]->flush_pipeline)
+        {
+            m_hw_warps[warp_id]->fetch_valid = false;
+            m_hw_warps[warp_id]->fetch_valid2 = false;
+        }
     }
 }
 
@@ -104,45 +109,40 @@ void BASE::INSTRUCTION_REG(int warp_id)
         // cout << "SM" << sm_id << " warp" << warp_id << " INSTRUCTION_REG: finish at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
         wait(clk.posedge_event());
         // cout << "SM" << sm_id << " warp" << warp_id << " INSTRUCTION_REG: start at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-        if (WARPS[warp_id]->is_warp_activated && rst_n != 0)
+        if (m_hw_warps[warp_id]->is_warp_activated && rst_n != 0)
         {
-            if (WARPS[warp_id]->jump == 1 |
-                WARPS[warp_id]->simtstk_jump == 1)
+            if (m_hw_warps[warp_id]->jump == 1 |
+                m_hw_warps[warp_id]->simtstk_jump == 1)
             {
-                WARPS[warp_id]->fetch_valid12 = false;
-                WARPS[warp_id]->ev_decode.notify();
+                m_hw_warps[warp_id]->fetch_valid12 = false;
+                m_hw_warps[warp_id]->ev_decode.notify();
             }
-            else if (WARPS[warp_id]->ibuf_empty |
-                     (!WARPS[warp_id]->ibuf_full |
-                      (WARPS[warp_id]->dispatch_warp_valid && (!opc_full | doemit))))
+            else if (m_hw_warps[warp_id]->ibuf_empty |
+                     (!m_hw_warps[warp_id]->ibuf_full |
+                      (m_hw_warps[warp_id]->dispatch_warp_valid && (!opc_full | doemit))))
             {
-                WARPS[warp_id]->fetch_valid12 = WARPS[warp_id]->fetch_valid;
+                m_hw_warps[warp_id]->fetch_valid12 = m_hw_warps[warp_id]->fetch_valid;
                 if (inssrc == "ireg")
-                    WARPS[warp_id]->fetch_ins =
-                        (WARPS[warp_id]->pc.read() >= 0)
-                            ? ireg[WARPS[warp_id]->pc.read() / 4]
+                    m_hw_warps[warp_id]->fetch_ins =
+                        (m_hw_warps[warp_id]->pc.read() >= 0)
+                            ? ireg[m_hw_warps[warp_id]->pc.read() / 4]
                             : I_TYPE(INVALID_, 0, 0, 0);
                 else if (inssrc == "imem")
                 {
                     // if (sm_id == 0 && warp_id == 0)
-                    //     cout << "SM" << sm_id << " warp" << warp_id << " INSTRUCTION_REG: fetch_ins pc=" << std::hex << WARPS[warp_id]->pc.read() << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-                    // WARPS[warp_id]->fetch_ins =
-                    //     (WARPS[warp_id]->pc.read() >= 0x80000000)
-                    //         ? I_TYPE(ins_mem[(WARPS[warp_id]->pc.read() - 0x80000000) / 4])
-                    //         : I_TYPE(INVALID_, 0, 0, 0);
-                    WARPS[warp_id]->fetch_ins = readInsBuffer(WARPS[warp_id]->pc.read(), addrOutofRangeException);
+                    //     cout << "SM" << sm_id << " warp" << warp_id << " INSTRUCTION_REG: fetch_ins pc=" << std::hex << m_hw_warps[warp_id]->pc.read() << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                    m_hw_warps[warp_id]->fetch_ins = m_kernel->readInsBuffer(m_hw_warps[warp_id]->pc.read(), addrOutofRangeException);
                     if (addrOutofRangeException)
                         cout << "SM" << sm_id << " warp" << warp_id << "INS_REG error: pc out of range at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
 
                     // if (sm_id == 0 && warp_id == 0)
-                    //     cout << "SM" << sm_id << " warp" << warp_id << " ICACHE: read fetch_ins.bit=ins_mem[" << std::hex << WARPS[warp_id]->pc.read() / 4 << "]=" << WARPS[warp_id]->fetch_ins.origin32bit << std::dec
+                    //     cout << "SM" << sm_id << " warp" << warp_id << " ICACHE: read fetch_ins.bit=ins_mem[" << std::hex << m_hw_warps[warp_id]->pc.read() << "]=" << m_hw_warps[warp_id]->fetch_ins.origin32bit << std::dec
                     //          << ", will pass to decode_ins at the same cycle at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-                    // cout << "SM" << sm_id << " warp" << warp_id << " INSTRUCTION_REG: finish fetch_ins pc=" << WARPS[warp_id]->pc.read() << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 }
 
                 else
                     cout << "ICACHE error: unrecognized param inssrc=" << inssrc << "\n";
-                WARPS[warp_id]->ev_decode.notify();
+                m_hw_warps[warp_id]->ev_decode.notify();
             }
         }
     }
@@ -150,19 +150,19 @@ void BASE::INSTRUCTION_REG(int warp_id)
 
 void BASE::cycle_IBUF_ACTION(int warp_id, I_TYPE &dispatch_ins_, I_TYPE &_readdata3)
 {
-    WARPS[warp_id]->ibuf_swallow = false;
+    m_hw_warps[warp_id]->ibuf_swallow = false;
     if (rst_n.read() == 0)
-        WARPS[warp_id]->ififo.clear();
+        m_hw_warps[warp_id]->ififo.clear();
     else
     {
-        if (WARPS[warp_id]->dispatch_warp_valid && (!opc_full | doemit))
+        if (m_hw_warps[warp_id]->dispatch_warp_valid && (!opc_full | doemit))
         {
             // cout << "before dispatch, ififo has " << ififo.used() << " elems at " << sc_time_stamp() <<","<< sc_delta_count_at_current_time() << "\n";
-            dispatch_ins_ = WARPS[warp_id]->ififo.get();
+            dispatch_ins_ = m_hw_warps[warp_id]->ififo.get();
             // if (sm_id == 0 && warp_id == 0)
             // {
-            //     if (!WARPS[warp_id]->ififo.isempty())
-            //         cout << "SM" << sm_id << " warp" << warp_id << " IBUF dispatch ins.bit=" << std::hex << dispatch_ins_.origin32bit << ", and ibuf.top become " << WARPS[warp_id]->ififo.front().origin32bit << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+            //     if (!m_hw_warps[warp_id]->ififo.isempty())
+            //         cout << "SM" << sm_id << " warp" << warp_id << " IBUF dispatch ins.bit=" << std::hex << dispatch_ins_.origin32bit << ", and ibuf.top become " << m_hw_warps[warp_id]->ififo.front().origin32bit << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
             //     else
             //         cout << "SM" << sm_id << " warp" << warp_id << " IBUF dispatch ins.bit=" << std::hex << dispatch_ins_.origin32bit << ", and ibuf become empty at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
             // }
@@ -172,62 +172,44 @@ void BASE::cycle_IBUF_ACTION(int warp_id, I_TYPE &dispatch_ins_, I_TYPE &_readda
         {
             // cout << "IBUF: dispatch == false at " << sc_time_stamp() <<","<< sc_delta_count_at_current_time() << "\n";
         }
-        if (WARPS[warp_id]->fetch_valid2 && WARPS[warp_id]->jump == false && WARPS[warp_id]->simtstk_jump == false)
+
+        if (m_hw_warps[warp_id]->fetch_valid2 && m_hw_warps[warp_id]->jump == false && m_hw_warps[warp_id]->simtstk_jump == false)
         {
-            if (WARPS[warp_id]->ififo.isfull())
+            if (m_hw_warps[warp_id]->ififo.isfull())
             {
                 // cout << "SM" << sm_id << " warp" << warp_id << " IFIFO is full(not error) at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
             }
             else
             {
-                WARPS[warp_id]->ififo.push(WARPS[warp_id]->decode_ins.read());
-                WARPS[warp_id]->ibuf_swallow = true;
-                // if (WARPS[warp_id]->decode_ins.read().op == OP_TYPE::ENDPRG_)
-                //     cout << "SM" << sm_id << " warp " << warp_id << " IFIFO push decode_ins=" << WARPS[warp_id]->decode_ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                m_hw_warps[warp_id]->ififo.push(m_hw_warps[warp_id]->decode_ins.read());
+                m_hw_warps[warp_id]->ibuf_swallow = true;
+                // if (m_hw_warps[warp_id]->decode_ins.read().op == OP_TYPE::ENDPRG_)
+                //     cout << "SM" << sm_id << " warp " << warp_id << " IFIFO push decode_ins=" << m_hw_warps[warp_id]->decode_ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
             }
             // cout << "before put, ififo has " << ififo.used() << " elems at " << sc_time_stamp() <<","<< sc_delta_count_at_current_time() << "\n";
             // cout << "after put, ififo has " << ififo.used() << " elems at " << sc_time_stamp() <<","<< sc_delta_count_at_current_time() << "\n";
         }
-        else if (WARPS[warp_id]->jump || WARPS[warp_id]->simtstk_jump)
+        else if (m_hw_warps[warp_id]->jump || m_hw_warps[warp_id]->simtstk_jump)
         {
             // cout << "ibuf detected jump at " << sc_time_stamp() <<","<< sc_delta_count_at_current_time() << "\n";
-            WARPS[warp_id]->ififo.clear();
+            m_hw_warps[warp_id]->ififo.clear();
         }
     }
-    WARPS[warp_id]->ibuf_empty = WARPS[warp_id]->ififo.isempty();
-    WARPS[warp_id]->ibuf_full = WARPS[warp_id]->ififo.isfull();
-    if (WARPS[warp_id]->ififo.isempty())
+    m_hw_warps[warp_id]->ibuf_empty = m_hw_warps[warp_id]->ififo.isempty();
+    m_hw_warps[warp_id]->ibuf_full = m_hw_warps[warp_id]->ififo.isfull();
+    if (m_hw_warps[warp_id]->ififo.isempty())
     {
-        WARPS[warp_id]->ififo_elem_num = 0;
-        WARPS[warp_id]->ibuftop_ins = I_TYPE(INVALID_, -1, 0, 0);
+        m_hw_warps[warp_id]->ififo_elem_num = 0;
+        m_hw_warps[warp_id]->ibuftop_ins = I_TYPE(INVALID_, -1, 0, 0);
     }
     else
     {
-        WARPS[warp_id]->ibuftop_ins.write(WARPS[warp_id]->ififo.front());
-        WARPS[warp_id]->ififo_elem_num = WARPS[warp_id]->ififo.used();
+        m_hw_warps[warp_id]->ibuftop_ins.write(m_hw_warps[warp_id]->ififo.front());
+        m_hw_warps[warp_id]->ififo_elem_num = m_hw_warps[warp_id]->ififo.used();
         // cout << "ififo has " << ififo.used() << " elems in it at " << sc_time_stamp() <<","<< sc_delta_count_at_current_time() << "\n";
     }
     // if (sm_id == 0 && warp_id == 0)
-    //     cout << "SM" << sm_id << " warp" << warp_id << " IBUF ififo_elem_num=" << WARPS[warp_id]->ififo_elem_num << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-}
-
-void BASE::IBUF_ACTION(int warp_id)
-{
-    I_TYPE dispatch_ins_;
-    I_TYPE _readdata3;
-    while (true)
-    {
-        // cout << "SM" << sm_id << " warp" << warp_id << " IBUF_ACTION: finish at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-        wait(clk.posedge_event());
-        // cout << "SM" << sm_id << " warp" << warp_id << " IBUF_ACTION: start at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-        // cout << "IBUF_ACTION warp" << warp_id << ": start at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-
-        if (WARPS[warp_id]->is_warp_activated)
-        {
-            cycle_IBUF_ACTION(warp_id, dispatch_ins_, _readdata3);
-            WARPS[warp_id]->ev_ibuf_updated.notify();
-        }
-    }
+    //     cout << "SM" << sm_id << " warp" << warp_id << " IBUF ififo_elem_num=" << m_hw_warps[warp_id]->ififo_elem_num << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
 }
 
 void BASE::cycle_UPDATE_SCORE(int warp_id, I_TYPE &tmpins, std::set<SCORE_TYPE>::iterator &it, REG_TYPE &regtype_, bool &insertscore)
@@ -249,15 +231,15 @@ void BASE::cycle_UPDATE_SCORE(int warp_id, I_TYPE &tmpins, std::set<SCORE_TYPE>:
             regtype_ = s;
         else
             cout << "Scoreboard warp" << warp_id << " error: wb_ins wvd=wxd=0 at the same time at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-        it = WARPS[warp_id]->score.find(SCORE_TYPE(regtype_, tmpins.d));
+        it = m_hw_warps[warp_id]->score.find(SCORE_TYPE(regtype_, tmpins.d));
         // cout << "scoreboard写回: 正在寻找 SCORE " << SCORE_TYPE(regtype_, tmpins.d) << " at " << sc_time_stamp() <<","<< sc_delta_count_at_current_time() << "\n";
-        if (it == WARPS[warp_id]->score.end())
+        if (it == m_hw_warps[warp_id]->score.end())
         {
             cout << "warp" << warp_id << "_wb_ena error: scoreboard can't find rd in score set, wb_ins=" << wb_ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
         }
         else
         {
-            WARPS[warp_id]->score.erase(it);
+            m_hw_warps[warp_id]->score.erase(it);
         }
         // cout << "warp" << warp_id << "_scoreboard: succesfully erased SCORE " << SCORE_TYPE(regtype_, tmpins.d) << ", wb_ins=" << wb_ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
     }
@@ -265,28 +247,28 @@ void BASE::cycle_UPDATE_SCORE(int warp_id, I_TYPE &tmpins, std::set<SCORE_TYPE>:
     //
     // dispatch阶段，写入score
     //
-    tmpins = WARPS[warp_id]->ibuftop_ins; // this ibuftop_ins is the old data
-    if (WARPS[warp_id]->branch_sig || WARPS[warp_id]->vbran_sig)
+    tmpins = m_hw_warps[warp_id]->ibuftop_ins; // this ibuftop_ins is the old data
+    if (m_hw_warps[warp_id]->branch_sig || m_hw_warps[warp_id]->vbran_sig)
     {
-        if (WARPS[warp_id]->wait_bran == 0)
+        if (m_hw_warps[warp_id]->wait_bran == 0)
             cout << "warp" << warp_id << "_scoreboard error: detect (v)branch_sig=1(from salu) while wait_bran=0 at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-        else if (WARPS[warp_id]->dispatch_warp_valid && (!opc_full | doemit))
+        else if (m_hw_warps[warp_id]->dispatch_warp_valid && (!opc_full | doemit))
             cout << "warp" << warp_id << "_scoreboard error: detect (v)branch_sig=1(from salu) while dispatch=1 at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-        WARPS[warp_id]->wait_bran = 0;
+        m_hw_warps[warp_id]->wait_bran = 0;
     }
     else if ((tmpins.ddd.branch != 0) &&
-             WARPS[warp_id]->dispatch_warp_valid && (!opc_full | doemit)) // 表示将要dispatch
+             m_hw_warps[warp_id]->dispatch_warp_valid && (!opc_full | doemit)) // 表示将要dispatch
     {
         // cout << "ibuf let wait_bran=1 at " << sc_time_stamp() <<","<< sc_delta_count_at_current_time() << "\n";
-        WARPS[warp_id]->wait_bran = 1;
+        m_hw_warps[warp_id]->wait_bran = 1;
     }
-    else if (tmpins.op == OP_TYPE::ENDPRG_ && WARPS[warp_id]->dispatch_warp_valid && (!opc_full | doemit))
+    else if (tmpins.op == OP_TYPE::ENDPRG_ && m_hw_warps[warp_id]->dispatch_warp_valid && (!opc_full | doemit))
     { // 权宜之计，让endprg后暂停dispatch
         // cout << "SM" << sm_id << " warp " << warp_id << " UPDATE_SCORE detect ENDPRG, suspend to dispatch at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-        WARPS[warp_id]->wait_bran = 1;
+        m_hw_warps[warp_id]->wait_bran = 1;
     }
 
-    if (WARPS[warp_id]->dispatch_warp_valid && (!opc_full | doemit))
+    if (m_hw_warps[warp_id]->dispatch_warp_valid && (!opc_full | doemit))
     { // 加入 score
         insertscore = true;
         if (tmpins.ddd.wvd)
@@ -302,7 +284,7 @@ void BASE::cycle_UPDATE_SCORE(int warp_id, I_TYPE &tmpins, std::set<SCORE_TYPE>:
         else
             insertscore = false;
         if (insertscore)
-            WARPS[warp_id]->score.insert(SCORE_TYPE(regtype_, tmpins.d));
+            m_hw_warps[warp_id]->score.insert(SCORE_TYPE(regtype_, tmpins.d));
         // if (sm_id == 0)
         //     cout << "SM0 warp" << warp_id << "_scoreboard: insert " << SCORE_TYPE(regtype_, tmpins.d)
         //          << " because of dispatch " << tmpins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
@@ -311,51 +293,51 @@ void BASE::cycle_UPDATE_SCORE(int warp_id, I_TYPE &tmpins, std::set<SCORE_TYPE>:
 
 void BASE::cycle_JUDGE_DISPATCH(int warp_id, I_TYPE &_readibuf)
 {
-    if (WARPS[warp_id]->wait_bran | WARPS[warp_id]->jump)
+    if (m_hw_warps[warp_id]->wait_bran | m_hw_warps[warp_id]->jump)
     {
-        WARPS[warp_id]->can_dispatch = false;
+        m_hw_warps[warp_id]->can_dispatch = false;
     }
-    else if (!WARPS[warp_id]->ififo.isempty())
+    else if (!m_hw_warps[warp_id]->ififo.isempty())
     {
-        _readibuf = WARPS[warp_id]->ififo.front();
-        WARPS[warp_id]->can_dispatch = true;
+        _readibuf = m_hw_warps[warp_id]->ififo.front();
+        m_hw_warps[warp_id]->can_dispatch = true;
 
         if (_readibuf.op == INVALID_)
-            WARPS[warp_id]->can_dispatch = false;
+            m_hw_warps[warp_id]->can_dispatch = false;
 
-        if (_readibuf.ddd.wxd && WARPS[warp_id]->score.find(SCORE_TYPE(s, _readibuf.d)) != WARPS[warp_id]->score.end())
-            WARPS[warp_id]->can_dispatch = false;
-        else if (_readibuf.ddd.wvd && WARPS[warp_id]->score.find(SCORE_TYPE(v, _readibuf.d)) != WARPS[warp_id]->score.end())
-            WARPS[warp_id]->can_dispatch = false;
-        else if (_readibuf.ddd.sel_alu1 == DecodeParams::A1_RS1 && WARPS[warp_id]->score.find(SCORE_TYPE(s, _readibuf.s1)) != WARPS[warp_id]->score.end())
-            WARPS[warp_id]->can_dispatch = false;
-        else if (_readibuf.ddd.sel_alu1 == DecodeParams::A1_VRS1 && WARPS[warp_id]->score.find(SCORE_TYPE(v, _readibuf.s1)) != WARPS[warp_id]->score.end())
-            WARPS[warp_id]->can_dispatch = false;
-        else if (_readibuf.ddd.sel_alu2 == DecodeParams::sel_alu2_t::A2_RS2 && WARPS[warp_id]->score.find(SCORE_TYPE(s, _readibuf.s2)) != WARPS[warp_id]->score.end())
-            WARPS[warp_id]->can_dispatch = false;
-        else if (_readibuf.ddd.sel_alu2 == DecodeParams::sel_alu2_t::A2_VRS2 && WARPS[warp_id]->score.find(SCORE_TYPE(v, _readibuf.s2)) != WARPS[warp_id]->score.end())
-            WARPS[warp_id]->can_dispatch = false;
-        else if (_readibuf.ddd.sel_alu3 == DecodeParams::sel_alu3_t::A3_FRS3 && WARPS[warp_id]->score.find(SCORE_TYPE(s, _readibuf.s3)) != WARPS[warp_id]->score.end())
-            WARPS[warp_id]->can_dispatch = false;
-        else if (_readibuf.ddd.sel_alu3 == DecodeParams::sel_alu3_t::A3_VRS3 && WARPS[warp_id]->score.find(SCORE_TYPE(v, _readibuf.s3)) != WARPS[warp_id]->score.end())
-            WARPS[warp_id]->can_dispatch = false;
-        else if (_readibuf.ddd.sel_alu3 == DecodeParams::sel_alu3_t::A3_PC && _readibuf.ddd.branch == DecodeParams::branch_t::B_R && WARPS[warp_id]->score.find(SCORE_TYPE(s, _readibuf.s1)) != WARPS[warp_id]->score.end())
-            WARPS[warp_id]->can_dispatch = false;
-        else if (_readibuf.ddd.sel_alu3 == DecodeParams::sel_alu3_t::A3_SD && (_readibuf.ddd.isvec & (!_readibuf.ddd.readmask)) && WARPS[warp_id]->score.find(SCORE_TYPE(s, _readibuf.s3)) != WARPS[warp_id]->score.end())
-            WARPS[warp_id]->can_dispatch = false;
-        else if (_readibuf.ddd.sel_alu3 == DecodeParams::sel_alu3_t::A3_SD && !(_readibuf.ddd.isvec & (!_readibuf.ddd.readmask)) && WARPS[warp_id]->score.find(SCORE_TYPE(s, _readibuf.s2)) != WARPS[warp_id]->score.end())
-            WARPS[warp_id]->can_dispatch = false;
+        if (_readibuf.ddd.wxd && m_hw_warps[warp_id]->score.find(SCORE_TYPE(s, _readibuf.d)) != m_hw_warps[warp_id]->score.end())
+            m_hw_warps[warp_id]->can_dispatch = false;
+        else if (_readibuf.ddd.wvd && m_hw_warps[warp_id]->score.find(SCORE_TYPE(v, _readibuf.d)) != m_hw_warps[warp_id]->score.end())
+            m_hw_warps[warp_id]->can_dispatch = false;
+        else if (_readibuf.ddd.sel_alu1 == DecodeParams::A1_RS1 && m_hw_warps[warp_id]->score.find(SCORE_TYPE(s, _readibuf.s1)) != m_hw_warps[warp_id]->score.end())
+            m_hw_warps[warp_id]->can_dispatch = false;
+        else if (_readibuf.ddd.sel_alu1 == DecodeParams::A1_VRS1 && m_hw_warps[warp_id]->score.find(SCORE_TYPE(v, _readibuf.s1)) != m_hw_warps[warp_id]->score.end())
+            m_hw_warps[warp_id]->can_dispatch = false;
+        else if (_readibuf.ddd.sel_alu2 == DecodeParams::sel_alu2_t::A2_RS2 && m_hw_warps[warp_id]->score.find(SCORE_TYPE(s, _readibuf.s2)) != m_hw_warps[warp_id]->score.end())
+            m_hw_warps[warp_id]->can_dispatch = false;
+        else if (_readibuf.ddd.sel_alu2 == DecodeParams::sel_alu2_t::A2_VRS2 && m_hw_warps[warp_id]->score.find(SCORE_TYPE(v, _readibuf.s2)) != m_hw_warps[warp_id]->score.end())
+            m_hw_warps[warp_id]->can_dispatch = false;
+        else if (_readibuf.ddd.sel_alu3 == DecodeParams::sel_alu3_t::A3_FRS3 && m_hw_warps[warp_id]->score.find(SCORE_TYPE(s, _readibuf.s3)) != m_hw_warps[warp_id]->score.end())
+            m_hw_warps[warp_id]->can_dispatch = false;
+        else if (_readibuf.ddd.sel_alu3 == DecodeParams::sel_alu3_t::A3_VRS3 && m_hw_warps[warp_id]->score.find(SCORE_TYPE(v, _readibuf.s3)) != m_hw_warps[warp_id]->score.end())
+            m_hw_warps[warp_id]->can_dispatch = false;
+        else if (_readibuf.ddd.sel_alu3 == DecodeParams::sel_alu3_t::A3_PC && _readibuf.ddd.branch == DecodeParams::branch_t::B_R && m_hw_warps[warp_id]->score.find(SCORE_TYPE(s, _readibuf.s1)) != m_hw_warps[warp_id]->score.end())
+            m_hw_warps[warp_id]->can_dispatch = false;
+        else if (_readibuf.ddd.sel_alu3 == DecodeParams::sel_alu3_t::A3_SD && (_readibuf.ddd.isvec & (!_readibuf.ddd.readmask)) && m_hw_warps[warp_id]->score.find(SCORE_TYPE(s, _readibuf.s3)) != m_hw_warps[warp_id]->score.end())
+            m_hw_warps[warp_id]->can_dispatch = false;
+        else if (_readibuf.ddd.sel_alu3 == DecodeParams::sel_alu3_t::A3_SD && !(_readibuf.ddd.isvec & (!_readibuf.ddd.readmask)) && m_hw_warps[warp_id]->score.find(SCORE_TYPE(s, _readibuf.s2)) != m_hw_warps[warp_id]->score.end())
+            m_hw_warps[warp_id]->can_dispatch = false;
 
         // if (sm_id == 0 && warp_id == 0)
-        //     if (WARPS[warp_id]->can_dispatch == false)
+        //     if (m_hw_warps[warp_id]->can_dispatch == false)
         //         cout << "SM" << sm_id << " warp" << warp_id << " JUDGE_DISPATCH=false with ins.bit=" << std::hex << _readibuf.origin32bit << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
 
-        // if (sm_id == 0 && warp_id == 0 && _readibuf.origin32bit == uint32_t(0x96013057) && WARPS[warp_id]->can_dispatch == false)
-        // if (sm_id == 0 && warp_id == 0 && WARPS[warp_id]->can_dispatch == false)
+        // if (sm_id == 0 && warp_id == 0 && _readibuf.origin32bit == uint32_t(0x96013057) && m_hw_warps[warp_id]->can_dispatch == false)
+        // if (sm_id == 0 && warp_id == 0 && m_hw_warps[warp_id]->can_dispatch == false)
         //     cout << "SM" << sm_id << " warp" << warp_id << " JUDGE_DISPATCH meet ins.bit=" << std::hex << _readibuf.origin32bit << std::dec << ", can't dispatch, ins.d=" << _readibuf.d << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
     }
-    else if (WARPS[warp_id]->ififo.isempty())
-        WARPS[warp_id]->can_dispatch = false;
+    else if (m_hw_warps[warp_id]->ififo.isempty())
+        m_hw_warps[warp_id]->can_dispatch = false;
 }
 
 void BASE::JUDGE_DISPATCH(int warp_id)
@@ -364,13 +346,13 @@ void BASE::JUDGE_DISPATCH(int warp_id)
     while (true)
     {
         // cout << "SM" << sm_id << " warp" << warp_id << " JUDGE_DISPATCH: finish at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-        wait(WARPS[warp_id]->ev_judge_dispatch & WARPS[warp_id]->ev_ibuf_updated);
+        wait(m_hw_warps[warp_id]->ev_judge_dispatch & m_hw_warps[warp_id]->ev_ibuf_updated);
         // cout << "SM" << sm_id << " warp" << warp_id << " JUDGE_DISPATCH: start at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
         // cout << "scoreboard: ibuftop_ins=" << ibuftop_ins << " at " << sc_time_stamp() <<","<< sc_delta_count_at_current_time() << "\n";
 
         cycle_JUDGE_DISPATCH(warp_id, _readibuf);
 
-        WARPS[warp_id]->ev_issue.notify();
+        m_hw_warps[warp_id]->ev_issue.notify();
     }
 }
 
@@ -387,117 +369,36 @@ void BASE::BEFORE_DISPATCH(int warp_id)
     while (true)
     {
         wait(ev_warp_assigned);
-        if (WARPS[warp_id]->is_warp_activated)
+        if (m_hw_warps[warp_id]->is_warp_activated)
         {
             // if (sm_id == 0 && warp_id == 0)
-            // cout << "SM" << sm_id << " warp" << warp_id << " before action, fetch_valid2=" << WARPS[warp_id]->fetch_valid2 << ", decode_ins=" << std::hex << WARPS[warp_id]->decode_ins.read().origin32bit
-            //      << std::dec << ", jump=" << WARPS[warp_id]->jump << ", ififo.isfull=" << WARPS[warp_id]->ififo.isfull() << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+            // cout << "SM" << sm_id << " warp" << warp_id << " before action, fetch_valid2=" << m_hw_warps[warp_id]->fetch_valid2 << ", decode_ins=" << std::hex << m_hw_warps[warp_id]->decode_ins.read().origin32bit
+            //      << std::dec << ", jump=" << m_hw_warps[warp_id]->jump << ", ififo.isfull=" << m_hw_warps[warp_id]->ififo.isfull() << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
 
             cycle_IBUF_ACTION(warp_id, dispatch_ins_, _readdata3);
             cycle_UPDATE_SCORE(warp_id, tmpins, it, regtype_, insertscore);
             cycle_JUDGE_DISPATCH(warp_id, _readibuf);
-            WARPS[warp_id]->ev_issue.notify();
+            m_hw_warps[warp_id]->ev_issue.notify();
         }
         else
-        { // 某个warp结束后，依然出发issue_list，否则warp_scheduler无法运行
-            WARPS[warp_id]->ev_issue.notify();
-        }
-    }
-}
-
-void BASE::cycle_ISSUE_ACTION()
-{
-    bool find_dispatchwarp = 0;
-    last_dispatch_warpid = 0;
-    I_TYPE _newissueins;
-
-    if (!opc_full | doemit) // 这是dispatch_ready (ready-valid机制)
-    {
-        find_dispatchwarp = 0;
-        for (int i = last_dispatch_warpid; i < last_dispatch_warpid + num_warp_activated; i++)
         {
-            if (!find_dispatchwarp && WARPS[i % num_warp_activated]->can_dispatch)
-            {
-                // cout << "ISSUE: opc_full=" << opc_full << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-                WARPS[i % num_warp_activated]->dispatch_warp_valid = true;
-                dispatch_valid = true;
-                _newissueins = WARPS[i % num_warp_activated]->ififo.front();
-                _newissueins.mask = WARPS[i % num_warp_activated]->current_mask;
-                // cout << "let issue_ins mask=" << _newissueins.mask << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-                issue_ins = _newissueins;
-                issueins_warpid = i % num_warp_activated;
-                find_dispatchwarp = true;
-                last_dispatch_warpid = i % num_warp_activated + 1;
-            }
-            else
-            {
-                WARPS[i % num_warp_activated]->dispatch_warp_valid = false;
-                // cout << "ISSUE: let warp" << i % num_warp_activated << " dispatch_warp_valid=false at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-            }
+            // 某个warp结束后，依然出发issue_list，否则warp_scheduler无法运行
+            m_hw_warps[warp_id]->ev_issue.notify();
         }
-        if (!find_dispatchwarp)
-            dispatch_valid = false;
-    }
-}
 
-void BASE::ISSUE_ACTION()
-{
-    bool find_dispatchwarp = 0;
-    last_dispatch_warpid = 0;
-    I_TYPE _newissueins;
-    while (true)
-    {
-        wait(ev_issue_list);
-        // cout << "SM" << sm_id << " ISSUE_ACTION: finish at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-        // cout << "SM" << sm_id << " ISSUE_ACTION: start at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-        // cout << "ISSUE start at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-        cycle_ISSUE_ACTION();
-    }
-}
-
-std::pair<int, int> BASE::reg_arbiter(
-    const std::array<std::array<bank_t, 3>, OPCFIFO_SIZE> &addr_arr, // opc_srcaddr
-    const std::array<std::array<bool, 3>, OPCFIFO_SIZE> &valid_arr,  // opc_valid
-    std::array<std::array<bool, 3>, OPCFIFO_SIZE> &ready_arr,        // opc_ready
-    int bank_id,
-    std::array<int, BANK_NUM> &REGcurrentIdx,
-    std::array<int, BANK_NUM> &read_bank_addr)
-{
-    const int rows = OPCFIFO_SIZE; // = addr_arr.size()
-    const int cols = 3;            // = addr_arr[0].size(), 每个opc_fifo_t四个待取元素
-    const int size = rows * cols;
-    std::pair<int, int> result(-1, -1); // 默认值表示没有找到有效数据
-    int index, i, j;
-    for (int idx = REGcurrentIdx[bank_id] % size;
-         idx < size + REGcurrentIdx[bank_id] % size; idx++)
-    {
-        index = idx % size;
-        i = index / cols;
-        j = index % cols;
-        if (valid_arr[i][j] == true)
+        if (m_hw_warps[warp_id]->flush_pipeline)
         {
-            if (addr_arr[i][j].bank_id == bank_id)
-            {
-                read_bank_addr[bank_id] = addr_arr[i][j].addr; // 下周期读数据
-                // cout << "let read_bank_addr(bank" << bank_id << ")="
-                //      << addr_arr[i][j].addr << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-                result.first = i;
-                result.second = j;
-                ready_arr[i][j] = true;
-                REGcurrentIdx[bank_id] = index + 1;
-                break;
-            }
+            m_hw_warps[warp_id]->ififo_elem_num = m_hw_warps[warp_id]->ififo.used();
         }
     }
-    return result;
 }
 
 void BASE::activate_warp(int warp_id)
 {
-    if (WARPS[warp_id] == nullptr)
+    if (m_hw_warps[warp_id] == nullptr)
     {
         WARP_BONE *new_warp_bone_ = new WARP_BONE(warp_id);
-        WARPS[warp_id] = new_warp_bone_;
+        m_hw_warps[warp_id] = new_warp_bone_;
 
         // warp_threads_group[0][warp_id] = new sc_process_handle(sc_spawn(sc_bind(&BASE::PROGRAM_COUNTER, this, warp_id), ("warp" + std::to_string(warp_id) + "_PROGRAM_COUNTER").c_str()));
         // warp_threads_group[1][warp_id] = new sc_process_handle(sc_spawn(sc_bind(&BASE::INSTRUCTION_REG, this, warp_id), ("warp" + std::to_string(warp_id) + "_INSTRUCTION_REG").c_str()));
@@ -517,10 +418,10 @@ void BASE::activate_warp(int warp_id)
 
 void BASE::remove_warp(int warp_id)
 {
-    if (WARPS[warp_id] != nullptr)
+    if (m_hw_warps[warp_id] != nullptr)
     {
-        delete WARPS[warp_id];
-        WARPS[warp_id] = nullptr;
+        delete m_hw_warps[warp_id];
+        m_hw_warps[warp_id] = nullptr;
         for (auto &threads : warp_threads_group)
         {
             sc_process_handle *thread_to_delete = threads[warp_id];
@@ -535,5 +436,122 @@ void BASE::remove_warp(int warp_id)
     else
     {
         cout << "Remove warp error: warp" << warp_id << " doesn't exist!\n";
+    }
+}
+
+void BASE::set_kernel(std::shared_ptr<kernel_info_t> kernel)
+{
+    assert(kernel);
+    m_kernel = kernel;
+    cout << "SM " << sm_id << " bind to kernel " << m_kernel->get_kid() << " \"" << m_kernel->get_kname() << "\" at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+}
+
+bool BASE::can_issue_1block(std::shared_ptr<kernel_info_t> kernel)
+{
+    if (max_cta_num(kernel) < 1)
+        return false;
+    else
+        return true;
+}
+
+unsigned BASE::max_cta_num(std::shared_ptr<kernel_info_t> kernel)
+{
+    unsigned kernel_num_thread_per_warp = kernel->get_num_thread_per_warp();
+    unsigned kernel_num_warp_per_cta = kernel->get_num_warp_per_cta();
+    if (kernel_num_thread_per_warp > hw_num_thread)
+        return 0;
+
+    // limited by warps
+    unsigned result_warp;
+    result_warp = hw_num_warp / kernel_num_warp_per_cta;
+
+    // limited by local memory size
+    unsigned kernel_ldsSize_per_cta = kernel->get_ldsSize_per_cta();
+    unsigned result_localmem;
+    result_localmem = hw_lds_size / kernel_ldsSize_per_cta;
+
+    return result_warp < result_localmem ? result_warp : result_localmem;
+}
+
+void BASE::issue_block2core(std::shared_ptr<kernel_info_t> kernel)
+{
+
+    unsigned kernel_num_thread_per_warp = kernel->get_num_thread_per_warp();
+    unsigned kernel_num_warp_per_cta = kernel->get_num_warp_per_cta();
+
+    unsigned free_ctaid_in_core; // 为cta分配的core内ctaid. 对于给定kernel，存在ctaid和warp之间的确定映射
+    unsigned hw_start_warpid = (unsigned)-1;
+
+    // 找到core中空闲的一组warp和相应的ctaid
+    for (int idx = 0; idx < MAX_CTA_PER_CORE; idx++)
+    {
+        unsigned start_warpid_try = idx * kernel_num_warp_per_cta;
+        if (m_hw_warps[start_warpid_try]->is_warp_activated.read() == false)
+        {
+            free_ctaid_in_core = idx;
+            hw_start_warpid = start_warpid_try;
+            break;
+        }
+    }
+    assert(free_ctaid_in_core != (unsigned)-1);
+
+    dim3 ctaid_kernel = kernel->get_next_cta_id();
+    unsigned ctaid_kernel_single = kernel->get_next_cta_id_single();
+
+    // 遍历并激活每个warp
+    for (unsigned widINcta = 0; widINcta < kernel_num_warp_per_cta; widINcta++)
+    {
+        unsigned hw_wid = widINcta + hw_start_warpid;
+        m_hw_warps[hw_wid]->is_warp_activated.write(true);
+        m_hw_warps[hw_wid]->m_ctaid_in_core = free_ctaid_in_core;
+        m_hw_warps[hw_wid]->CSR_reg[0x800] = widINcta * kernel_num_thread_per_warp;
+        m_hw_warps[hw_wid]->CSR_reg[0x801] = kernel_num_warp_per_cta;
+        m_hw_warps[hw_wid]->CSR_reg[0x802] = kernel_num_thread_per_warp;
+        m_hw_warps[hw_wid]->CSR_reg[0x803] = kernel->get_metadata_baseaddr();
+        m_hw_warps[hw_wid]->CSR_reg[0x804] = free_ctaid_in_core;
+        m_hw_warps[hw_wid]->CSR_reg[0x805] = widINcta;
+        m_hw_warps[hw_wid]->CSR_reg[0x806] = ldsBaseAddr_core + free_ctaid_in_core * kernel->get_ldsSize_per_cta();
+        m_hw_warps[hw_wid]->CSR_reg[0x807] =
+            kernel->get_pdsBaseAddr() +
+            ctaid_kernel_single * kernel_num_warp_per_cta *
+                kernel_num_thread_per_warp * kernel->get_pdsSize_per_thread();
+        m_hw_warps[hw_wid]->CSR_reg[0x808] = ctaid_kernel.x;
+        m_hw_warps[hw_wid]->CSR_reg[0x809] = ctaid_kernel.y;
+        m_hw_warps[hw_wid]->CSR_reg[0x80a] = ctaid_kernel.z;
+
+        m_hw_warps[hw_wid]->CSR_reg[0x300] = 0x00001800; // WHY?
+
+        m_hw_warps[hw_wid]->is_warp_activated.write(true);
+        cout << "SM " << sm_id << " warp " << hw_wid << " is activated at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+        m_hw_warps[hw_wid]->pc.write(kernel->get_startaddr());
+        m_hw_warps[hw_wid]->fetch_valid.write(true);
+
+        sc_bv<8> _validmask = 0;
+        for (int i = 0; i < kernel_num_thread_per_warp; i++)
+        {
+            _validmask[i] = 1;
+        }
+        m_hw_warps[hw_wid]->current_mask.write(_validmask);
+    }
+    m_num_warp_activated += kernel_num_warp_per_cta;
+    m_current_kernel_running.write(true);
+    m_current_kernel_completed.write(false);
+    kernel->increment_cta_id();
+    cout << "SM " << sm_id << " issue 1 block of kernel \"" << kernel->get_kname() << "\" at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+}
+
+void increment_x_then_y_then_z(dim3 &i, const dim3 &bound)
+{
+    i.x++;
+    if (i.x >= bound.x)
+    {
+        i.x = 0;
+        i.y++;
+        if (i.y >= bound.y)
+        {
+            i.y = 0;
+            if (i.z < bound.z)
+                i.z++;
+        }
     }
 }

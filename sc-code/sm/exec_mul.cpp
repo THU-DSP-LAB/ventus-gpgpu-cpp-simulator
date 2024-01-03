@@ -18,7 +18,7 @@ void BASE::MUL_IN()
             default:
                 new_data.ins = emit_ins;
                 new_data.warp_id = emitins_warpid;
-                for (int i = 0; i < num_thread; i++)
+                for (int i = 0; i < hw_num_thread; i++)
                 {
                     new_data.rsv1_data[i] = tomul_data1[i];
                     new_data.rsv2_data[i] = tomul_data2[i];
@@ -92,7 +92,7 @@ void BASE::MUL_CALC()
 
             case DecodeParams::alu_fn_t::FN_MUL:
                 // VMUL.VV, VMUL.VX
-                for (int i = 0; i < num_thread; i++)
+                for (int i = 0; i < m_hw_warps[multmp1.warp_id]->CSR_reg[0x802]; i++)
                 {
                     if (multmp2.ins.mask[i] == 1)
                         multmp2.rdv1_data[i] = multmp1.rsv1_data[i] * multmp1.rsv2_data[i];
@@ -102,9 +102,8 @@ void BASE::MUL_CALC()
             case DecodeParams::alu_fn_t::FN_MADD:
                 // VMADD
                 cout << "EXEC_MUL: FN_MADD,{thread,s1,s2,s3}: " << std::hex;
-                for (int i = 0; i < num_thread; i++)
+                for (int i = 0; i < m_hw_warps[multmp1.warp_id]->CSR_reg[0x802]; i++)
                 {
-
                     if (multmp2.ins.mask[i] == 1)
                     {
                         cout << "{" << i << "," << multmp1.rsv1_data[i] << "," << multmp1.rsv2_data[i] << "," << multmp1.rsv3_data[i] << "};";

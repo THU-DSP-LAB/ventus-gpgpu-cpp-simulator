@@ -17,7 +17,7 @@ void BASE::LSU_IN()
 
             new_data.ins = emit_ins;
             new_data.warp_id = emitins_warpid;
-            for (int i = 0; i < num_thread; i++)
+            for (int i = 0; i < hw_num_thread; i++)
             {
                 new_data.rsv1_data[i] = tolsu_data1[i];
                 new_data.rsv2_data[i] = tolsu_data2[i];
@@ -78,7 +78,7 @@ void BASE::LSU_CALC()
     bool succeed;
     unsigned int external_addr;
     bool addrOutofRangeException;
-    std::array<int, num_thread> LSUaddr;
+    std::array<int, hw_num_thread> LSUaddr;
     while (true)
     {
         wait(lsu_eva | lsu_eqa.default_event());
@@ -92,12 +92,12 @@ void BASE::LSU_CALC()
         lsutmp1 = lsu_dq.front();
         lsu_dq.pop();
 
-        for (int i = 0; i < num_thread; i++)
+        for (int i = 0; i < hw_num_thread; i++)
         {
             LSUaddr[i] = (lsutmp1.ins.ddd.isvec & lsutmp1.ins.ddd.disable_mask)
                              ? lsutmp1.ins.ddd.is_vls12()
                                    ? (lsutmp1.rsv1_data[i] + lsutmp1.rsv2_data[i])
-                                   : ((lsutmp1.rsv1_data[i] + lsutmp1.rsv2_data[i]) * num_thread + i << 2 + WARPS[lsutmp1.warp_id]->CSR_reg[0x807])
+                                   : ((lsutmp1.rsv1_data[i] + lsutmp1.rsv2_data[i]) * hw_num_thread + i << 2 + m_hw_warps[lsutmp1.warp_id]->CSR_reg[0x807])
                          : lsutmp1.ins.ddd.isvec
                              ? (lsutmp1.rsv1_data[i] + (lsutmp1.ins.ddd.mop == 0
                                                             ? i << 2
@@ -109,9 +109,9 @@ void BASE::LSU_CALC()
         { // 要写回寄存器
             lsutmp2.ins = lsutmp1.ins;
             lsutmp2.warp_id = lsutmp1.warp_id;
-            for (int i = 0; i < num_thread; i++)
+            for (int i = 0; i < m_hw_warps[lsutmp1.warp_id]->CSR_reg[0x802]; i++)
             {
-                lsutmp2.rdv1_data[i] = getBufferData(*buffer_data, LSUaddr[i], mtd.num_buffer, mtd.buffer_base, mtd.buffer_allocsize, addrOutofRangeException, lsutmp2.ins);
+                lsutmp2.rdv1_data[i] = m_kernel->getBufferData(LSUaddr[i], addrOutofRangeException, lsutmp2.ins);
                 if (addrOutofRangeException)
                     cout << "SM" << sm_id << " LSU detect addrOutofRange, ins=" << lsutmp1.ins << ",addr=" << LSUaddr[i] << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
             }
@@ -120,60 +120,19 @@ void BASE::LSU_CALC()
         }
         else
         {
-            for (int i = 0; i < num_thread; i++)
+            for (int i = 0; i < m_hw_warps[lsutmp1.warp_id]->CSR_reg[0x802]; i++)
             {
-                writeBufferData(lsutmp1.rsv3_data[i], *buffer_data, LSUaddr[i], mtd.num_buffer, mtd.buffer_base, mtd.buffer_allocsize, lsutmp1.ins);
+                m_kernel->writeBufferData(lsutmp1.rsv3_data[i], LSUaddr[i], lsutmp1.ins);
             }
             cout << "SM" << sm_id << " warp " << lsutmp1.warp_id << " 0x" << std::hex << lsutmp1.ins.currentpc << " " << lsutmp1.ins << std::hex
                  << " data=" << std::setw(8) << std::setfill('0');
-            for (int i = num_thread - 1; i >= 0; i--)
-                cout << lsutmp1.rsv3_data[i] << ",addr=" << LSUaddr[i] << "; ";
+            for (int i = m_hw_warps[lsutmp1.warp_id]->CSR_reg[0x802] - 1; i >= 0; i--)
+                cout << lsutmp1.rsv3_data[i] << " ";
+            cout << "@ ";
+            for (int i = m_hw_warps[lsutmp1.warp_id]->CSR_reg[0x802] - 1; i >= 0; i--)
+                cout << LSUaddr[i] << " ";
             cout << std::setw(0) << std::setfill(' ') << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
         }
-
-        // switch (lsutmp1.ins.op)
-        // {
-        // case LW_:
-        //     lsutmp2.ins = lsutmp1.ins;
-        //     lsutmp2.warp_id = lsutmp1.warp_id;
-        //     external_addr = lsutmp1.rss1_data + lsutmp1.rss2_data;
-
-        //     // cout << "LSU_CALC: read lw rss1_data=" << lsutmp1.rss1_data
-        //     //      << ", external addr=" << external_addr
-        //     //      << ", ins=" << lsutmp1.ins
-        //     //      << ", external_mem[]=" << external_mem[external_addr]
-        //     //      << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-
-        //     lsutmp2.rds1_data = getBufferData(*buffer_data, external_addr, mtd.num_buffer, mtd.buffer_base, mtd.buffer_allocsize, addrOutofRangeException, lsutmp2.ins);
-        //     if (addrOutofRangeException)
-        //         cout << "SM" << sm_id << " LSU detect addrOutofRange, ins=" << lsutmp1.ins << ",addr=" << external_addr << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-        //     lsufifo.push(lsutmp2);
-        //     // cout << "LSU_CALC: lw, pushed " << lsutmp2.rds1_data << " to s_regfile rd=" << lsutmp1.ins.d << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-        //     break;
-        // case SW_:
-        //     external_addr = lsutmp1.rss1_data + lsutmp1.rss2_data;
-        //     writeBufferData(lsutmp1.rss3_data, *buffer_data, external_addr, mtd.num_buffer, mtd.buffer_base, mtd.buffer_allocsize, lsutmp1.ins);
-        //     cout << "SM" << sm_id << " warp " << lsutmp1.warp_id << " 0x" << std::hex << lsutmp1.ins.currentpc << " " << lsutmp1.ins << std::hex
-        //          << " data=" << std::setw(8) << std::setfill('0') << lsutmp1.rss3_data << " addr=" << external_addr
-        //          << std::setw(0) << std::setfill(' ') << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-        //     break;
-        // case VLE32_V_:
-        //     lsutmp2.ins = lsutmp1.ins;
-        //     lsutmp2.warp_id = lsutmp1.warp_id;
-        //     // cout << "LSU_CALC: calc vle32v, rss1=" << lsutmp1.rss1_data << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-        //     for (int i = 0; i < num_thread; i++)
-        //     {
-        //         lsutmp2.rdv1_data[i] = getBufferData(*buffer_data, lsutmp1.rss1_data + i * 4, mtd.num_buffer, mtd.buffer_base, mtd.buffer_allocsize, addrOutofRangeException, lsutmp2.ins);
-        //         if (addrOutofRangeException)
-        //             cout << "SM" << sm_id << " LSU detect addrOutofRange, ins=" << lsutmp1.ins << ",addr=" << external_addr << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-        //     }
-        //     lsufifo.push(lsutmp2);
-        //     // cout << "LSU_CALC: pushed vle32v output at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-        //     break;
-        // default:
-        //     cout << "LSU_CALC warning: switch to unrecognized ins" << lsutmp1.ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-        //     break;
-        // }
         ev_lsufifo_pushed.notify();
     }
 }

@@ -1,5 +1,42 @@
 #include "BASE.h"
 
+std::pair<int, int> BASE::reg_arbiter(
+    const std::array<std::array<bank_t, 3>, OPCFIFO_SIZE> &addr_arr, // opc_srcaddr
+    const std::array<std::array<bool, 3>, OPCFIFO_SIZE> &valid_arr,  // opc_valid
+    std::array<std::array<bool, 3>, OPCFIFO_SIZE> &ready_arr,        // opc_ready
+    int bank_id,
+    std::array<int, BANK_NUM> &REGcurrentIdx,
+    std::array<int, BANK_NUM> &read_bank_addr)
+{
+    const int rows = OPCFIFO_SIZE; // = addr_arr.size()
+    const int cols = 3;            // = addr_arr[0].size(), 每个opc_fifo_t四个待取元素
+    const int size = rows * cols;
+    std::pair<int, int> result(-1, -1); // 默认值表示没有找到有效数据
+    int index, i, j;
+    for (int idx = REGcurrentIdx[bank_id] % size;
+         idx < size + REGcurrentIdx[bank_id] % size; idx++)
+    {
+        index = idx % size;
+        i = index / cols;
+        j = index % cols;
+        if (valid_arr[i][j] == true)
+        {
+            if (addr_arr[i][j].bank_id == bank_id)
+            {
+                read_bank_addr[bank_id] = addr_arr[i][j].addr; // 下周期读数据
+                // cout << "let read_bank_addr(bank" << bank_id << ")="
+                //      << addr_arr[i][j].addr << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                result.first = i;
+                result.second = j;
+                ready_arr[i][j] = true;
+                REGcurrentIdx[bank_id] = index + 1;
+                break;
+            }
+        }
+    }
+    return result;
+}
+
 void BASE::READ_REG()
 {
     std::pair<int, int> temp_pair(-1, -1);
@@ -9,6 +46,7 @@ void BASE::READ_REG()
     while (true)
     {
         wait(clk.posedge_event());
+
         // 先根据上一cycle regfile arbiter的结果读数据
         for (int i = 0; i < BANK_NUM; i++)
         {
@@ -23,15 +61,17 @@ void BASE::READ_REG()
                 // cout << "从regfile读出: REGselectIdx[" << i << "] to opc(" << REGselectIdx[i].first << "," << REGselectIdx[i].second << ") at " << sc_time_stamp() <<","<< sc_delta_count_at_current_time() << "\n";
                 if (opc_banktype[row][col] == 0)
                 {
-                    read_data[i].fill(WARPS[tmp.warp_id]->s_regfile[tmp.addr]);
+                    read_data[i].fill(m_hw_warps[tmp.warp_id]->s_regfile[tmp.addr]);
                 }
                 else
                 {
-                    read_data[i] = WARPS[tmp.warp_id]->v_regfile[tmp.addr];
+                    read_data[i] = m_hw_warps[tmp.warp_id]->v_regfile[tmp.addr];
                 }
             }
         }
         ev_regfile_readdata.notify();
+
+        // 再根据当前cycle的opc进行regfile arbiter
         wait(ev_opc_collect);
         for (auto &elem : opc_ready)
             elem.fill(0);
@@ -63,7 +103,7 @@ void BASE::WRITE_REG(int warp_id)
                      << std::dec << std::setfill(' ') << std::setw(0)
                      << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 if (rdv1_addr != 0)
-                    WARPS[warp_id]->s_regfile[rdv1_addr.read()] = rdv1_data[0];
+                    m_hw_warps[warp_id]->s_regfile[rdv1_addr.read()] = rdv1_data[0];
             }
             if (write_v)
             {
@@ -72,16 +112,16 @@ void BASE::WRITE_REG(int warp_id)
                      << " " << wb_ins
                      << " v " << std::setfill('0') << std::setw(3) << rdv1_addr.read() << " "
                      << std::hex << std::setw(8);
-                for (int j = num_thread - 1; j > 0; j--)
-                    cout << rdv1_data[j] << ",";
+                for (int i = m_hw_warps[wb_warpid]->CSR_reg[0x802] - 1; i > 0; i--)
+                    cout << rdv1_data[i] << " ";
                 cout << rdv1_data[0];
                 cout << std::dec << std::setfill(' ') << std::setw(0)
                      << "; mask=" << wb_ins.read().mask << ", s1=" << wb_ins.read().s1 << ",s2=" << wb_ins.read().s2 << ",s3=" << wb_ins.read().s3
                      << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
 
-                for (int i = 0; i < num_thread; i++)
+                for (int i = 0; i < m_hw_warps[wb_warpid]->CSR_reg[0x802]; i++)
                     if (wb_ins.read().mask[i] == 1)
-                        WARPS[warp_id]->v_regfile[rdv1_addr.read()][i] = rdv1_data[i];
+                        m_hw_warps[warp_id]->v_regfile[rdv1_addr.read()][i] = rdv1_data[i];
             }
         }
     }

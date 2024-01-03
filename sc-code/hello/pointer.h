@@ -8,7 +8,7 @@ SC_MODULE(POINTER)
 {
 public:
     sc_in_clk clk{"clk"};
-    using v_regfile_t = std::array<int, num_thread>;
+    using v_regfile_t = std::array<int, hw_num_thread>;
     std::array<v_regfile_t, 32> v_regfile;
     float floatmem;
     float *floatptr;

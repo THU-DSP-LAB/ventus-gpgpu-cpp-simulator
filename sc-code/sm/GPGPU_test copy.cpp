@@ -7,9 +7,8 @@
 int sc_main(int argc, char *argv[])
 {
     // 处理命令行参数
-    std::string inssrc, metafile, datafile, numcycle, kernelName;
+    std::string inssrc, metafile, datafile, numcycle;
     int numkernel = 0;
-    std::vector<std::shared_ptr<kernel_info_t>> m_running_kernels;
     for (int i = 1; i < argc; i++)
     {
         if (strcmp(argv[i], "--inssrc") == 0)
@@ -21,18 +20,7 @@ int sc_main(int argc, char *argv[])
         {
             numkernel = std::stoi(argv[i + 1]);
             i++;
-            m_running_kernels.resize(numkernel);
-            for (int j = 0; j < numkernel; j++)
-            {
-                kernelName = argv[i + 1];
-                i++;
-                metafile = argv[i + 1];
-                i++;
-                datafile = argv[i + 1];
-                i++;
-                cout << "Initializing kernel " << kernelName << " info ...\n";
-                m_running_kernels[j] = std::make_shared<kernel_info_t>(kernelName, "../../testcase/" + metafile, "../../testcase/" + datafile);
-            }
+            
         }
         if (strcmp(argv[i], "--metafile") == 0)
         { // like "vecadd/vecadd.riscv.meta"
@@ -50,33 +38,30 @@ int sc_main(int argc, char *argv[])
             i++;
         }
     }
-    std::cout << "Finish reading runtime args\n";
+    std::cout << "Finish reading runtime args, " << argc << " args found\n";
 
     std::cout << "----------Initializing SM data-structures----------\n";
     BASE **BASE_impl;
+    // BASE_impl = new BASE("BASE", inssrc);
     BASE_impl = new BASE *[NUM_SM];
     for (int i = 0; i < NUM_SM; i++)
     {
         BASE_impl[i] = new BASE(("SM" + std::to_string(i)).c_str(), inssrc, i);
     }
+
     BASE_sti BASE_sti_impl("BASE_STI");
 
     std::cout << "----------Initializing CTAs----------\n";
-    CTA_Scheduler cta_impl("CTA_Scheduler");
-    cta_impl.set_running_kernels(m_running_kernels);
+    CTA_Scheduler cta_impl("CTA_Scheduler", "../../testcase/" + metafile);
     cta_impl.sm_group = BASE_impl;
-    // cta_impl.CTA_INIT();
-
+    cta_impl.CTA_INIT();
     for (int i = 0; i < NUM_SM; i++)
     {
-        BASE_impl[i]->set_CTA_Scheduler(&cta_impl);
-    }
-
-    for (int i = 0; i < NUM_SM; i++)
-    {
+        BASE_impl[i]->metafile = "../../testcase/" + metafile;
+        BASE_impl[i]->datafile = "../../testcase/" + datafile;
         for (auto &warp_ : BASE_impl[i]->m_hw_warps)
         {
-            if (warp_ != nullptr)
+            if (warp_ != nullptr && warp_->will_warp_activate)
             {
                 BASE_impl[i]->ev_issue_list &= warp_->ev_issue;
             }
@@ -92,8 +77,6 @@ int sc_main(int argc, char *argv[])
         (*BASE_impl[i]).rst_n(rst_n);
     }
     BASE_sti_impl.rst_n(rst_n);
-
-    cta_impl.clk(clk);
 
     sc_trace_file *tf[hw_num_warp];
     for (int i = 0; i < hw_num_warp; i++)
@@ -124,7 +107,6 @@ int sc_main(int argc, char *argv[])
             sc_trace(tf[i], BASE_impl[0]->m_hw_warps[i]->ififo_elem_num, "ififo_elem_num");
             sc_trace(tf[i], BASE_impl[0]->m_hw_warps[i]->wait_bran, "wait_bran");
             sc_trace(tf[i], BASE_impl[0]->m_hw_warps[i]->can_dispatch, "can_dispatch");
-            sc_trace(tf[i], BASE_impl[0]->m_hw_warps[i]->is_warp_activated, "is_warp_activated");
             sc_trace(tf[i], BASE_impl[0]->opc_full, "opc_full");
             sc_trace(tf[i], BASE_impl[0]->last_dispatch_warpid, "last_dispatch_warpid");
             sc_trace(tf[i], BASE_impl[0]->issue_ins, "issue_ins");
@@ -207,8 +189,6 @@ int sc_main(int argc, char *argv[])
     std::cout << "----------Simulation start----------\n";
     auto start = std::chrono::high_resolution_clock::now();
     sc_start(std::stoi(numcycle), SC_NS);
-
-    cout << "----------Simulation end------------\n";
 
     for (auto tf_ : tf)
         sc_close_vcd_trace_file(tf_);

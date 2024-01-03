@@ -18,10 +18,13 @@
 #include "magic_enum.hpp"
 #include <stdexcept> // For std::out_of_range
 
-inline constexpr int num_warp = 8;
+// #include <format>  // gcc13支持std::format
+
+inline constexpr int hw_num_warp = 32;
+inline constexpr unsigned MAX_CTA_PER_CORE = 32;
 inline constexpr int depth_warp = 2;
 inline constexpr int xLen = 32;
-inline constexpr long unsigned int num_thread = 8;
+inline constexpr long unsigned int hw_num_thread = 8; // 每个warp支持的最大thread
 inline constexpr int ireg_bitsize = 10;
 inline constexpr int ireg_size = 1 << ireg_bitsize;
 inline constexpr int INS_LENGTH = 32; // the length of per instruction
@@ -29,8 +32,14 @@ inline constexpr double PERIOD = 10;
 inline constexpr int IFIFO_SIZE = 10;
 inline constexpr int OPCFIFO_SIZE = 4;
 inline constexpr int BANK_NUM = 4;
-inline constexpr int NUM_SM = 1;
+inline constexpr int NUM_SM = 2;
 inline constexpr int num_register_per_warp = 64; // 每个warp寄存器数目
+inline constexpr int NUM_MAX_KERNEL = 8;
+inline constexpr unsigned max_concurrent_kernel = 4; // 正在运行的kernel的最大数量
+inline constexpr unsigned hw_lds_size = 0x1000000;   // core的总localmem大小
+inline constexpr unsigned MAX_RUNNING_CTA_PER_KERNEL = 32;
+inline constexpr unsigned ldsBaseAddr_core = 0x70000000;
+
 // 编译期计算整数的二进制对数向上取整
 constexpr int log2Ceil(int n)
 {
@@ -43,11 +52,11 @@ constexpr int log2Ceil(int n)
     }
     return log;
 }
-inline constexpr int depth_thread = log2Ceil(num_thread);
+inline constexpr int depth_thread = log2Ceil(hw_num_thread);
 
 using reg_t = sc_int<32>;
-using v_regfile_t = std::array<reg_t, num_thread>;
-struct vector_t : std::array<reg_t, num_thread>
+using v_regfile_t = std::array<reg_t, hw_num_thread>;
+struct vector_t : std::array<reg_t, hw_num_thread>
 {
     friend std::ostream &operator<<(std::ostream &os, const v_regfile_t &arr)
     {
@@ -59,16 +68,16 @@ struct vector_t : std::array<reg_t, num_thread>
         os << std::dec << "}";
         return os;
     }
-    bool operator==(const std::array<reg_t, num_thread> &other) const
+    bool operator==(const std::array<reg_t, hw_num_thread> &other) const
     {
-        for (int i = 0; i < num_thread; ++i)
+        for (int i = 0; i < hw_num_thread; ++i)
             if ((*this)[i] != other[i])
                 return false;
         return true;
     }
-    v_regfile_t &operator=(const std::array<reg_t, num_thread> &other)
+    v_regfile_t &operator=(const std::array<reg_t, hw_num_thread> &other)
     {
-        for (int i = 0; i < num_thread; ++i)
+        for (int i = 0; i < hw_num_thread; ++i)
         {
             (*this)[i] = other[i];
         }
@@ -906,7 +915,7 @@ public:
 
     // 以下为chisel的其他decode信号
 
-    uint32_t mop;   //在decode函数中赋值
+    uint32_t mop; // 在decode函数中赋值
     bool mem() const
     {
         int value = static_cast<int>(mem_cmd);
@@ -931,7 +940,7 @@ public:
     decodedat ddd;
     // int jump_addr = -1; // 分支指令才有用
     int currentpc; // 每条指令当前pc，取指后赋予
-    sc_bv<num_thread> mask;
+    sc_bv<hw_num_thread> mask;
 
     I_TYPE(){};
     I_TYPE(uint32_t origin) : origin32bit(origin){};
@@ -1055,7 +1064,7 @@ struct opcfifo_t
     std::array<bank_t, 3> srcaddr;
     std::array<bool, 3> banktype = {0};
     // int mask;
-    std::array<std::array<reg_t, num_thread>, 3> data;
+    std::array<std::array<reg_t, hw_num_thread>, 3> data;
     bool all_ready()
     {
         return ready[0] && ready[1] && ready[2];
@@ -1288,13 +1297,13 @@ struct valu_in_t
 {
     I_TYPE ins;
     int warp_id;
-    std::array<reg_t, num_thread> rsv1_data, rsv2_data, rsv3_data;
+    std::array<reg_t, hw_num_thread> rsv1_data, rsv2_data, rsv3_data;
 };
 struct valu_out_t
 {
     I_TYPE ins;
     int warp_id;
-    std::array<reg_t, num_thread> rdv1_data;
+    std::array<reg_t, hw_num_thread> rdv1_data;
     bool operator==(const valu_out_t &rhs) const
     {
         return rhs.ins == ins && rhs.rdv1_data == rdv1_data;
@@ -1321,7 +1330,7 @@ struct valu_out_t
     friend void sc_trace(sc_trace_file *tf, const valu_out_t &v, const std::string &NAME)
     {
         sc_trace(tf, v.ins, NAME + ".ins");
-        for (int i = 0; i < num_thread; i++)
+        for (int i = 0; i < hw_num_thread; i++)
             sc_trace(tf, v.rdv1_data[i], NAME + ".rdv1_data(" + std::to_string(i) + ")");
 
         sc_trace(tf, v.warp_id, NAME + ".warp_id");
@@ -1331,13 +1340,13 @@ struct vfpu_in_t
 {
     I_TYPE ins;
     int warp_id;
-    std::array<int, num_thread> vfpuSdata1, vfpuSdata2, vfpuSdata3;
+    std::array<int, hw_num_thread> vfpuSdata1, vfpuSdata2, vfpuSdata3;
 };
 struct vfpu_out_t
 {
     I_TYPE ins;
     int warp_id;
-    std::array<int, num_thread> rdf1_data;
+    std::array<int, hw_num_thread> rdf1_data;
     reg_t rds1_data; // FCVT_W_S等指令使用
     bool operator==(const vfpu_out_t &rhs) const
     {
@@ -1365,7 +1374,7 @@ struct vfpu_out_t
     friend void sc_trace(sc_trace_file *tf, const vfpu_out_t &v, const std::string &NAME)
     {
         sc_trace(tf, v.ins, NAME + ".ins");
-        for (int i = 0; i < num_thread; i++)
+        for (int i = 0; i < hw_num_thread; i++)
             sc_trace(tf, v.rdf1_data[i], NAME + ".rdf1_data(" + std::to_string(i) + ")");
         sc_trace(tf, v.warp_id, NAME + ".warp_id");
     }
@@ -1374,20 +1383,20 @@ struct lsu_in_t
 {
     I_TYPE ins;
     int warp_id;
-    std::array<reg_t, num_thread> rsv1_data, rsv2_data, rsv3_data;
+    std::array<reg_t, hw_num_thread> rsv1_data, rsv2_data, rsv3_data;
 
     // below 3 data is to store
     reg_t rds1_data;
-    std::array<reg_t, num_thread> rdv1_data;
-    std::array<float, num_thread> rdf1_data;
+    std::array<reg_t, hw_num_thread> rdv1_data;
+    std::array<float, hw_num_thread> rdf1_data;
 };
 struct lsu_out_t
 {
     I_TYPE ins;
     int warp_id;
     reg_t rds1_data;
-    std::array<reg_t, num_thread> rdv1_data;
-    std::array<float, num_thread> rdf1_data;
+    std::array<reg_t, hw_num_thread> rdv1_data;
+    std::array<float, hw_num_thread> rdf1_data;
     bool operator==(const lsu_out_t &rhs) const
     {
         return rhs.ins == ins && rhs.rds1_data == rds1_data &&
@@ -1425,7 +1434,7 @@ struct lsu_out_t
     {
         sc_trace(tf, v.ins, NAME + ".ins");
         sc_trace(tf, v.rds1_data, NAME + ".rds1_data");
-        for (int i = 0; i < num_thread; i++)
+        for (int i = 0; i < hw_num_thread; i++)
             sc_trace(tf, v.rdv1_data[i], NAME + ".rdv1_data(" + std::to_string(i) + ")");
 
         sc_trace(tf, v.warp_id, NAME + ".warp_id");
@@ -1439,7 +1448,7 @@ class simtstack_t
 public:
     uint32_t rpc;
     uint32_t nextpc;
-    sc_bv<num_thread> nextmask; // 汇合点mask
+    sc_bv<hw_num_thread> nextmask; // 汇合点mask
 
     friend ostream &operator<<(ostream &os, simtstack_t const &v)
     {
@@ -1486,14 +1495,14 @@ struct mul_in_t
 {
     I_TYPE ins;
     int warp_id;
-    std::array<reg_t, num_thread> rsv1_data, rsv2_data, rsv3_data;
+    std::array<reg_t, hw_num_thread> rsv1_data, rsv2_data, rsv3_data;
     reg_t rss1_data;
 };
 struct mul_out_t
 {
     I_TYPE ins;
     int warp_id;
-    std::array<reg_t, num_thread> rdv1_data;
+    std::array<reg_t, hw_num_thread> rdv1_data;
     bool operator==(const mul_out_t &rhs) const
     {
         return rhs.ins == ins && rhs.rdv1_data == rdv1_data;
@@ -1520,7 +1529,7 @@ struct mul_out_t
     friend void sc_trace(sc_trace_file *tf, const mul_out_t &v, const std::string &NAME)
     {
         sc_trace(tf, v.ins, NAME + ".ins");
-        for (int i = 0; i < num_thread; i++)
+        for (int i = 0; i < hw_num_thread; i++)
             sc_trace(tf, v.rdv1_data[i], NAME + ".rdv1_data(" + std::to_string(i) + ")");
         sc_trace(tf, v.warp_id, NAME + ".warp_id");
     }
@@ -1530,14 +1539,14 @@ struct sfu_in_t
 {
     I_TYPE ins;
     int warp_id;
-    std::array<reg_t, num_thread> rsv1_data, rsv2_data;
+    std::array<reg_t, hw_num_thread> rsv1_data, rsv2_data;
     reg_t rss1_data;
 };
 struct sfu_out_t
 {
     I_TYPE ins;
     int warp_id;
-    std::array<reg_t, num_thread> rdv1_data;
+    std::array<reg_t, hw_num_thread> rdv1_data;
     bool operator==(const sfu_out_t &rhs) const
     {
         return rhs.ins == ins && rhs.rdv1_data == rdv1_data;
@@ -1564,7 +1573,7 @@ struct sfu_out_t
     friend void sc_trace(sc_trace_file *tf, const sfu_out_t &v, const std::string &NAME)
     {
         sc_trace(tf, v.ins, NAME + ".ins");
-        for (int i = 0; i < num_thread; i++)
+        for (int i = 0; i < hw_num_thread; i++)
             sc_trace(tf, v.rdv1_data[i], NAME + ".rdv1_data(" + std::to_string(i) + ")");
         sc_trace(tf, v.warp_id, NAME + ".warp_id");
     }
@@ -1576,36 +1585,60 @@ public:
     int warp_id;
     sc_event ev_kernel_ret; // 当前warp已经执行完kernel
 
+    unsigned m_ctaid_in_core; // 与kernel配置有关的、绑定的core内ctaid
+
     explicit WARP_BONE(int warp_id)
         : warp_id(warp_id),
-          ibuf_swallow(("ibuf_swallow_warp" + std::to_string(warp_id)).c_str()),
-          fetch_valid(("fetch_valid" + std::to_string(warp_id)).c_str()),
-          fetch_valid2(("fetch_valid2" + std::to_string(warp_id)).c_str()),
-          jump(("jump" + std::to_string(warp_id)).c_str()),
-          branch_sig(("branch_sig" + std::to_string(warp_id)).c_str()),
-          vbran_sig(("vbran_sig" + std::to_string(warp_id)).c_str()),
-          jump_addr(("jump_addr" + std::to_string(warp_id)).c_str()),
-          pc(("pc" + std::to_string(warp_id)).c_str()),
-          decode_ins(("decode_ins" + std::to_string(warp_id)).c_str()),
-          ibuf_empty(("ibuf_empty" + std::to_string(warp_id)).c_str()),
-          ibuf_full(("ibuf_full" + std::to_string(warp_id)).c_str()),
-          ibuftop_ins(("ibuftop_ins" + std::to_string(warp_id)).c_str()),
-          dispatch_warp_valid(("dispatch_warp_valid" + std::to_string(warp_id)).c_str())
+          is_warp_activated(("is_warp_activated_W" + std::to_string(warp_id)).c_str()),
+          ibuf_swallow(("ibuf_swallow_warp_W" + std::to_string(warp_id)).c_str()),
+          fetch_valid(("fetch_valid_W" + std::to_string(warp_id)).c_str()),
+          fetch_valid2(("fetch_valid2_W" + std::to_string(warp_id)).c_str()),
+          jump(("jump_W" + std::to_string(warp_id)).c_str()),
+          branch_sig(("branch_sig_W" + std::to_string(warp_id)).c_str()),
+          vbran_sig(("vbran_sig_W" + std::to_string(warp_id)).c_str()),
+          jump_addr(("jump_addr_W" + std::to_string(warp_id)).c_str()),
+          pc(("pc_W" + std::to_string(warp_id)).c_str()),
+          decode_ins(("decode_ins_W" + std::to_string(warp_id)).c_str()),
+          ibuf_empty(("ibuf_empty_W" + std::to_string(warp_id)).c_str()),
+          ibuf_full(("ibuf_full_W" + std::to_string(warp_id)).c_str()),
+          ibuftop_ins(("ibuftop_ins_W" + std::to_string(warp_id)).c_str()),
+          ififo_elem_num(("ififo_elem_num_W" + std::to_string(warp_id)).c_str()),
+          dispatch_warp_valid(("dispatch_warp_valid_W" + std::to_string(warp_id)).c_str()),
+          current_mask(("current_mask_W" + std::to_string(warp_id)).c_str()),
+          simtstk_jumpaddr(("simtstk_jumpaddr_W" + std::to_string(warp_id)).c_str()),
+          simtstk_jump(("simtstk_jump_W" + std::to_string(warp_id)).c_str())
     {
-        current_mask.write(~sc_bv<num_thread>());
+        current_mask.write(~sc_bv<hw_num_thread>());
     }
 
-    sc_signal<bool> is_warp_activated;
+    void initwarp()
+    {
+        fetch_valid12 = false;
+        ififo.clear();
+        can_dispatch = false;
+        score.clear();
+        wait_bran = false;
+        s_regfile.fill(0);
+        for (auto &subarray : v_regfile)
+            subarray.fill(0);
+        CSR_reg.fill(0);
+        std::stack<simtstack_t>().swap(IPDOM_stack);
+
+        flush_pipeline.write(true);
+    }
+
+    sc_signal<bool, SC_MANY_WRITERS> is_warp_activated;
     bool will_warp_activate;
 
     // fetch
     sc_event ev_fetchpc, ev_decode;
     sc_signal<bool> ibuf_swallow; // 表示是否接收上一cycle fetch_valid，相当于ready
-    sc_signal<bool> fetch_valid;
-    sc_signal<bool, SC_MANY_WRITERS> fetch_valid2;                // 2是真正的valid，直接与ibuffer沟通
+    sc_signal<bool, SC_MANY_WRITERS> fetch_valid;
     bool fetch_valid12;                                           // 用于取指令和decode之间传递
+    sc_signal<bool, SC_MANY_WRITERS> fetch_valid2;                // 2是真正的valid，直接与ibuffer沟通
     sc_signal<bool, SC_MANY_WRITERS> jump, branch_sig, vbran_sig; // 无论是否jump，只要发生了分支判断，将branch_sig置为1。其中branch_sig是标量分支，vbran_sig是向量分支
-    sc_signal<int> jump_addr, pc;
+    sc_signal<uint32_t> jump_addr;
+    sc_signal<uint32_t, SC_MANY_WRITERS> pc;
     I_TYPE fetch_ins;
     sc_signal<I_TYPE> decode_ins;
     // ibuffer
@@ -1629,10 +1662,11 @@ public:
     std::array<int, 0x820> CSR_reg;
     // simt-stack
     std::stack<simtstack_t> IPDOM_stack;
-    sc_signal<sc_bv<num_thread>> current_mask; // 在dispatch时随指令存入OPC
-    sc_signal<int> simtstk_jumpaddr;           // out_pc
-    sc_signal<bool> simtstk_jump;              // fetch跳转的控制信号
-    sc_signal<bool> simtstk_flush;             // 流水线冲刷信号
+    sc_signal<sc_bv<hw_num_thread>, SC_MANY_WRITERS> current_mask; // 在dispatch时随指令存入OPC
+    sc_signal<int> simtstk_jumpaddr;                               // out_pc
+    sc_signal<bool> simtstk_jump;                                  // fetch跳转的控制信号
+
+    sc_signal<bool> flush_pipeline;
 };
 
 // union FloatAndInt
@@ -1649,27 +1683,6 @@ public:
 // {
 //     return left.i == right.i;
 // };
-
-struct meta_data
-{ // 这个metadata是供驱动使用的，而不是给硬件的
-    uint64_t startaddr;
-    uint64_t kernel_id;
-    uint64_t kernel_size[3];    ///> 每个kernel的workgroup三维数目
-    uint64_t wf_size;           ///> 每个warp的thread数目
-    uint64_t wg_size;           ///> 每个workgroup的warp数目
-    uint64_t metaDataBaseAddr;  ///> CSR_KNL的值，
-    uint64_t ldsSize;           ///> 每个workgroup使用的local memory的大小
-    uint64_t pdsSize;           ///> 每个thread用到的private memory大小
-    uint64_t sgprUsage;         ///> 每个workgroup使用的标量寄存器数目
-    uint64_t vgprUsage;         ///> 每个thread使用的向量寄存器数目
-    uint64_t pdsBaseAddr;       ///> private memory的基址，要转成每个workgroup的基地址， wf_size*wg_size*pdsSize
-    uint64_t num_buffer;        ///> buffer的数目，包括pc
-    uint64_t *buffer_base;      ///> 各buffer的基址。第一块buffer是给硬件用的metadata
-    uint64_t *buffer_size;      ///> 各buffer的size，以Bytes为单位。实际使用的大小，用于初始化.data
-    uint64_t *buffer_allocsize; ///> 各buffer的size，以Bytes为单位。分配的大小
-
-    int insBufferIndex; // 指令在哪一个buffer
-};
 
 uint32_t extractBits32(uint32_t number, int start, int end);
 

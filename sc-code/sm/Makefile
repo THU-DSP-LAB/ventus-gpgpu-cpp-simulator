@@ -27,8 +27,8 @@ endif
 LD  = $(CXX)
 
 # Sources and objects
-GPGPU_test_FILE=GPGPU_test.cpp BASE.cpp opc.cpp decode.cpp init_decodetable.cpp init_ins.cpp init_instable.cpp initialize.cpp\
- CTA_Scheduler.cpp init_extmem.cpp ../parameters.cpp \
+GPGPU_test_FILE=GPGPU_test.cpp BASE.cpp opc.cpp decode.cpp init_decodetable.cpp init_ins.cpp init_instable.cpp initialize.cpp \
+ CTA_Scheduler.cpp init_extmem.cpp ../parameters.cpp ../context_model.hpp ../context_model.cpp ../utils.hpp ../gpgpu_model.hpp \
  writeback.cpp regfile.cpp warp_scheduler.cpp \
  exec_salu.cpp exec_simtstk.cpp exec_lsu.cpp exec_vfpu.cpp exec_csr.cpp exec_mul.cpp \
  exec_sfu.cpp exec_valu.cpp
@@ -53,13 +53,15 @@ $(BINARY): $(OBJS)
 	@$(LD) -o $@ $(OBJS) $(LDFLAGS)
 
 RUNFLAGS = --inssrc imem --metafile matadd/matadd.metadata --datafile matadd/matadd.data --numcycle 20000
+
+RUNFLAGS_NEW = --inssrc imem --numkernel 2 vecadd vecadd/vecadd4x4.metadata vecadd/vecadd4x4.data matadd matadd/matadd.metadata matadd/matadd.data --numcycle 30000
 	
 RUNFLAGS_vecadd = --inssrc imem --metafile vecadd/vecadd4x4.metadata --datafile vecadd/vecadd4x4.data --numcycle 20000
 
 RUNFLAGS_nn = --inssrc imem --metafile adv_nn/NearestNeighbor_0.metadata --datafile adv_nn/NearestNeighbor_0.data --numcycle 20000
 
 run: $(BINARY)
-	./$(BINARY) $(RUNFLAGS)
+	./$(BINARY) $(RUNFLAGS_NEW)
 
 run_vecadd: $(BINARY)
 	./$(BINARY) $(RUNFLAGS_vecadd)
@@ -68,7 +70,7 @@ run_nn: $(BINARY)
 	./$(BINARY) $(RUNFLAGS_nn)
 
 gdb: $(BINARY)
-	gdb --tui -s $(BINARY) --args $(BINARY) $(RUNFLAGS)
+	gdb --tui -s $(BINARY) --args $(BINARY) $(RUNFLAGS_NEW)
 
 clean:
 	-rm -rf $(BUILD_DIR)
@@ -77,4 +79,4 @@ clean:
 GPGPU_test_GDB:
 	$(CXX) -o $(BINARY) $(GPGPU_test_FILE) $(LIB_DIR) $(INC_DIR) $(LIB) -std=c++20 -g
 
-.PHONY: default clean run gdb
+.PHONY: default clean run gdb run_vecadd run_nn

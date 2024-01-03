@@ -18,7 +18,7 @@ void BASE::SFU_IN()
             default:
                 new_data.ins = emit_ins;
                 new_data.warp_id = emitins_warpid;
-                for (int i = 0; i < num_thread; i++)
+                for (int i = 0; i < hw_num_thread; i++)
                 {
                     new_data.rsv1_data[i] = tosfu_data1[i];
                     new_data.rsv2_data[i] = tosfu_data2[i];
@@ -97,17 +97,15 @@ void BASE::SFU_CALC()
                     {
                         if (sfutmp1.ins.ddd.sel_alu1 == DecodeParams::A1_RS1)
                         { // VREMU.VX
-                            for (int i = 0; i < num_thread; i++)
+                            for (int i = 0; i < m_hw_warps[sfutmp1.warp_id]->CSR_reg[0x802]; i++)
                             {
                                 if (sfutmp2.ins.mask[i] == 1)
-                                {
                                     sfutmp2.rdv1_data[i] = (unsigned)sfutmp1.rsv2_data[i] % sfutmp1.rsv1_data[0];
-                                }
                             }
                         }
                         else
                         {
-                            for (int i = 0; i < num_thread; i++)
+                            for (int i = 0; i < m_hw_warps[sfutmp1.warp_id]->CSR_reg[0x802]; i++)
                             {
                                 if (sfutmp2.ins.mask[i] == 1)
                                 {
@@ -122,7 +120,7 @@ void BASE::SFU_CALC()
                     }
                     else
                     {
-                        for (int i = 0; i < num_thread; i++)
+                        for (int i = 0; i < m_hw_warps[sfutmp1.warp_id]->CSR_reg[0x802]; i++)
                         {
                             if (sfutmp2.ins.mask[i] == 1)
                                 sfutmp2.rdv1_data[i] = (unsigned)sfutmp1.rsv1_data[i] % sfutmp1.rsv2_data[i];
@@ -138,7 +136,7 @@ void BASE::SFU_CALC()
                 if (sfutmp1.ins.ddd.isvec)
                 {
                     if (sfutmp1.ins.ddd.reverse)
-                        for (int i = 0; i < num_thread; i++)
+                        for (int i = 0; i < m_hw_warps[sfutmp1.warp_id]->CSR_reg[0x802]; i++)
                         {
                             if (sfutmp2.ins.mask[i] == 1)
                             {
@@ -150,7 +148,7 @@ void BASE::SFU_CALC()
                             }
                         }
                     else
-                        for (int i = 0; i < num_thread; i++)
+                        for (int i = 0; i < m_hw_warps[sfutmp1.warp_id]->CSR_reg[0x802]; i++)
                         {
                             if (sfutmp2.ins.mask[i] == 1)
                                 sfutmp2.rdv1_data[i] = (unsigned)sfutmp1.rsv1_data[i] / (unsigned)sfutmp1.rsv2_data[i];
