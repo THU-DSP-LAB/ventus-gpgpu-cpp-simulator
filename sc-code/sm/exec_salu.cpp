@@ -232,6 +232,10 @@ void BASE::SALU_CALC()
                     cout << "SALU_CALC error: exec REMU_ but rs2=0 at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 salutmp2.data = static_cast<unsigned int>(salutmp1.rss1_data) % static_cast<unsigned int>(salutmp1.rss2_data);
                 break;
+
+            default:
+                cout << "SALU_CALC warning: switch to unrecognized ins" << salutmp1.ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                break;
             }
             salufifo.push(salutmp2);
         }
@@ -326,8 +330,9 @@ void BASE::SALU_CALC()
                     cout << "false at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 }
                 break;
+
             default:
-                cout << "SALU_CALC warning: switch to unrecognized ins" << salutmp1.ins << "," << std::hex << salutmp1.ins.origin32bit << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                cout << "SALU_CALC warning: switch to unrecognized ins" << salutmp1.ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 break;
             }
         }

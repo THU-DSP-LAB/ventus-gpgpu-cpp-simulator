@@ -1,22 +1,22 @@
 [*]
 [*] GTKWave Analyzer v3.3.104 (w)1999-2020 BSI
-[*] Tue Jan  2 01:52:17 2024
+[*] Fri Jan 26 20:54:07 2024
 [*]
-[dumpfile] "/home/lan/work/ventus-gpgpu-cpp-simulator/sc-code/sm/BASE_wave_warp1.vcd"
-[dumpfile_mtime] "Tue Jan  2 01:50:18 2024"
-[dumpfile_size] 380867
-[savefile] "/home/lan/work/ventus-gpgpu-cpp-simulator/sc-code/sm/BASE_wave_warp1.gtkw"
-[timestart] 8458
-[size] 2548 1347
+[dumpfile] "/home/lan/work/ventus-gpgpu-cpp-simulator/sc-code/sm/BASE_wave_warp0.vcd"
+[dumpfile_mtime] "Fri Jan 26 20:47:40 2024"
+[dumpfile_size] 32911
+[savefile] "/home/lan/work/ventus-gpgpu-cpp-simulator/sc-code/sm/BASE_wave_warp.gtkw"
+[timestart] 801
+[size] 1908 1119
 [pos] -1 -1
-*-4.000000 8605 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-4.000000 845 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] SystemC.
 [treeopen] SystemC.salutmp2.
 [treeopen] SystemC.salutop_dat.
 [sst_width] 214
 [signals_width] 369
 [sst_expanded] 1
-[sst_vpaned_height] 396
+[sst_vpaned_height] 319
 @420
 SystemC.Clk
 @28
@@ -30,7 +30,6 @@ SystemC.vbran_sig
 @22
 SystemC.pc[31:0]
 SystemC.decode_ins.ins_bit[31:0]
-SystemC.decode_ins.currentpc[31:0]
 @420
 [color] 1
 SystemC.fetch_valid
@@ -41,16 +40,15 @@ SystemC.fetch_valid2
 SystemC.ififo_elem_num[31:0]
 [color] 3
 SystemC.ibuf_swallow
-@421
 [color] 3
 SystemC.ibuf_empty
 @22
 [color] 2
 SystemC.ibuftop_ins.ins_bit[31:0]
 SystemC.ibuftop_ins.currentpc[31:0]
-@420
 [color] 2
 SystemC.ibuftop_ins.op[31:0]
+@420
 SystemC.wait_bran
 [color] 3
 SystemC.can_dispatch

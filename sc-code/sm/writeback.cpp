@@ -7,8 +7,9 @@ void BASE::WRITE_BACK()
     while (true)
     {
         wait(ev_salufifo_pushed & ev_valufifo_pushed & ev_vfpufifo_pushed &
-             ev_lsufifo_pushed & ev_csrfifo_pushed & ev_mulfifo_pushed & ev_sfufifo_pushed);
-        // if (sm_id == 0)
+             ev_lsufifo_pushed & ev_csrfifo_pushed & ev_mulfifo_pushed & ev_sfufifo_pushed &
+             ev_tcfifo_pushed);
+        // if (sm_id == 1)
         //     cout << "SM" << sm_id << " WRITEBACK: start at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
         if (execpop_salu)
         {
@@ -28,6 +29,8 @@ void BASE::WRITE_BACK()
             mulfifo.pop();
         if (execpop_sfu)
             sfufifo.pop();
+        if (execpop_tc)
+            tcfifo.pop();
 
         salufifo_empty = salufifo.isempty();
         if (!salufifo_empty)
@@ -57,6 +60,10 @@ void BASE::WRITE_BACK()
         if (!sfufifo_empty)
             sfutop_dat = sfufifo.front();
         sfufifo_elem_num = sfufifo.used();
+        tcfifo_empty = tcfifo.isempty();
+        if (!tcfifo_empty)
+            tctop_dat = tcfifo.front();
+        tcfifo_elem_num = tcfifo.used();
 
         execpop_valu = false;
         execpop_salu = false;
@@ -65,6 +72,7 @@ void BASE::WRITE_BACK()
         execpop_csr = false;
         execpop_mul = false;
         execpop_sfu = false;
+        execpop_tc = false;
 
         if (salufifo_empty == false)
         {
@@ -206,6 +214,18 @@ void BASE::WRITE_BACK()
                 for (int i = 0; i < hw_num_thread; i++)
                     rdv1_data[i] = sfutop_dat.rdv1_data[i];
             }
+        }
+        else if (tcfifo_empty == false)
+        {
+            write_s = false;
+            write_v = true;
+            wb_ena = true;
+            execpop_tc = true;
+            wb_ins = tctop_dat.ins;
+            rdv1_addr = tctop_dat.ins.d;
+            for (int i = 0; i < hw_num_thread; i++)
+                rdv1_data[i] = tctop_dat.rdv1_data[i];
+            wb_warpid = tctop_dat.warp_id;
         }
         else
         {

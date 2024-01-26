@@ -88,6 +88,9 @@ public:
     void SFU_IN();
     void SFU_CALC();
     void SFU_CTRL();
+    void TC_IN();
+    void TC_CALC();
+    void TC_CTRL();
     // writeback
     void WRITE_BACK();
 
@@ -190,6 +193,12 @@ public:
         SC_THREAD(SFU_CALC);
         sensitive << clk.pos();
         SC_THREAD(SFU_CTRL);
+
+        SC_THREAD(TC_IN);
+        sensitive << clk.pos();
+        SC_THREAD(TC_CALC);
+        sensitive << clk.pos();
+        SC_THREAD(TC_CTRL);
 
         // writeback
         SC_THREAD(WRITE_BACK);
@@ -385,6 +394,23 @@ public:
     int sfufifo_elem_num;
     sc_signal<bool> sfueqa_triggered{"sfueqa_triggered"}, sfueqb_triggered{"sfueqb_triggered"};
     sc_signal<bool> execpop_sfu{"execpop_sfu"};
+
+    // tc
+    sc_signal<bool> emito_tc{"emito_tc"};
+    sc_vector<sc_signal<int32_t>> totc_data1{"totc_data1", hw_num_thread}, // OPC TO TC
+        totc_data2{"totc_data2", hw_num_thread}, totc_data3{"totc_data3", hw_num_thread};
+    bool tc_ready;
+    sc_signal<bool> tc_ready_old{"tc_ready_old"};
+    sc_event_queue tc_eqa, tc_eqb;
+    sc_event tc_eva, tc_evb, tc_unready, tc_nothinghappen,
+        ev_tcfifo_pushed, ev_tcready_updated;
+    std::queue<tc_in_t> tc_dq;
+    StaticQueue<tc_out_t, 3> tcfifo;
+    tc_out_t tctop_dat;
+    bool tcfifo_empty, tcfifo_push;
+    int tcfifo_elem_num;
+    sc_signal<bool> tceqa_triggered{"tceqa_triggered"}, tceqb_triggered{"tceqb_triggered"};
+    sc_signal<bool> execpop_tc{"execpop_tc"};
 
     // writeback
     sc_signal<bool> write_s{"write_s"}, write_v{"write_v"}, write_f{"write_f"};

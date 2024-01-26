@@ -31,7 +31,7 @@ GPGPU_test_FILE=GPGPU_test.cpp BASE.cpp opc.cpp decode.cpp init_decodetable.cpp 
  CTA_Scheduler.cpp init_extmem.cpp ../parameters.cpp ../context_model.hpp ../context_model.cpp ../utils.hpp ../gpgpu_model.hpp \
  writeback.cpp regfile.cpp warp_scheduler.cpp \
  exec_salu.cpp exec_simtstk.cpp exec_lsu.cpp exec_vfpu.cpp exec_csr.cpp exec_mul.cpp \
- exec_sfu.cpp exec_valu.cpp
+ exec_sfu.cpp exec_valu.cpp exec_tensor.cpp
 
 SRCS = $(GPGPU_test_FILE)
 OBJS = $(SRCS:%.cpp=$(OBJ_DIR)/%.o)
@@ -60,6 +60,8 @@ RUNFLAGS_vecadd = --inssrc imem --metafile vecadd/vecadd4x4.metadata --datafile 
 
 RUNFLAGS_nn = --inssrc imem --metafile adv_nn/NearestNeighbor_0.metadata --datafile adv_nn/NearestNeighbor_0.data --numcycle 20000
 
+RUNFLAGS_tensor = --inssrc imem --numkernel 1 tensor tensor/tensor.metadata tensor/tensor.data --numcycle 1200
+
 run: $(BINARY)
 	./$(BINARY) $(RUNFLAGS_NEW)
 
@@ -68,6 +70,9 @@ run_vecadd: $(BINARY)
 
 run_nn: $(BINARY)
 	./$(BINARY) $(RUNFLAGS_nn)
+
+run_tensor: $(BINARY)
+	./$(BINARY) $(RUNFLAGS_tensor)
 
 gdb: $(BINARY)
 	gdb --tui -s $(BINARY) --args $(BINARY) $(RUNFLAGS_NEW)

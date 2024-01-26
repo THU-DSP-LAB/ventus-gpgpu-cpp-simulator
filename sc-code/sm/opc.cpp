@@ -31,7 +31,6 @@ void BASE::OPC_FIFO()
         // cout << "SM" << sm_id << " OPC_FIFO: finish at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
         wait();
         // cout << "SM" << sm_id << " OPC_FIFO: start at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-        // cout << "OPC_FIFO start at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
         if (doemit)
         {
             // cout << "opcfifo is popping index " << emit_idx << " at " << sc_time_stamp() <<","<< sc_delta_count_at_current_time() << "\n";
@@ -43,7 +42,6 @@ void BASE::OPC_FIFO()
         // 按目前的事件顺序，若发生某ins进入OPC而立刻ready，则会有问题，后续要修改
         if (dispatch_valid)
         {
-            // cout << "opc begin to put at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
             if (opc_full && doemit == false) // 相当于上一cycle dispatch_ready
             {
                 // if not ready, just wait, no need throw ERROR
@@ -53,6 +51,7 @@ void BASE::OPC_FIFO()
             {
                 _readdata4 = issue_ins.read();
                 _readwarpid = issueins_warpid;
+                // cout << "SM" << sm_id << " opc begin to put, warpid=" << issueins_warpid << ", at " << sc_time_stamp() << ", " << sc_delta_count_at_current_time() << "\n";
 
                 in_ready = {1, 1, 1};
                 in_valid = {0, 0, 0}; // 要取操作数，则ready=0，valid=1
@@ -147,9 +146,6 @@ void BASE::OPC_FIFO()
                 newopcdat.srcaddr = in_srcaddr;
                 newopcdat.banktype = in_banktype;
 
-                // opcfifo.push(opcfifo_t(_readdata4, _readwarpid,
-                //                        in_ready, in_valid, in_srcaddr, in_banktype));
-
                 opcfifo.push(newopcdat);
             }
         }
@@ -198,7 +194,7 @@ void BASE::OPC_EMIT()
              ev_saluready_updated & ev_valuready_updated &
              ev_vfpuready_updated & ev_lsuready_updated &
              ev_csrready_updated & ev_mulready_updated &
-             ev_sfuready_updated);
+             ev_sfuready_updated & ev_tcready_updated);
         // cout << "OPC_EMIT start at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
         doemit = false;
         findemit = 0;
@@ -210,6 +206,7 @@ void BASE::OPC_EMIT()
         emito_csr = false;
         emito_mul = false;
         emito_sfu = false;
+        emito_tc = false;
         emito_warpscheduler = false;
         for (int i = last_emit_entryid; i < last_emit_entryid + OPCFIFO_SIZE; i++)
         {
@@ -221,7 +218,7 @@ void BASE::OPC_EMIT()
                 emit_ins = opcfifo[entryidx].ins;
                 emitins_warpid = opcfifo[entryidx].warp_id;
 
-                // cout << "opcfifo[" << entryidx << "]-" << emit_ins << "is all ready, at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                // cout << "opcfifo[" << entryidx << "]-" << opcfifo[entryidx].ins << " is all ready, at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 switch (opcfifo[entryidx].ins.ddd.sel_execunit)
                 {
                 case DecodeParams::SALU:
@@ -351,6 +348,26 @@ void BASE::OPC_EMIT()
                         }
                     }
                     break;
+
+                case DecodeParams::TC:
+                    if (tc_ready)
+                    {
+                        emit_idx = entryidx;
+                        last_emit_entryid = entryidx + 1;
+                        findemit = 1;
+                        doemit = true;
+                        emito_tc = true;
+                        cout << "OPC: TC is ready at " << sc_time_stamp() <<","<< sc_delta_count_at_current_time() << "\n";
+
+                        for (int j = 0; j < hw_num_thread; j++)
+                        {
+                            totc_data1[j] = opcfifo[entryidx].data[0][j];
+                            totc_data2[j] = opcfifo[entryidx].data[1][j];
+                            totc_data3[j] = opcfifo[entryidx].data[2][j];
+                        }
+                    }
+                    break;
+
                 case DecodeParams::WPSCHEDLER:
                     emit_idx = entryidx;
                     last_emit_entryid = entryidx + 1;

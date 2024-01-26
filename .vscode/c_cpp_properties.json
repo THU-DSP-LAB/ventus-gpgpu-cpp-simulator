@@ -1,7 +1,6 @@
 {
     "env": {
-        "GCC_PATH": "/home/intern/mmy/utils/gcc-11.4.0",
-        "SYSTEMC_HOME": "/home/intern/mmy/utils/systemc-2.3.4"
+        // "GCC_PATH": "/home/utils/gcc-11.4.0",
     },
     "configurations": [
         {
@@ -11,7 +10,7 @@
                 "${env:SYSTEMC_HOME}/include",
                 "${env:SYSTEMC_HOME}/lib-linux64"
             ],
-            "compilerPath": "${env:GCC_PATH}/bin/g++",
+            "compilerPath": "/usr/bin/g++",
             "defines": [],
             "cStandard": "gnu23",
             "cppStandard": "c++20",

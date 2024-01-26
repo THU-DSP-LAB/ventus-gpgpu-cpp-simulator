@@ -183,8 +183,8 @@ void BASE::cycle_IBUF_ACTION(int warp_id, I_TYPE &dispatch_ins_, I_TYPE &_readda
             {
                 m_hw_warps[warp_id]->ififo.push(m_hw_warps[warp_id]->decode_ins.read());
                 m_hw_warps[warp_id]->ibuf_swallow = true;
-                // if (m_hw_warps[warp_id]->decode_ins.read().op == OP_TYPE::ENDPRG_)
-                //     cout << "SM" << sm_id << " warp " << warp_id << " IFIFO push decode_ins=" << m_hw_warps[warp_id]->decode_ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+
+                // cout << "SM" << sm_id << " warp " << warp_id << " IFIFO push decode_ins=" << m_hw_warps[warp_id]->decode_ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
             }
             // cout << "before put, ififo has " << ififo.used() << " elems at " << sc_time_stamp() <<","<< sc_delta_count_at_current_time() << "\n";
             // cout << "after put, ififo has " << ififo.used() << " elems at " << sc_time_stamp() <<","<< sc_delta_count_at_current_time() << "\n";
@@ -304,6 +304,8 @@ void BASE::cycle_JUDGE_DISPATCH(int warp_id, I_TYPE &_readibuf)
 
         if (_readibuf.op == INVALID_)
             m_hw_warps[warp_id]->can_dispatch = false;
+        if (_readibuf.op == ENDPRG_ && !m_hw_warps[warp_id]->score.empty())
+            m_hw_warps[warp_id]->can_dispatch = false;
 
         if (_readibuf.ddd.wxd && m_hw_warps[warp_id]->score.find(SCORE_TYPE(s, _readibuf.d)) != m_hw_warps[warp_id]->score.end())
             m_hw_warps[warp_id]->can_dispatch = false;
@@ -338,22 +340,6 @@ void BASE::cycle_JUDGE_DISPATCH(int warp_id, I_TYPE &_readibuf)
     }
     else if (m_hw_warps[warp_id]->ififo.isempty())
         m_hw_warps[warp_id]->can_dispatch = false;
-}
-
-void BASE::JUDGE_DISPATCH(int warp_id)
-{
-    I_TYPE _readibuf;
-    while (true)
-    {
-        // cout << "SM" << sm_id << " warp" << warp_id << " JUDGE_DISPATCH: finish at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-        wait(m_hw_warps[warp_id]->ev_judge_dispatch & m_hw_warps[warp_id]->ev_ibuf_updated);
-        // cout << "SM" << sm_id << " warp" << warp_id << " JUDGE_DISPATCH: start at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-        // cout << "scoreboard: ibuftop_ins=" << ibuftop_ins << " at " << sc_time_stamp() <<","<< sc_delta_count_at_current_time() << "\n";
-
-        cycle_JUDGE_DISPATCH(warp_id, _readibuf);
-
-        m_hw_warps[warp_id]->ev_issue.notify();
-    }
 }
 
 void BASE::BEFORE_DISPATCH(int warp_id)

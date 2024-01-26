@@ -1336,6 +1336,7 @@ struct valu_out_t
         sc_trace(tf, v.warp_id, NAME + ".warp_id");
     }
 };
+
 struct vfpu_in_t
 {
     I_TYPE ins;
@@ -1379,6 +1380,7 @@ struct vfpu_out_t
         sc_trace(tf, v.warp_id, NAME + ".warp_id");
     }
 };
+
 struct lsu_in_t
 {
     I_TYPE ins;
@@ -1456,6 +1458,7 @@ public:
         return os;
     }
 };
+
 struct csr_in_t
 {
     I_TYPE ins;
@@ -1491,6 +1494,7 @@ struct csr_out_t
         sc_trace(tf, v.data, NAME + ".data");
     }
 };
+
 struct mul_in_t
 {
     I_TYPE ins;
@@ -1579,6 +1583,49 @@ struct sfu_out_t
     }
 };
 
+struct tc_in_t
+{
+    I_TYPE ins;
+    int warp_id;
+    std::array<int, hw_num_thread> tcSdata1, tcSdata2, tcSdata3;
+};
+struct tc_out_t
+{
+    I_TYPE ins;
+    int warp_id;
+    std::array<int, hw_num_thread> rdv1_data;
+    bool operator==(const tc_out_t &rhs) const
+    {
+        return rhs.ins == ins && rhs.rdv1_data == rdv1_data;
+    }
+    tc_out_t &operator=(const tc_out_t &rhs)
+    {
+        ins = rhs.ins;
+        rdv1_data = rhs.rdv1_data;
+        warp_id = rhs.warp_id;
+        return *this;
+    }
+    friend ostream &operator<<(ostream &os, tc_out_t const &v)
+    {
+        os << "{" << v.ins << ";";
+        auto it = v.rdv1_data.begin();
+        while (it != v.rdv1_data.end())
+        {
+            os << *it << " ";
+            it = std::next(it);
+        }
+        os << "}";
+        return os;
+    }
+    friend void sc_trace(sc_trace_file *tf, const tc_out_t &v, const std::string &NAME)
+    {
+        sc_trace(tf, v.ins, NAME + ".ins");
+        for (int i = 0; i < hw_num_thread; i++)
+            sc_trace(tf, v.rdv1_data[i], NAME + ".rdv1_data(" + std::to_string(i) + ")");
+        sc_trace(tf, v.warp_id, NAME + ".warp_id");
+    }
+};
+
 class WARP_BONE
 {
 public:
@@ -1617,7 +1664,6 @@ public:
         ififo.clear();
         can_dispatch = false;
         score.clear();
-        wait_bran = false;
         s_regfile.fill(0);
         for (auto &subarray : v_regfile)
             subarray.fill(0);
