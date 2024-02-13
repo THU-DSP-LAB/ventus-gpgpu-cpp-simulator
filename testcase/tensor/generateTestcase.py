@@ -1,20 +1,24 @@
 import os
 import random
+import struct
 
 
-# Function to generate a .data file with random 32-bit integers
-def generate_random_integers(hex_byte_size: str, file_name: str):
+# Function to generate a .data file with random 32-bit floating-point numbers
+def generate_random_floats(hex_byte_size: str, file_name: str):
     # Convert the hex byte size to decimal
     byte_size = int(hex_byte_size, 16)
-    # Calculate the number of integers (4 bytes per integer)
-    num_integers = byte_size // 4
+    # Calculate the number of floats (4 bytes per float)
+    num_floats = byte_size // 4
 
-    with open(file_name, 'w') as file:
-        for _ in range(num_integers):
-            # Generate a random integer in the range of 14-bit signed integer
-            rand_int = random.randint(-16383, 16383)
-            # Convert to 32-bit signed integer format and write to file
-            file.write(f'{rand_int & 0xFFFFFFFF:08x}\n')
+    with open(file_name, "w") as file:
+        for _ in range(num_floats):
+            # Generate a random float in the range of -1.0 to 1.0
+            rand_float = random.uniform(-1.0, 1.0)
+            # Convert to 32-bit floating-point format
+            float_bytes = struct.pack("f", rand_float)
+            # Convert bytes to hexadecimal representation
+            hex_str = float_bytes.hex()
+            file.write(f"{hex_str}\n")
 
 
 try:
@@ -28,4 +32,4 @@ except NameError:
 file_name = os.path.join(current_dir, "tensor.data")
 
 # Generate the file
-generate_random_integers("200", file_name)
+generate_random_floats("200", file_name)

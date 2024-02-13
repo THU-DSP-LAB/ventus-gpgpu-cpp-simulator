@@ -89,12 +89,15 @@ void BASE::TC_CALC()
                 {
                     for (int j = 0; j < 2; ++j)
                     {
-                        tctmp2.rdv1_data[i * 2 + j] = 0;
+                        float result = 0.0f;
                         for (int k = 0; k < 4; ++k)
                         {
-                            tctmp2.rdv1_data[i * 2 + j] += tctmp1.tcSdata1[i * 4 + k] * tctmp1.tcSdata2[k * 2 + j];
+                            float a = std::bit_cast<float>(tctmp1.tcSdata1[i * 4 + k]);
+                            float b = std::bit_cast<float>(tctmp1.tcSdata2[k * 2 + j]);
+                            result += a * b;
                         }
-                        tctmp2.rdv1_data[i * 2 + j] += tctmp1.tcSdata3[i * 2 + j];
+                        result += std::bit_cast<float>(tctmp1.tcSdata3[i * 2 + j]);
+                        tctmp2.rdv1_data[i * 2 + j] = std::bit_cast<int>(result);
                     }
                 }
                 break;
