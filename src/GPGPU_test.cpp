@@ -1,5 +1,6 @@
-#include "BASE.h"
-#include "BASE_sti.h"
+#include "parameters.h"
+#include "sm/BASE.h"
+#include "sm/BASE_sti.h"
 #include "CTA_Scheduler.hpp"
 #include <chrono>
 #include <fstream>

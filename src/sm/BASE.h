@@ -3,7 +3,7 @@
 
 #define SC_INCLUDE_DYNAMIC_PROCESSES
 #include "../parameters.h"
-#include "CTA_Scheduler.hpp"
+#include "../CTA_Scheduler.hpp"
 #include "../context_model.hpp"
 #include "../utils.hpp"
 #include "../gpgpu_model.hpp"
@@ -21,7 +21,6 @@ public:
     void debug_display1();
     void debug_display2();
     void debug_display3();
-    void INIT_EXTMEM();
     void INIT_INSMEM();
     uint32_t getBufferData(const std::vector<std::vector<uint8_t>> &buffers, unsigned int virtualAddress, int num_buffer, uint64_t *buffer_base, uint64_t *buffer_size, bool &addrOutofRangeException, I_TYPE ins);
     uint32_t readInsBuffer(unsigned int virtualAddress, bool &addrOutofRangeException);
@@ -123,7 +122,6 @@ public:
         // SC_THREAD(debug_display1);
         // SC_THREAD(debug_display2);
         // SC_THREAD(debug_display3);
-        SC_THREAD(INIT_EXTMEM);
         SC_THREAD(INIT_INSTABLE);
         SC_THREAD(INIT_DECODETABLE);
 

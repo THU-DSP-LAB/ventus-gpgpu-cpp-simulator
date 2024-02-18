@@ -4,10 +4,10 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
-#include "BASE.h"
-#include "../context_model.hpp"
-#include "../utils.hpp"
-#include "../gpgpu_model.hpp"
+#include "sm/BASE.h"
+#include "context_model.hpp"
+#include "utils.hpp"
+#include "gpgpu_model.hpp"
 
 class BASE;
 

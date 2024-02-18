@@ -27,8 +27,8 @@ endif
 LD  = $(CXX)
 
 # Sources and objects
-GPGPU_test_FILE=GPGPU_test.cpp BASE.cpp opc.cpp decode.cpp init_decodetable.cpp init_ins.cpp init_instable.cpp initialize.cpp \
- CTA_Scheduler.cpp init_extmem.cpp ../parameters.cpp ../context_model.hpp ../context_model.cpp ../utils.hpp ../gpgpu_model.hpp \
+GPGPU_test_FILE=../GPGPU_test.cpp BASE.cpp opc.cpp decode.cpp init_decodetable.cpp init_instable.cpp \
+ ../CTA_Scheduler.cpp ../parameters.cpp ../context_model.hpp ../context_model.cpp ../utils.hpp ../gpgpu_model.hpp \
  writeback.cpp regfile.cpp warp_scheduler.cpp \
  exec_salu.cpp exec_simtstk.cpp exec_lsu.cpp exec_vfpu.cpp exec_csr.cpp exec_mul.cpp \
  exec_sfu.cpp exec_valu.cpp exec_tensor.cpp
@@ -79,7 +79,7 @@ gdb: $(BINARY)
 
 clean:
 	-rm -rf $(BUILD_DIR)
-	-rm -rf $(BINARY)
+	-rm -rf $(BINARY) *.vcd
 
 GPGPU_test_GDB:
 	$(CXX) -o $(BINARY) $(GPGPU_test_FILE) $(LIB_DIR) $(INC_DIR) $(LIB) -std=c++20 -g
