@@ -8,7 +8,7 @@ struct meta_data{  // 这个metadata是供驱动使用的，而不是给硬件�
     uint64_t wf_size; ///> 每个warp的thread数目
     uint64_t wg_size; ///> 每个workgroup的warp数目
     uint64_t metaDataBaseAddr;///> CSR_KNL的值，
-    uint64_t ldsSize;///> 每个workgroup使用的local memory的大小
+    uint64_t ldsSize;///> 每个workgroup使用的local memory(shared memory)的大小
     uint64_t pdsSize;///> 每个thread用到的private memory大小
     uint64_t sgprUsage;///> 每个warp使用的标量寄存器数目
     uint64_t vgprUsage;///> 每个warp使用的向量寄存器数目

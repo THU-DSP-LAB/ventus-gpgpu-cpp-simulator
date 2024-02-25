@@ -32,7 +32,7 @@ int sc_main(int argc, char *argv[])
                 datafile = argv[i + 1];
                 i++;
                 cout << "Initializing kernel " << kernelName << " info ...\n";
-                m_running_kernels[j] = std::make_shared<kernel_info_t>(kernelName, "../../testcase/" + metafile, "../../testcase/" + datafile);
+                m_running_kernels[j] = std::make_shared<kernel_info_t>(kernelName, "./testcase/" + metafile, "./testcase/" + datafile);
             }
         }
         if (strcmp(argv[i], "--metafile") == 0)
@@ -103,7 +103,7 @@ int sc_main(int argc, char *argv[])
         if (recordwave_SM->m_hw_warps[i] != nullptr)
         {
 
-            tf[i] = sc_create_vcd_trace_file(("BASE_wave_warp" + std::to_string(i)).c_str());
+            tf[i] = sc_create_vcd_trace_file(("output/wave_warp" + std::to_string(i)).c_str());
             tf[i]->set_time_unit(1, SC_NS);
             for (int j = 0; j < 32; j++)
             {

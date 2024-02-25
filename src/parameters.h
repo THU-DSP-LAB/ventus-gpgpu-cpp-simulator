@@ -1,6 +1,7 @@
 #ifndef _PARAMETERS_H
 #define _PARAMETERS_H
 
+#define SC_INCLUDE_DYNAMIC_PROCESSES
 #include "systemc.h"
 // #include "tlm.h"
 // #include "tlm_core/tlm_1/tlm_req_rsp/tlm_channels/tlm_fifo/tlm_fifo.h"

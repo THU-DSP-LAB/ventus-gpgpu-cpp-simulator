@@ -1,14 +1,14 @@
 [*]
 [*] GTKWave Analyzer v3.3.104 (w)1999-2020 BSI
-[*] Fri Jan 26 20:54:07 2024
+[*] Sun Feb 25 14:29:39 2024
 [*]
-[dumpfile] "/home/lan/work/ventus-gpgpu-cpp-simulator/sc-code/sm/BASE_wave_warp0.vcd"
-[dumpfile_mtime] "Fri Jan 26 20:47:40 2024"
-[dumpfile_size] 32911
-[savefile] "/home/lan/work/ventus-gpgpu-cpp-simulator/sc-code/sm/BASE_wave_warp.gtkw"
+[dumpfile] "/home/lan/work/ventus-gpgpu-cpp-simulator/output/wave_warp0.vcd"
+[dumpfile_mtime] "Sun Feb 25 14:28:51 2024"
+[dumpfile_size] 447420
+[savefile] "/home/lan/work/ventus-gpgpu-cpp-simulator/output/wave.gtkw"
 [timestart] 801
 [size] 1908 1119
-[pos] -1 -1
+[pos] 34302 33049
 *-4.000000 845 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] SystemC.
 [treeopen] SystemC.salutmp2.

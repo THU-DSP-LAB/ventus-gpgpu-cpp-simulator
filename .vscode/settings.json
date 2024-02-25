@@ -58,7 +58,8 @@
         "chrono": "cpp",
         "ctime": "cpp",
         "ratio": "cpp",
-        "iomanip": "cpp"
+        "iomanip": "cpp",
+        "systemc": "cpp"
     },
     "C_Cpp.errorSquiggles": "enabled",
     "C_Cpp.default.cppStandard": "c++20"
