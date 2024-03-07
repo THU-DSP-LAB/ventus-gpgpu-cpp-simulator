@@ -8,16 +8,11 @@
 int sc_main(int argc, char *argv[])
 {
     // 处理命令行参数
-    std::string inssrc, metafile, datafile, numcycle, kernelName;
+    std::string metafile, datafile, numcycle, kernelName;
     int numkernel = 0;
     std::vector<std::shared_ptr<kernel_info_t>> m_running_kernels;
     for (int i = 1; i < argc; i++)
     {
-        if (strcmp(argv[i], "--inssrc") == 0)
-        { // ireg or imem
-            inssrc = argv[i + 1];
-            i++;
-        }
         if (strcmp(argv[i], "--numkernel") == 0)
         {
             numkernel = std::stoi(argv[i + 1]);
@@ -31,7 +26,7 @@ int sc_main(int argc, char *argv[])
                 i++;
                 datafile = argv[i + 1];
                 i++;
-                cout << "Initializing kernel " << kernelName << " info ...\n";
+                std::cout << "Initializing kernel " << kernelName << " info ...\n";
                 m_running_kernels[j] = std::make_shared<kernel_info_t>(kernelName, "./testcase/" + metafile, "./testcase/" + datafile);
             }
         }
@@ -58,7 +53,7 @@ int sc_main(int argc, char *argv[])
     BASE_impl = new BASE *[NUM_SM];
     for (int i = 0; i < NUM_SM; i++)
     {
-        BASE_impl[i] = new BASE(("SM" + std::to_string(i)).c_str(), inssrc, i);
+        BASE_impl[i] = new BASE(("SM" + std::to_string(i)).c_str(), i);
     }
     BASE_sti BASE_sti_impl("BASE_STI");
 
@@ -210,7 +205,7 @@ int sc_main(int argc, char *argv[])
     auto start = std::chrono::high_resolution_clock::now();
     sc_core::sc_start(std::stoi(numcycle), SC_NS);
 
-    cout << "----------Simulation end------------\n";
+    std::cout << "----------Simulation end------------\n";
 
     for (auto tf_ : tf)
         sc_close_vcd_trace_file(tf_);

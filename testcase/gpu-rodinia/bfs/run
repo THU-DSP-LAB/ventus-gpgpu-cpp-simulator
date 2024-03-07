@@ -1,0 +1,4 @@
+#!/bin/bash
+
+export DATA_DIR=/data/eda/work/kongli/kl_ws/test_rodinia/gpu-rodinia/data
+./bfs.out ${DATA_DIR}/bfs/graph1MW_6.txt $@

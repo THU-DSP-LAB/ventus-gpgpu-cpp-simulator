@@ -21,7 +21,7 @@ void BASE::WARP_SCHEDULER()
             }
         }
 
-        // cout << "SM" << sm_id << " WARP SCHEDULER start at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+        // std::cout << "SM" << sm_id << " WARP SCHEDULER start at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
 
         // handle warp end
 
@@ -37,7 +37,7 @@ void BASE::WARP_SCHEDULER()
             {
                 m_current_kernel_running.write(false);
                 m_current_kernel_completed.write(true);
-                cout << "SM" << sm_id << " Warp Scheduler: finish current kernel at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                std::cout << "SM" << sm_id << " Warp Scheduler: finish current kernel at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
             }
         }
 
@@ -47,7 +47,7 @@ void BASE::WARP_SCHEDULER()
 
         if (emito_warpscheduler)
         {
-            // cout << "SM" << sm_id << " WARP SCHEDULER receive emit ins" << emit_ins << ", warpid=" << emitins_warpid << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+            // std::cout << "SM" << sm_id << " WARP SCHEDULER receive emit ins" << emit_ins << ", warpid=" << emitins_warpid << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
             new_ins = emit_ins;
             new_ins_warpid = emitins_warpid;
             switch (new_ins.op)
@@ -82,20 +82,20 @@ void BASE::WARP_SCHEDULER()
                 m_num_warp_activated--;
                 m_hw_warps[new_ins_warpid]->initwarp();
                 reset_flush_pipeline[new_ins_warpid] = true;
-                cout << "SM" << sm_id << " warp " << new_ins_warpid << " 0x" << std::hex << new_ins.currentpc
+                std::cout << "SM" << sm_id << " warp " << new_ins_warpid << " 0x" << std::hex << new_ins.currentpc
                      << " " << new_ins << " endprg"
                      << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 break;
 
             default:
-                cout << "warp scheduler warning, receive unrecognized instruction\n";
+                std::cout << "warp scheduler warning, receive unrecognized instruction\n";
                 break;
             }
         }
 
         // wait for all warps dispatch
         wait(ev_issue_list);
-        // cout << "SM" << sm_id << " WARP SCHEDULER receive issue_list " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+        // std::cout << "SM" << sm_id << " WARP SCHEDULER receive issue_list " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
 
         if (!opc_full | doemit) // 这是dispatch_ready，来自opc (ready-valid机制)
         {
@@ -108,7 +108,7 @@ void BASE::WARP_SCHEDULER()
                     dispatch_valid = true;
                     _newissueins = m_hw_warps[i % hw_num_warp]->ififo.front();
                     _newissueins.mask = m_hw_warps[i % hw_num_warp]->current_mask;
-                    // cout << "let issue_ins mask=" << _newissueins.mask << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                    // std::cout << "let issue_ins mask=" << _newissueins.mask << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                     issue_ins = _newissueins;
                     issueins_warpid = i % hw_num_warp;
                     find_dispatchwarp = true;
@@ -117,7 +117,7 @@ void BASE::WARP_SCHEDULER()
                 else
                 {
                     m_hw_warps[i % hw_num_warp]->dispatch_warp_valid = false;
-                    // cout << "ISSUE: let warp" << i % hw_num_warp << " dispatch_warp_valid=false at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                    // std::cout << "ISSUE: let warp" << i % hw_num_warp << " dispatch_warp_valid=false at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 }
             }
             if (!find_dispatchwarp)

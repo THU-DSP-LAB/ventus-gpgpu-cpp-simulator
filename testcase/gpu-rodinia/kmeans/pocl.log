@@ -1,0 +1,72 @@
+WG size of kernel_swap = 256, WG size of kernel_kmeans = 64 
+
+I/O completed
+
+Number of objects: 32
+Number of features: 34
+[INFO]: [HW DRIVER] in [FILE] ventus.cpp,[LINE]25,[fn] vt_dev_open: vt_dev_open : hello world from ventus.cpp
+spike device initialize: allocating local memory: to allocate at 0x70000000 with 268435456 bytes 
+spike device initialize: allocating pc source memory: to allocate at 0x80000000 with 268435456 bytes 
+### Triple: riscv32, CPU: ventus-gpgpu
+to allocate at 0x90000000 with 8192 bytes 
+to copy to 0x90000000 with 4352 bytes
+to allocate at 0x90002000 with 8192 bytes 
+notice that ventus hasn't support local buffer as argument yet.
+to allocate at 0x90004000 with 4096 bytes 
+to copy to 0x90004000 with 16 bytes
+to allocate at 0x90005000 with 1048576 bytes 
+to allocate at 0x90105000 with 4096 bytes 
+to copy to 0x90105000 with 64 bytes
+arg gpgpu is numw:16,numt:16,numwg:1,kernelx:1,kernely:1,kernelz:1,ldssize:0x1000,pdssize:0x10000,pdsbase:0x90005000,knlbase:0x90105000
+vaddr mem scope is -m0x70000000:0x90106000
+src file is object.riscv, run log is written to object.riscv.log
+spike -l --log-commits -p16 --isa rv32gcv_zfh --pc=0x80000000 -m0x70000000:0x90106000 --varch vlen:512,elen:32 --gpgpuarch numw:16,numt:16,numwg:1,kernelx:1,kernely:1,kernelz:1,ldssize:0x1000,pdssize:0x10000,pdsbase:0x90005000,knlbase:0x90105000 --log=object.riscv.log object.riscv 
+warp number: 16 thread number = 16  workgroup number = 1 workgroup dimension:1*1*1 lds size: 0x1000 pds size: 0x10000 lds base: 0x70000000 pds base: 0x90005000 knl base: 0x90105000
+all warps reach the endprg. now proc 0 will end the simulation.
+Log file object.riscv.log renamed successfully to kmeans_swap_0.log.
+to allocate at 0x90106000 with 4096 bytes 
+to copy to 0x90106000 with 680 bytes
+to allocate at 0x90107000 with 4096 bytes 
+notice that ventus hasn't support local buffer as argument yet.
+to allocate at 0x90108000 with 4096 bytes 
+to copy to 0x90108000 with 32 bytes
+to allocate at 0x90109000 with 262144 bytes 
+to allocate at 0x90149000 with 4096 bytes 
+to copy to 0x90149000 with 64 bytes
+arg gpgpu is numw:4,numt:16,numwg:1,kernelx:1,kernely:1,kernelz:1,ldssize:0x1000,pdssize:0x10000,pdsbase:0x90109000,knlbase:0x90149000
+vaddr mem scope is -m0x70000000:0x9014a000
+src file is object.riscv, run log is written to object.riscv.log
+spike -l --log-commits -p4 --isa rv32gcv_zfh --pc=0x80000000 -m0x70000000:0x9014a000 --varch vlen:512,elen:32 --gpgpuarch numw:4,numt:16,numwg:1,kernelx:1,kernely:1,kernelz:1,ldssize:0x1000,pdssize:0x10000,pdsbase:0x90109000,knlbase:0x90149000 --log=object.riscv.log object.riscv 
+warp number: 4 thread number = 16  workgroup number = 1 workgroup dimension:1*1*1 lds size: 0x1000 pds size: 0x10000 lds base: 0x70000000 pds base: 0x90109000 knl base: 0x90149000
+all warps reach the endprg. now proc 0 will end the simulation.
+Log file object.riscv.log renamed successfully to kmeans_kernel_c_0.log.
+to copy from 0x90107000 with 128 bytes
+to copy to 0x90106000 with 680 bytes
+notice that ventus hasn't support local buffer as argument yet.
+to allocate at 0x9014a000 with 4096 bytes 
+to copy to 0x9014a000 with 32 bytes
+to allocate at 0x9014b000 with 262144 bytes 
+to allocate at 0x9018b000 with 4096 bytes 
+to copy to 0x9018b000 with 64 bytes
+arg gpgpu is numw:4,numt:16,numwg:1,kernelx:1,kernely:1,kernelz:1,ldssize:0x1000,pdssize:0x10000,pdsbase:0x9014b000,knlbase:0x9018b000
+vaddr mem scope is -m0x70000000:0x9018c000
+src file is object.riscv, run log is written to object.riscv.log
+spike -l --log-commits -p4 --isa rv32gcv_zfh --pc=0x80000000 -m0x70000000:0x9018c000 --varch vlen:512,elen:32 --gpgpuarch numw:4,numt:16,numwg:1,kernelx:1,kernely:1,kernelz:1,ldssize:0x1000,pdssize:0x10000,pdsbase:0x9014b000,knlbase:0x9018b000 --log=object.riscv.log object.riscv 
+warp number: 4 thread number = 16  workgroup number = 1 workgroup dimension:1*1*1 lds size: 0x1000 pds size: 0x10000 lds base: 0x70000000 pds base: 0x9014b000 knl base: 0x9018b000
+all warps reach the endprg. now proc 0 will end the simulation.
+Log file object.riscv.log renamed successfully to kmeans_kernel_c_1.log.
+to copy from 0x90107000 with 128 bytes
+iterated 2 times
+
+================= Centroid Coordinates =================
+0: 47.00 209.00 0.00 63.00 59.00 118.00 218.00 94.00 231.00 93.00 231.00 162.00 113.00 19.00 115.00 73.00 219.00 76.00 109.00 77.00 248.00 77.00 223.00 226.00 59.00 13.00 124.00 19.00 150.00 205.00 143.00 197.00 159.00 143.00
+
+1: 4.00 218.00 6.00 222.00 57.00 237.00 59.00 32.00 144.00 172.00 51.00 3.00 245.00 14.00 79.00 99.00 92.00 72.00 176.00 59.00 42.00 235.00 72.00 166.00 255.00 222.00 115.00 142.00 163.00 18.00 30.00 167.00 237.00 36.00
+
+2: 134.00 38.00 17.00 193.00 70.00 161.00 110.00 122.00 164.00 99.00 136.00 244.00 198.00 228.00 60.00 119.00 32.00 102.00 98.00 104.00 12.00 97.00 71.00 127.00 240.00 234.00 146.00 14.00 146.00 127.00 50.00 24.00 165.00 67.00
+
+3: 217.00 235.00 229.00 71.00 101.00 137.00 171.00 238.00 125.00 113.00 210.00 185.00 232.00 242.00 31.00 75.00 91.00 43.00 172.00 162.00 171.00 156.00 140.00 61.00 170.00 30.00 188.00 220.00 54.00 97.00 32.00 16.00 76.00 5.00
+
+4: 109.66 132.25 109.84 133.75 96.88 129.22 134.69 109.81 145.22 120.81 119.53 125.56 161.81 139.56 134.75 122.62 127.72 135.12 122.69 124.00 132.91 152.53 120.34 142.50 125.38 127.25 134.97 123.38 126.19 124.41 125.47 132.09 145.03 99.59
+
+Number of Iteration: 1

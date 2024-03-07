@@ -1,0 +1,1 @@
+/eda/work/yangzx/ventus/llvm-project/install/bin/clang -g  -pie CMakeFiles/matadd.dir/matadd.c.o CMakeFiles/matadd.dir/matadd_exec.c.o -o matadd   -L/data/eda/work/yangzx/ventus/llvm-project/install/lib  -Wl,-rpath,/data/eda/work/yangzx/ventus/llvm-project/install/lib ../../poclu/libpoclu.a -lOpenCL -lm 

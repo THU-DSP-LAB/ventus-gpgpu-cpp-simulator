@@ -11,12 +11,12 @@ void BASE::TC_IN()
         {
             if (tc_ready_old == false)
             {
-                cout << "tc error: not ready at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                std::cout << "tc error: not ready at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
             }
             tc_unready.notify();
             new_data.ins = emit_ins;
             new_data.warp_id = emitins_warpid;
-            // cout << "SM" << sm_id << " TC_IN receive ins=" << emit_ins.read() << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+            // std::cout << "SM" << sm_id << " TC_IN receive ins=" << emit_ins.read() << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
 
             for (int i = 0; i < m_hw_warps[new_data.warp_id]->CSR_reg[0x802]; i++)
             {
@@ -83,7 +83,28 @@ void BASE::TC_CALC()
             switch (tctmp1.ins.ddd.alu_fn)
             {
             case DecodeParams::alu_fn_t::FN_TTF:
-                cout << "TC: start at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                // std::cout << "Matrix A (Hardware format):" << std::endl;
+                // for (int i = 0; i < 2; ++i)
+                // {
+                //     for (int j = 0; j < 4; ++j)
+                //         std::cout << std::hex << std::setw(8) << std::setfill('0') << tctmp1.tcSdata1[i * 4 + j] << " ";
+                //     std::cout << std::endl;
+                // }
+                // std::cout << "Matrix B (Hardware format):" << std::endl;
+                // for (int i = 0; i < 4; ++i)
+                // {
+                //     for (int j = 0; j < 2; ++j)
+                //         std::cout << std::hex << std::setw(8) << std::setfill('0') << tctmp1.tcSdata2[i * 2 + j] << " ";
+                //     std::cout << std::endl;
+                // }
+                // std::cout << "Matrix C (Hardware format):" << std::endl;
+                // for (int i = 0; i < 2; ++i)
+                // {
+                //     for (int j = 0; j < 2; ++j)
+                //         std::cout << std::hex << std::setw(8) << std::setfill('0') << tctmp1.tcSdata3[i * 2 + j] << " ";
+                //     std::cout << std::endl;
+                // }
+
                 static_assert(hw_num_thread >= 8, "hw_num_thread must be at least 8.");
                 for (int i = 0; i < 2; ++i)
                 {
@@ -93,16 +114,24 @@ void BASE::TC_CALC()
                         for (int k = 0; k < 4; ++k)
                         {
                             float a = std::bit_cast<float>(tctmp1.tcSdata1[i * 4 + k]);
-                            float b = std::bit_cast<float>(tctmp1.tcSdata2[k * 2 + j]);
+                            float b = std::bit_cast<float>(tctmp1.tcSdata2[j * 4 + k]);
                             result += a * b;
                         }
                         result += std::bit_cast<float>(tctmp1.tcSdata3[i * 2 + j]);
                         tctmp2.rdv1_data[i * 2 + j] = std::bit_cast<int>(result);
                     }
                 }
+
+                // std::cout << "Matrix D (Result in Hardware format):" << std::endl;
+                // for (int i = 0; i < 2; ++i)
+                // {
+                //     for (int j = 0; j < 2; ++j)
+                //         std::cout << std::hex << std::setw(8) << std::setfill('0') << tctmp2.rdv1_data[i * 2 + j] << " ";
+                //     std::cout << std::endl;
+                // }
                 break;
             default:
-                cout << "TC_CALC warning: switch to unrecognized ins" << tctmp1.ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                std::cout << "TC_CALC warning: switch to unrecognized ins" << tctmp1.ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 break;
             }
             tcfifo.push(tctmp2);

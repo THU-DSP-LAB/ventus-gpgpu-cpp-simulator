@@ -12,7 +12,7 @@ void BASE::VALU_IN()
         if (emito_valu)
         {
             if (valu_ready_old == false)
-                cout << "valu error: not ready at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                std::cout << "valu error: not ready at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
             valu_unready.notify();
 
             if (emit_ins.read().ddd.branch != DecodeParams::branch_t::B_N)
@@ -57,12 +57,12 @@ void BASE::VALU_IN()
                 }
 
                 // if (new_data.ins.origin32bit == (uint32_t)0x42026057)
-                //     cout << "valu vmv.s.x, rsv1_data=" << new_data.rsv1_data[0] << "\n";
+                //     std::cout << "valu vmv.s.x, rsv1_data=" << new_data.rsv1_data[0] << "\n";
 
                 valu_dq.push(new_data);
                 a_delay = 3;
                 b_delay = 1;
-                // cout << "valu: receive VADD_VV_, will notify eq, at " << sc_time_stamp() <<","<< sc_delta_count_at_current_time() << "\n";
+                // std::cout << "valu: receive VADD_VV_, will notify eq, at " << sc_time_stamp() <<","<< sc_delta_count_at_current_time() << "\n";
                 if (a_delay == 0)
                     valu_eva.notify();
                 else if (valueqa_triggered)
@@ -114,7 +114,7 @@ void BASE::VALU_CALC()
             valueqa_triggered = false;
         }
         valuto_simtstk = false;
-        // cout << "valu_eqa.default_event triggered at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+        // std::cout << "valu_eqa.default_event triggered at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
         valutmp1 = valu_dq.front();
         valu_dq.pop();
         if (valutmp1.ins.ddd.wxd | valutmp1.ins.ddd.wvd)
@@ -182,14 +182,14 @@ void BASE::VALU_CALC()
             case DecodeParams::alu_fn_t::FN_A2ZERO:
                 // VMV.S.X
                 // 由于指令编码错误 现在当成vmv.v.x
-                // cout << "VALU_CALC switch to FN_A2ZERO, RSDATA=" << valutmp1.rsv1_data[0]
+                // std::cout << "VALU_CALC switch to FN_A2ZERO, RSDATA=" << valutmp1.rsv1_data[0]
                 //      << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 for (int i = 0; i < hw_num_thread; i++)
                     valutmp2.rdv1_data[i] = valutmp1.rsv1_data[0];
                 break;
 
             default:
-                cout << "VALU_CALC warning: switch to unrecognized ins" << valutmp1.ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                std::cout << "VALU_CALC warning: switch to unrecognized ins" << valutmp1.ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 break;
             }
             valufifo.push(valutmp2);
@@ -243,7 +243,7 @@ void BASE::VALU_CALC()
                 vbranchins_warpid = valutmp1.warp_id;
                 break;
             default:
-                cout << "VALU_CALC warning: switch to unrecognized ins" << valutmp1.ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                std::cout << "VALU_CALC warning: switch to unrecognized ins" << valutmp1.ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 break;
             }
         }

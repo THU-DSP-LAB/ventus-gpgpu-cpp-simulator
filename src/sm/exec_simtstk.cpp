@@ -31,13 +31,13 @@ void BASE::SIMT_STACK(int warp_id)
         {
             m_hw_warps[warp_id]->vbran_sig = true;
             if (emito_simtstk)
-                cout << "SIMT-STACK error: receive join & beq at the same time at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                std::cout << "SIMT-STACK error: receive join & beq at the same time at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
 
             if (std::bitset<hw_num_thread>(branch_elsemask.read().to_string()) == 0)
             { // VALU计算出的elsemask全为0，不跳转
                 // 不对stack操作
                 // 不跳转
-                cout << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex << vbranch_ins.read().currentpc << std::dec
+                std::cout << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex << vbranch_ins.read().currentpc << std::dec
                      << " " << vbranch_ins
                      << " join " << vbranch_ins.read().mask << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
             }
@@ -48,7 +48,7 @@ void BASE::SIMT_STACK(int warp_id)
                 m_hw_warps[warp_id]->simtstk_jumpaddr = branch_elsepc;
                 m_hw_warps[warp_id]->current_mask = branch_elsemask; // 全为1
                 m_hw_warps[warp_id]->simtstk_jump = true;
-                cout << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex << vbranch_ins.read().currentpc << std::dec
+                std::cout << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex << vbranch_ins.read().currentpc << std::dec
                      << " " << vbranch_ins
                      << " goto elsepath(jump) mask=" << branch_elsemask << " jumpTO 0x"
                      << std::hex << branch_elsepc << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
@@ -64,14 +64,14 @@ void BASE::SIMT_STACK(int warp_id)
                     newstkelem.nextpc = m_hw_warps[warp_id]->CSR_reg[0x80c];
                     newstkelem.nextmask = vbranch_ins.read().mask;
                     m_hw_warps[warp_id]->IPDOM_stack.push(newstkelem);
-                    cout << "SIMT-stack warp " << warp_id << " pushed elem" << newstkelem << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                    std::cout << "SIMT-stack warp " << warp_id << " pushed elem" << newstkelem << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
 
                     newstkelem.nextpc = branch_elsepc;
                     newstkelem.nextmask = branch_elsemask;
                     m_hw_warps[warp_id]->IPDOM_stack.push(newstkelem);
-                    cout << "SIMT-stack warp " << warp_id << " pushed elem" << newstkelem << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                    std::cout << "SIMT-stack warp " << warp_id << " pushed elem" << newstkelem << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
 
-                    cout << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex << vbranch_ins.read().currentpc << std::dec
+                    std::cout << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex << vbranch_ins.read().currentpc << std::dec
                          << " " << vbranch_ins
                          << " goto ifpath(pc+4) mask=" << branch_ifmask << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 }
@@ -86,14 +86,14 @@ void BASE::SIMT_STACK(int warp_id)
                     newstkelem.nextpc = m_hw_warps[warp_id]->CSR_reg[0x80c];
                     newstkelem.nextmask = vbranch_ins.read().mask;
                     m_hw_warps[warp_id]->IPDOM_stack.push(newstkelem);
-                    cout << "SIMT-stack warp " << warp_id << " pushed elem" << newstkelem << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                    std::cout << "SIMT-stack warp " << warp_id << " pushed elem" << newstkelem << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
 
                     newstkelem.nextpc = vbranch_ins.read().currentpc + 4;
                     newstkelem.nextmask = branch_ifmask;
                     m_hw_warps[warp_id]->IPDOM_stack.push(newstkelem);
-                    cout << "SIMT-stack warp " << warp_id << " pushed elem" << newstkelem << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                    std::cout << "SIMT-stack warp " << warp_id << " pushed elem" << newstkelem << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
 
-                    cout << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex << vbranch_ins.read().currentpc << std::dec
+                    std::cout << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex << vbranch_ins.read().currentpc << std::dec
                          << " " << vbranch_ins
                          << " goto elsepath(jump) mask=" << branch_elsemask << " jumpTO 0x"
                          << std::hex << branch_elsepc << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
@@ -103,7 +103,7 @@ void BASE::SIMT_STACK(int warp_id)
 
         if (emito_simtstk && emitins_warpid == warp_id) // OPC发射的join指令
         {
-            cout << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex << emit_ins.read().currentpc << std::dec
+            std::cout << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex << emit_ins.read().currentpc << std::dec
                  << " SIMT_STK receive join ins" << emit_ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
             m_hw_warps[warp_id]->vbran_sig = true;
             /*** 以下为分支控制 ***/
@@ -113,7 +113,7 @@ void BASE::SIMT_STACK(int warp_id)
                 readins = emit_ins;
                 if (readins.currentpc == tmpstkelem.rpc)
                 {
-                    cout << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex << emit_ins.read().currentpc
+                    std::cout << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex << emit_ins.read().currentpc
                          << " " << emit_ins << "jump=true, jumpTO 0x" << tmpstkelem.nextpc
                          << ", mask change from " << m_hw_warps[warp_id]->current_mask << " to " << tmpstkelem.nextmask
                          << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";

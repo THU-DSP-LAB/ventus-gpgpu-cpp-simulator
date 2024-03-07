@@ -11,7 +11,7 @@ void BASE::LSU_IN()
         {
             if (lsu_ready_old == false)
             {
-                cout << "lsu error: not ready at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                std::cout << "lsu error: not ready at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
             }
             lsu_unready.notify();
 
@@ -43,20 +43,20 @@ void BASE::LSU_IN()
                 ev_lsuready_updated.notify();
             }
 
-            cout << "SM" << sm_id << " warp " << emitins_warpid << " 0x" << std::hex << emit_ins.read().currentpc << " " << emit_ins << " LSU addr=" << std::hex << std::setw(8) << std::setfill('0');
+            std::cout << "SM" << sm_id << " warp " << emitins_warpid << " 0x" << std::hex << emit_ins.read().currentpc << " " << emit_ins << " LSU addr=" << std::hex << std::setw(8) << std::setfill('0');
             switch (emit_ins.read().op)
             {
             case LW_:
-                cout << new_data.rsv1_data[0] << std::setw(0) << "+" << std::setw(8) << new_data.rsv2_data[0];
+                std::cout << new_data.rsv1_data[0] << std::setw(0) << "+" << std::setw(8) << new_data.rsv2_data[0];
                 break;
             case SW_:
-                cout << new_data.rsv1_data[0] << std::setw(0) << "+" << std::setw(8) << new_data.rsv2_data[0];
+                std::cout << new_data.rsv1_data[0] << std::setw(0) << "+" << std::setw(8) << new_data.rsv2_data[0];
                 break;
             case VLE32_V_:
-                cout << new_data.rsv1_data[0];
+                std::cout << new_data.rsv1_data[0];
                 break;
             }
-            cout << std::setw(0) << std::setfill(' ') << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+            std::cout << std::setw(0) << std::setfill(' ') << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
         }
         else
         {
@@ -88,7 +88,7 @@ void BASE::LSU_CALC()
             wait(SC_ZERO_TIME);
             lsueqa_triggered = false;
         }
-        // cout << "LSU_OUT: triggered by eva/eqa at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+        // std::cout << "LSU_OUT: triggered by eva/eqa at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
         lsutmp1 = lsu_dq.front();
         lsu_dq.pop();
 
@@ -113,7 +113,7 @@ void BASE::LSU_CALC()
             {
                 lsutmp2.rdv1_data[i] = m_kernel->getBufferData(LSUaddr[i], addrOutofRangeException, lsutmp2.ins);
                 if (addrOutofRangeException)
-                    cout << "SM" << sm_id << " LSU detect addrOutofRange, ins=" << lsutmp1.ins << ",addr=" << LSUaddr[i] << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                    std::cout << "SM" << sm_id << " LSU detect addrOutofRange, ins=" << lsutmp1.ins << ",addr=" << LSUaddr[i] << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
             }
 
             lsufifo.push(lsutmp2);
@@ -124,14 +124,14 @@ void BASE::LSU_CALC()
             {
                 m_kernel->writeBufferData(lsutmp1.rsv3_data[i], LSUaddr[i], lsutmp1.ins);
             }
-            cout << "SM" << sm_id << " warp " << lsutmp1.warp_id << " 0x" << std::hex << lsutmp1.ins.currentpc << " " << lsutmp1.ins << std::hex
+            std::cout << "SM" << sm_id << " warp " << lsutmp1.warp_id << " 0x" << std::hex << lsutmp1.ins.currentpc << " " << lsutmp1.ins << std::hex
                  << " data=" << std::setw(8) << std::setfill('0');
             for (int i = m_hw_warps[lsutmp1.warp_id]->CSR_reg[0x802] - 1; i >= 0; i--)
-                cout << lsutmp1.rsv3_data[i] << " ";
-            cout << "@ ";
+                std::cout << lsutmp1.rsv3_data[i] << " ";
+            std::cout << "@ ";
             for (int i = m_hw_warps[lsutmp1.warp_id]->CSR_reg[0x802] - 1; i >= 0; i--)
-                cout << LSUaddr[i] << " ";
-            cout << std::setw(0) << std::setfill(' ') << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                std::cout << LSUaddr[i] << " ";
+            std::cout << std::setw(0) << std::setfill(' ') << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
         }
         ev_lsufifo_pushed.notify();
     }

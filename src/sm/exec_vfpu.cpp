@@ -11,7 +11,7 @@ void BASE::VFPU_IN()
         {
             if (vfpu_ready_old == false)
             {
-                cout << "vfpu error: not ready at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                std::cout << "vfpu error: not ready at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
             }
             vfpu_unready.notify();
             new_data.ins = emit_ins;
@@ -85,6 +85,14 @@ void BASE::VFPU_CALC()
                 // VFADD.VF, VFADD.VV
                 for (int i = 0; i < m_hw_warps[vfputmp2.warp_id]->CSR_reg[0x802]; i++)
                     vfputmp2.rdf1_data[i] = std::bit_cast<int>(std::bit_cast<float>(vfputmp1.vfpuSdata1[i]) + std::bit_cast<float>(vfputmp1.vfpuSdata2[i]));
+                break;
+            case DecodeParams::alu_fn_t::FN_FMUL:
+                for (int i = 0; i < m_hw_warps[vfputmp2.warp_id]->CSR_reg[0x802]; i++)
+                    vfputmp2.rdf1_data[i] = std::bit_cast<int>(std::bit_cast<float>(vfputmp1.vfpuSdata1[i]) * std::bit_cast<float>(vfputmp1.vfpuSdata2[i]));
+                break;
+            case DecodeParams::alu_fn_t::FN_FMADD:
+                for (int i = 0; i < m_hw_warps[vfputmp2.warp_id]->CSR_reg[0x802]; i++)
+                    vfputmp2.rdf1_data[i] = std::bit_cast<int>(std::bit_cast<float>(vfputmp1.vfpuSdata1[i]) * std::bit_cast<float>(vfputmp1.vfpuSdata2[i]) + std::bit_cast<float>(vfputmp1.vfpuSdata3[i]));
                 break;
 
             case FSQRT_S_:
@@ -243,7 +251,7 @@ void BASE::VFPU_CALC()
                         std::bit_cast<float>(vfputmp1.vfpuSdata1[0]) * std::bit_cast<float>(vfputmp1.vfpuSdata2[i]) + std::bit_cast<float>(vfputmp1.vfpuSdata3[i]));
                 break;
             default:
-                cout << "VFPU_CALC warning: switch to unrecognized ins" << vfputmp1.ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                std::cout << "VFPU_CALC warning: switch to unrecognized ins" << vfputmp1.ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 break;
             }
             vfpufifo.push(vfputmp2);

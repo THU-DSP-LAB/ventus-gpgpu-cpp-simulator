@@ -59,8 +59,20 @@
         "ctime": "cpp",
         "ratio": "cpp",
         "iomanip": "cpp",
-        "systemc": "cpp"
+        "systemc": "cpp",
+        "codecvt": "cpp",
+        "complex": "cpp",
+        "condition_variable": "cpp",
+        "mutex": "cpp",
+        "semaphore": "cpp",
+        "stop_token": "cpp",
+        "thread": "cpp",
+        "cfenv": "cpp",
+        "variant": "cpp"
     },
     "C_Cpp.errorSquiggles": "enabled",
-    "C_Cpp.default.cppStandard": "c++20"
+    "C_Cpp.default.cppStandard": "c++20",
+    "files.watcherExclude": {
+        "**/target": true
+    }
 }

@@ -42,7 +42,7 @@ public:
         m_kernel_name = kernel_name;
         initMetaData(metadata_file);
         init_extmem(data_file);
-        cout << "kernel " << kernel_name << " initialized, set grid_dim=" << m_grid_dim.x << m_grid_dim.y << m_grid_dim.z << "\n";
+        std::cout << "kernel " << kernel_name << " initialized, set grid_dim=" << m_grid_dim.x << m_grid_dim.y << m_grid_dim.z << "\n";
     }
 
     bool no_more_ctas_to_run() const
@@ -115,7 +115,7 @@ private:
 
         if (!file)
         {
-            cout << "Error opening file: " << filename << endl;
+            std::cout << "Error opening file: " << filename << std::endl;
             return;
         }
 
@@ -135,7 +135,7 @@ private:
 
             if (!isHexCharacter(c))
             {
-                cout << "Invalid character found: " << c << endl;
+                std::cout << "Invalid character found: " << c << " in " << filename << std::endl;
                 continue;
             }
 
@@ -157,7 +157,7 @@ private:
 
         if (bits > 0)
         {
-            cout << "Warning: Incomplete item found at the end of the file!" << endl;
+            std::cout << "Warning: Incomplete item found at the end of the file!" << std::endl;
         }
 
         file.close();

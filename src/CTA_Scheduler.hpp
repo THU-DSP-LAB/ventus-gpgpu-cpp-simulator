@@ -29,8 +29,6 @@ public:
 public:
     sc_event ev_activate_warp;
 
-    void readHexFile(const std::string &filename, int itemSize, std::vector<uint64_t> &items);
-    void assignMetadata(const std::vector<uint64_t> &metadata, meta_data_t &mtd);
     void activate_warp();
     void schedule_kernel2core();
     void set_running_kernels(std::vector<std::shared_ptr<kernel_info_t>> &_kernels) { m_running_kernels = _kernels; }

@@ -9,9 +9,9 @@ void BASE::SALU_IN()
         wait();
         if (emito_salu)
         {
-            // cout << "SALU_IN: receive ins=" << emit_ins << "warp" << emitins_warpid << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+            // std::cout << "SALU_IN: receive ins=" << emit_ins << "warp" << emitins_warpid << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
             if (salu_ready_old == false)
-                cout << "salu error: not ready at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                std::cout << "salu error: not ready at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
             salu_unready.notify();
             switch (emit_ins.read().op)
             {
@@ -22,16 +22,16 @@ void BASE::SALU_IN()
                 new_data.rss2_data = tosalu_data2;
                 new_data.rss3_data = tosalu_data3;
                 salu_dq.push(new_data);
-                // cout << "salu_dq has just pushed 1 elem at " << sc_time_stamp() <<","<< sc_delta_count_at_current_time() << "\n";
+                // std::cout << "salu_dq has just pushed 1 elem at " << sc_time_stamp() <<","<< sc_delta_count_at_current_time() << "\n";
                 a_delay = 1;
                 b_delay = 1;
-                // cout << "SALU_IN: see salueqa_triggered=" << salueqa_triggered << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                // std::cout << "SALU_IN: see salueqa_triggered=" << salueqa_triggered << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 if (a_delay == 0)
                     salu_eva.notify();
                 else if (salueqa_triggered)
                 {
                     salu_eqa.notify(sc_time((a_delay)*PERIOD, SC_NS));
-                    // cout << "SALU_IN detect salueqa is triggered at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                    // std::cout << "SALU_IN detect salueqa is triggered at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 }
                 else
                 {
@@ -50,10 +50,10 @@ void BASE::SALU_IN()
                     salu_eqb.notify(sc_time((b_delay)*PERIOD, SC_NS));
                     ev_saluready_updated.notify();
                 }
-                // cout << "SALU_IN switch to ADD_ (from opc input) at " << sc_time_stamp() <<","<< sc_delta_count_at_current_time() << "\n";
+                // std::cout << "SALU_IN switch to ADD_ (from opc input) at " << sc_time_stamp() <<","<< sc_delta_count_at_current_time() << "\n";
                 break;
                 // default:
-                //     cout << "salu error: receive wrong ins " << emit_ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                //     std::cout << "salu error: receive wrong ins " << emit_ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 //     break;
             }
         }
@@ -86,7 +86,7 @@ void BASE::SALU_CALC()
         wait(salu_eva | salu_eqa.default_event());
         if (salu_eqa.default_event().triggered())
         {
-            // cout << "SALU_CALC detect salueqa triggered at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+            // std::cout << "SALU_CALC detect salueqa triggered at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
             salueqa_triggered = true;
             wait(SC_ZERO_TIME);
             salueqa_triggered = false;
@@ -97,9 +97,9 @@ void BASE::SALU_CALC()
             warp_->branch_sig = false;
         }
         salutmp1 = salu_dq.front();
-        // cout << "salu_dq.front's ins is " << salutmp1.ins << ", data is " << salutmp1.rss1_data << "," << salutmp1.rss2_data << "\n";
+        // std::cout << "salu_dq.front's ins is " << salutmp1.ins << ", data is " << salutmp1.rss1_data << "," << salutmp1.rss2_data << "\n";
         salu_dq.pop();
-        // cout << "salu_dq has poped, now its elem_num is " << salu_dq.size() << " at " << sc_time_stamp() <<","<< sc_delta_count_at_current_time() << "\n";
+        // std::cout << "salu_dq has poped, now its elem_num is " << salu_dq.size() << " at " << sc_time_stamp() <<","<< sc_delta_count_at_current_time() << "\n";
         if (salutmp1.ins.ddd.wxd)
         {
             salutmp2.ins = salutmp1.ins;
@@ -111,7 +111,7 @@ void BASE::SALU_CALC()
 
                 if (salutmp1.ins.ddd.branch == DecodeParams::branch_t::B_J) // jal
                 {
-                    cout << "SM" << sm_id << " warp " << salutmp1.warp_id << " 0x" << std::hex << salutmp1.ins.currentpc << " " << salutmp1.ins << " jump=true, jumpTO 0x" << std::hex << salutmp1.rss3_data << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                    std::cout << "SM" << sm_id << " warp " << salutmp1.warp_id << " 0x" << std::hex << salutmp1.ins.currentpc << " " << salutmp1.ins << " jump=true, jumpTO 0x" << std::hex << salutmp1.rss3_data << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                     m_hw_warps[salutmp1.warp_id]->branch_sig = true;
                     m_hw_warps[salutmp1.warp_id]->jump = 1;
                     m_hw_warps[salutmp1.warp_id]->jump_addr = salutmp1.rss3_data;
@@ -119,7 +119,7 @@ void BASE::SALU_CALC()
                 else if (salutmp1.ins.ddd.branch == DecodeParams::branch_t::B_R) // jalr
                 {
                     jump_addr_tmp = (salutmp1.rss3_data + salutmp1.ins.imm) & (~1);
-                    cout << "SM" << sm_id << " warp " << salutmp1.warp_id << " 0x" << std::hex << salutmp1.ins.currentpc << " " << salutmp1.ins << " jump=true, jumpTO 0x" << std::hex << jump_addr_tmp << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                    std::cout << "SM" << sm_id << " warp " << salutmp1.warp_id << " 0x" << std::hex << salutmp1.ins.currentpc << " " << salutmp1.ins << " jump=true, jumpTO 0x" << std::hex << jump_addr_tmp << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                     m_hw_warps[salutmp1.warp_id]->branch_sig = true;
                     m_hw_warps[salutmp1.warp_id]->jump = 1;
                     m_hw_warps[salutmp1.warp_id]->jump_addr = jump_addr_tmp;
@@ -214,34 +214,34 @@ void BASE::SALU_CALC()
                 break;
             case DIV_:
                 if (salutmp1.rss2_data == 0)
-                    cout << "SALU_CALC error: exec DIV_ but rs2=0 at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                    std::cout << "SALU_CALC error: exec DIV_ but rs2=0 at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 salutmp2.data = salutmp1.rss1_data / salutmp1.rss2_data;
                 break;
             case DIVU_:
                 if (salutmp1.rss2_data == 0)
-                    cout << "SALU_CALC error: exec DIVU_ but rs2=0 at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                    std::cout << "SALU_CALC error: exec DIVU_ but rs2=0 at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 salutmp2.data = static_cast<unsigned int>(salutmp1.rss1_data) / static_cast<unsigned int>(salutmp1.rss2_data);
                 break;
             case REM_:
                 if (salutmp1.rss2_data == 0)
-                    cout << "SALU_CALC error: exec REM_ but rs2=0 at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                    std::cout << "SALU_CALC error: exec REM_ but rs2=0 at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 salutmp2.data = salutmp1.rss1_data % salutmp1.rss2_data;
                 break;
             case REMU_:
                 if (salutmp1.rss2_data == 0)
-                    cout << "SALU_CALC error: exec REMU_ but rs2=0 at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                    std::cout << "SALU_CALC error: exec REMU_ but rs2=0 at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 salutmp2.data = static_cast<unsigned int>(salutmp1.rss1_data) % static_cast<unsigned int>(salutmp1.rss2_data);
                 break;
 
             default:
-                cout << "SALU_CALC warning: switch to unrecognized ins" << salutmp1.ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                std::cout << "SALU_CALC warning: switch to unrecognized ins" << salutmp1.ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 break;
             }
             salufifo.push(salutmp2);
         }
         else
         {
-            cout << "SM" << sm_id << " warp " << salutmp1.warp_id << " 0x" << std::hex << salutmp1.ins.currentpc << " " << salutmp1.ins << " jump=";
+            std::cout << "SM" << sm_id << " warp " << salutmp1.warp_id << " 0x" << std::hex << salutmp1.ins.currentpc << " " << salutmp1.ins << " jump=";
             switch (salutmp1.ins.ddd.alu_fn)
             {
             // case BEQ_:
@@ -251,11 +251,11 @@ void BASE::SALU_CALC()
                 {
                     m_hw_warps[salutmp1.warp_id]->jump = 1;
                     m_hw_warps[salutmp1.warp_id]->jump_addr = salutmp1.rss3_data;
-                    cout << "true, jumpTO 0x" << std::hex << salutmp1.rss3_data << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                    std::cout << "true, jumpTO 0x" << std::hex << salutmp1.rss3_data << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 }
                 else
                 {
-                    cout << "false at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                    std::cout << "false at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 }
                 break;
 
@@ -266,11 +266,11 @@ void BASE::SALU_CALC()
                 {
                     m_hw_warps[salutmp1.warp_id]->jump = 1;
                     m_hw_warps[salutmp1.warp_id]->jump_addr = salutmp1.rss3_data;
-                    cout << "true, jumpTO 0x" << std::hex << salutmp1.rss3_data << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                    std::cout << "true, jumpTO 0x" << std::hex << salutmp1.rss3_data << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 }
                 else
                 {
-                    cout << "false at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                    std::cout << "false at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 }
                 break;
             // case BGEU_:
@@ -280,11 +280,11 @@ void BASE::SALU_CALC()
                 {
                     m_hw_warps[salutmp1.warp_id]->jump = 1;
                     m_hw_warps[salutmp1.warp_id]->jump_addr = salutmp1.rss3_data;
-                    cout << "true, jumpTO 0x" << std::hex << salutmp1.rss3_data << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                    std::cout << "true, jumpTO 0x" << std::hex << salutmp1.rss3_data << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 }
                 else
                 {
-                    cout << "false at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                    std::cout << "false at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 }
                 break;
             // case BLT_:
@@ -294,11 +294,11 @@ void BASE::SALU_CALC()
                 {
                     m_hw_warps[salutmp1.warp_id]->jump = 1;
                     m_hw_warps[salutmp1.warp_id]->jump_addr = salutmp1.rss3_data;
-                    cout << "true, jumpTO 0x" << std::hex << salutmp1.rss3_data << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                    std::cout << "true, jumpTO 0x" << std::hex << salutmp1.rss3_data << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 }
                 else
                 {
-                    cout << "false at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                    std::cout << "false at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 }
                 break;
             // case BLTU_:
@@ -308,11 +308,11 @@ void BASE::SALU_CALC()
                 {
                     m_hw_warps[salutmp1.warp_id]->jump = 1;
                     m_hw_warps[salutmp1.warp_id]->jump_addr = salutmp1.rss3_data;
-                    cout << "true, jumpTO 0x" << std::hex << salutmp1.rss3_data << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                    std::cout << "true, jumpTO 0x" << std::hex << salutmp1.rss3_data << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 }
                 else
                 {
-                    cout << "false at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                    std::cout << "false at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 }
                 break;
 
@@ -323,16 +323,16 @@ void BASE::SALU_CALC()
                 {
                     m_hw_warps[salutmp1.warp_id]->jump = 1;
                     m_hw_warps[salutmp1.warp_id]->jump_addr = salutmp1.rss3_data;
-                    cout << "true, jumpTO 0x" << std::hex << salutmp1.rss3_data << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                    std::cout << "true, jumpTO 0x" << std::hex << salutmp1.rss3_data << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 }
                 else
                 {
-                    cout << "false at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                    std::cout << "false at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 }
                 break;
 
             default:
-                cout << "SALU_CALC warning: switch to unrecognized ins" << salutmp1.ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                std::cout << "SALU_CALC warning: switch to unrecognized ins" << salutmp1.ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 break;
             }
         }

@@ -24,7 +24,7 @@ std::pair<int, int> BASE::reg_arbiter(
             if (addr_arr[i][j].bank_id == bank_id)
             {
                 read_bank_addr[bank_id] = addr_arr[i][j].addr; // 下周期读数据
-                // cout << "let read_bank_addr(bank" << bank_id << ")="
+                // std::cout << "let read_bank_addr(bank" << bank_id << ")="
                 //      << addr_arr[i][j].addr << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 result.first = i;
                 result.second = j;
@@ -55,10 +55,10 @@ void BASE::READ_REG()
             if (REGselectIdx[i] != temp_pair)
             {
                 tmp = bank_undecode(i, read_bank_addr[i]);
-                // cout << opcfifo[row].ins << " warp " << opcfifo[row].warp_id;
-                // cout << " decode(bank" << i << ",addr" << read_bank_addr[i]
+                // std::cout << opcfifo[row].ins << " warp " << opcfifo[row].warp_id;
+                // std::cout << " decode(bank" << i << ",addr" << read_bank_addr[i]
                 //      << ") undecode --> warp_id=" << tmp.warp_id << ", addr=" << tmp.addr << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-                // cout << "从regfile读出: REGselectIdx[" << i << "] to opc(" << REGselectIdx[i].first << "," << REGselectIdx[i].second << ") at " << sc_time_stamp() <<","<< sc_delta_count_at_current_time() << "\n";
+                // std::cout << "从regfile读出: REGselectIdx[" << i << "] to opc(" << REGselectIdx[i].first << "," << REGselectIdx[i].second << ") at " << sc_time_stamp() <<","<< sc_delta_count_at_current_time() << "\n";
                 if (opc_banktype[row][col] == 0)
                 {
                     read_data[i].fill(m_hw_warps[tmp.warp_id]->s_regfile[tmp.addr]);
@@ -95,7 +95,7 @@ void BASE::WRITE_REG(int warp_id)
             if (write_s)
             {
 
-                cout << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex << wb_ins.read().currentpc << std::dec
+                std::cout << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex << wb_ins.read().currentpc << std::dec
                      << " " << wb_ins
                      << " x " << std::setfill('0') << std::setw(3) << rdv1_addr.read() << " "
                      << std::hex << std::setw(8)
@@ -108,14 +108,14 @@ void BASE::WRITE_REG(int warp_id)
             if (write_v)
             {
 
-                cout << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex << wb_ins.read().currentpc << std::dec
+                std::cout << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex << wb_ins.read().currentpc << std::dec
                      << " " << wb_ins
                      << " v " << std::setfill('0') << std::setw(3) << rdv1_addr.read() << " "
                      << std::hex << std::setw(8);
                 for (int i = m_hw_warps[wb_warpid]->CSR_reg[0x802] - 1; i > 0; i--)
-                    cout << rdv1_data[i] << " ";
-                cout << rdv1_data[0];
-                cout << std::dec << std::setfill(' ') << std::setw(0)
+                    std::cout << rdv1_data[i] << " ";
+                std::cout << rdv1_data[0];
+                std::cout << std::dec << std::setfill(' ') << std::setw(0)
                      << "; mask=" << wb_ins.read().mask << ", s1=" << wb_ins.read().s1 << ",s2=" << wb_ins.read().s2 << ",s3=" << wb_ins.read().s3
                      << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
 

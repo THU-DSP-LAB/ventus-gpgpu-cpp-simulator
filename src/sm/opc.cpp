@@ -28,15 +28,15 @@ void BASE::OPC_FIFO()
     opcfifo_t newopcdat;
     while (true)
     {
-        // cout << "SM" << sm_id << " OPC_FIFO: finish at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+        // std::cout << "SM" << sm_id << " OPC_FIFO: finish at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
         wait();
-        // cout << "SM" << sm_id << " OPC_FIFO: start at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+        // std::cout << "SM" << sm_id << " OPC_FIFO: start at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
         if (doemit)
         {
-            // cout << "opcfifo is popping index " << emit_idx << " at " << sc_time_stamp() <<","<< sc_delta_count_at_current_time() << "\n";
+            // std::cout << "opcfifo is popping index " << emit_idx << " at " << sc_time_stamp() <<","<< sc_delta_count_at_current_time() << "\n";
             auto popdat = opcfifo[emit_idx];
             opcfifo.pop(emit_idx); // last cycle emit
-            // cout << "OPC_FIFO: poped ins " << popdat.ins << "warp" << popdat.warp_id << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+            // std::cout << "OPC_FIFO: poped ins " << popdat.ins << "warp" << popdat.warp_id << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
         }
         ev_opc_pop.notify();
         // 按目前的事件顺序，若发生某ins进入OPC而立刻ready，则会有问题，后续要修改
@@ -45,13 +45,13 @@ void BASE::OPC_FIFO()
             if (opc_full && doemit == false) // 相当于上一cycle dispatch_ready
             {
                 // if not ready, just wait, no need throw ERROR
-                // cout << "OPC ERROR: is full but receive ins from issue at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                // std::cout << "OPC ERROR: is full but receive ins from issue at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
             }
             else
             {
                 _readdata4 = issue_ins.read();
                 _readwarpid = issueins_warpid;
-                // cout << "SM" << sm_id << " opc begin to put, warpid=" << issueins_warpid << ", at " << sc_time_stamp() << ", " << sc_delta_count_at_current_time() << "\n";
+                // std::cout << "SM" << sm_id << " opc begin to put, warpid=" << issueins_warpid << ", at " << sc_time_stamp() << ", " << sc_delta_count_at_current_time() << "\n";
 
                 in_ready = {1, 1, 1};
                 in_valid = {0, 0, 0}; // 要取操作数，则ready=0，valid=1
@@ -135,7 +135,7 @@ void BASE::OPC_FIFO()
                     in_banktype[2] = _readdata4.ddd.isvec ? 1 : 0;
                 }
 
-                // cout << "opcfifo push issue_ins " << _readdata4 << "warp" << _readwarpid
+                // std::cout << "opcfifo push issue_ins " << _readdata4 << "warp" << _readwarpid
                 //      << ", srcaddr=(" << in_srcaddr[0] << ";" << in_srcaddr[1] << ")"
                 //      << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
 
@@ -152,9 +152,9 @@ void BASE::OPC_FIFO()
         opcfifo_elem_num = opcfifo.get_size();
         opc_full = opcfifo.get_size() == OPCFIFO_SIZE;
         opc_empty = opcfifo.get_size() == 0;
-        // cout << "OPC_FIFO waiting ev_opc_judge_emit at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+        // std::cout << "OPC_FIFO waiting ev_opc_judge_emit at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
         wait(ev_opc_judge_emit & ev_regfile_readdata);
-        // cout << "OPC_FIFO get ev_opc_judge_emit at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+        // std::cout << "OPC_FIFO get ev_opc_judge_emit at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
 
         //  由ready写入entry，不能影响当前cycle判断emit
         for (int i = 0; i < OPCFIFO_SIZE; i++)
@@ -163,20 +163,20 @@ void BASE::OPC_FIFO()
                 if (opc_ready[i][j] == true)
                 {
                     if (opcfifo[i].valid[j] == false)
-                        cout << "opc collect error[" << i << "," << j << "]: ins " << magic_enum::enum_name((OP_TYPE)opcfifo[i].ins.op) << " ready=1 but valid=0 at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                        std::cout << "opc collect error[" << i << "," << j << "]: ins " << magic_enum::enum_name((OP_TYPE)opcfifo[i].ins.op) << " ready=1 but valid=0 at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                     opcfifo[i].ready[j] = true;
                     opcfifo[i].valid[j] = false;
                     opcfifo[i].data[j] = read_data[opcfifo[i].srcaddr[j].bank_id];
                     printdata_ = read_data[opcfifo[i].srcaddr[j].bank_id];
-                    // cout << "OPC_FIFO: store_in[" << i << "," << j << "], ins=" << magic_enum::enum_name((OP_TYPE)opcfifo[i].ins.op) << "warp" << opcfifo[i].warp_id
+                    // std::cout << "OPC_FIFO: store_in[" << i << "," << j << "], ins=" << magic_enum::enum_name((OP_TYPE)opcfifo[i].ins.op) << "warp" << opcfifo[i].warp_id
                     //      << ", data[" << j << "]=" << printdata_ << ", srcaddr=" << opcfifo[i].srcaddr[j] << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 }
         }
         ev_opc_store.notify();
-        // cout << "OPC: entry[0]: ins=" << magic_enum::enum_name((OP_TYPE)opcfifo[0].ins.op) << ", tag_valid="<<opcfifo.tag_valid(0)<<", valid={" << opcfifo[0].valid[0] << "," << opcfifo[0].valid[1] << "," << opcfifo[0].valid[2] << "}, ready={" << opcfifo[0].ready[0] << "," << opcfifo[0].ready[1] << "," << opcfifo[0].ready[2] << "}\n";
-        // cout << "     entry[1]: ins=" << magic_enum::enum_name((OP_TYPE)opcfifo[1].ins.op) << ", tag_valid="<<opcfifo.tag_valid(1)<<", valid={" << opcfifo[1].valid[0] << "," << opcfifo[1].valid[1] << "," << opcfifo[1].valid[2] << "}, ready={" << opcfifo[1].ready[0] << "," << opcfifo[1].ready[1] << "," << opcfifo[1].ready[2] << "}\n";
-        // cout << "     entry[2]: ins=" << magic_enum::enum_name((OP_TYPE)opcfifo[2].ins.op) << ", tag_valid="<<opcfifo.tag_valid(2)<<", valid={" << opcfifo[2].valid[0] << "," << opcfifo[2].valid[1] << "," << opcfifo[2].valid[2] << "}, ready={" << opcfifo[2].ready[0] << "," << opcfifo[2].ready[1] << "," << opcfifo[2].ready[2] << "}\n";
-        // cout << "     entry[3]: ins=" << magic_enum::enum_name((OP_TYPE)opcfifo[3].ins.op) << ", tag_valid="<<opcfifo.tag_valid(3)<<", valid={" << opcfifo[3].valid[0] << "," << opcfifo[3].valid[1] << "," << opcfifo[3].valid[2] << "}, ready={" << opcfifo[3].ready[0] << "," << opcfifo[3].ready[1] << "," << opcfifo[3].ready[2] << "} at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+        // std::cout << "OPC: entry[0]: ins=" << magic_enum::enum_name((OP_TYPE)opcfifo[0].ins.op) << ", tag_valid="<<opcfifo.tag_valid(0)<<", valid={" << opcfifo[0].valid[0] << "," << opcfifo[0].valid[1] << "," << opcfifo[0].valid[2] << "}, ready={" << opcfifo[0].ready[0] << "," << opcfifo[0].ready[1] << "," << opcfifo[0].ready[2] << "}\n";
+        // std::cout << "     entry[1]: ins=" << magic_enum::enum_name((OP_TYPE)opcfifo[1].ins.op) << ", tag_valid="<<opcfifo.tag_valid(1)<<", valid={" << opcfifo[1].valid[0] << "," << opcfifo[1].valid[1] << "," << opcfifo[1].valid[2] << "}, ready={" << opcfifo[1].ready[0] << "," << opcfifo[1].ready[1] << "," << opcfifo[1].ready[2] << "}\n";
+        // std::cout << "     entry[2]: ins=" << magic_enum::enum_name((OP_TYPE)opcfifo[2].ins.op) << ", tag_valid="<<opcfifo.tag_valid(2)<<", valid={" << opcfifo[2].valid[0] << "," << opcfifo[2].valid[1] << "," << opcfifo[2].valid[2] << "}, ready={" << opcfifo[2].ready[0] << "," << opcfifo[2].ready[1] << "," << opcfifo[2].ready[2] << "}\n";
+        // std::cout << "     entry[3]: ins=" << magic_enum::enum_name((OP_TYPE)opcfifo[3].ins.op) << ", tag_valid="<<opcfifo.tag_valid(3)<<", valid={" << opcfifo[3].valid[0] << "," << opcfifo[3].valid[1] << "," << opcfifo[3].valid[2] << "}, ready={" << opcfifo[3].ready[0] << "," << opcfifo[3].ready[1] << "," << opcfifo[3].ready[2] << "} at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
     }
 }
 
@@ -195,7 +195,7 @@ void BASE::OPC_EMIT()
              ev_vfpuready_updated & ev_lsuready_updated &
              ev_csrready_updated & ev_mulready_updated &
              ev_sfuready_updated & ev_tcready_updated);
-        // cout << "OPC_EMIT start at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+        // std::cout << "OPC_EMIT start at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
         doemit = false;
         findemit = 0;
         emito_salu = false;
@@ -218,7 +218,7 @@ void BASE::OPC_EMIT()
                 emit_ins = opcfifo[entryidx].ins;
                 emitins_warpid = opcfifo[entryidx].warp_id;
 
-                // cout << "opcfifo[" << entryidx << "]-" << opcfifo[entryidx].ins << " is all ready, at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                // std::cout << "opcfifo[" << entryidx << "]-" << opcfifo[entryidx].ins << " is all ready, at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 switch (opcfifo[entryidx].ins.ddd.sel_execunit)
                 {
                 case DecodeParams::SALU:
@@ -228,7 +228,7 @@ void BASE::OPC_EMIT()
                         last_emit_entryid = entryidx + 1;
                         findemit = 1;
                         doemit = true;
-                        // cout << "OPC: salu is ready at " << sc_time_stamp() <<","<< sc_delta_count_at_current_time() << "\n";
+                        // std::cout << "OPC: salu is ready at " << sc_time_stamp() <<","<< sc_delta_count_at_current_time() << "\n";
                         emito_salu = true;
                         tosalu_data1 = opcfifo[entryidx].data[0][0];
                         tosalu_data2 = opcfifo[entryidx].data[1][0];
@@ -236,7 +236,7 @@ void BASE::OPC_EMIT()
                     }
                     else
                     {
-                        // cout << "OPC_EMIT: find all_ready ins " << opcfifo[entryidx].ins << "warp" << opcfifo[entryidx].warp_id << " but salu not ready at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                        // std::cout << "OPC_EMIT: find all_ready ins " << opcfifo[entryidx].ins << "warp" << opcfifo[entryidx].warp_id << " but salu not ready at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                     }
                     break;
 
@@ -311,7 +311,7 @@ void BASE::OPC_EMIT()
                         doemit = true;
                         emito_csr = true;
                         tocsr_data1 = opcfifo[entryidx].data[0][0];
-                        // cout << "opc: emito csr, tocsr_data1=opcfifo[entryidx].data[0][0]=0x" << std::hex << opcfifo[entryidx].data[0][0] << std::dec << "\n";
+                        // std::cout << "opc: emito csr, tocsr_data1=opcfifo[entryidx].data[0][0]=0x" << std::hex << opcfifo[entryidx].data[0][0] << std::dec << "\n";
                         tocsr_data2 = opcfifo[entryidx].data[1][0];
                     }
                     break;
@@ -357,8 +357,6 @@ void BASE::OPC_EMIT()
                         findemit = 1;
                         doemit = true;
                         emito_tc = true;
-                        cout << "OPC: TC is ready at " << sc_time_stamp() <<","<< sc_delta_count_at_current_time() << "\n";
-
                         for (int j = 0; j < hw_num_thread; j++)
                         {
                             totc_data1[j] = opcfifo[entryidx].data[0][j];
@@ -377,17 +375,17 @@ void BASE::OPC_EMIT()
                     break;
 
                 case DecodeParams::INVALID_EXECUNIT:
-                    cout << "SM" << sm_id << " OPC_EMIT error: ins=" << opcfifo[entryidx].ins << "," << std::hex << opcfifo[entryidx].ins.origin32bit << std::dec
+                    std::cout << "SM" << sm_id << " OPC_EMIT error: ins=" << opcfifo[entryidx].ins << "," << std::hex << opcfifo[entryidx].ins.origin32bit << std::dec
                          << " but INVALID EXECUNIT at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                     break;
                 default:
-                    cout << "SM" << sm_id << " OPC_EMIT warning: ins=" << opcfifo[entryidx].ins << "," << std::hex << opcfifo[entryidx].ins.origin32bit << std::dec
+                    std::cout << "SM" << sm_id << " OPC_EMIT warning: ins=" << opcfifo[entryidx].ins << "," << std::hex << opcfifo[entryidx].ins.origin32bit << std::dec
                          << " but undefined EXECUNIT at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                     break;
                 }
             }
         }
-        // cout << "emit_idx is set to " << emit_idx << "\n";
+        // std::cout << "emit_idx is set to " << emit_idx << "\n";
         ev_opc_judge_emit.notify();
     }
 }

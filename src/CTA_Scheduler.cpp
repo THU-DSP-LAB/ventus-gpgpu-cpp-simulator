@@ -17,127 +17,6 @@ int CTA_Scheduler::charToHex(char c)
         return -1; // Invalid character
 }
 
-void CTA_Scheduler::readHexFile(const std::string &filename, int itemSize, std::vector<uint64_t> &items)
-{ // itemSize为每个数据的比特数，这里为64
-    ifstream file(filename);
-
-    if (!file)
-    {
-        cout << "Error opening file: " << filename << endl;
-        return;
-    }
-
-    char c;
-    int bits = 0;
-    uint64_t value = 0;
-    bool leftside = false;
-
-    while (file.get(c))
-    {
-        if (c == '\n')
-        {
-            if (bits != 0)
-                leftside = true;
-            continue;
-        }
-
-        if (!isHexCharacter(c))
-        {
-            cout << "Invalid character found: " << c << endl;
-            continue;
-        }
-
-        int hexValue = charToHex(c);
-        if (leftside)
-            value = value | ((uint64_t)hexValue << (92 - bits));
-        else
-            value = (value << 4) | hexValue;
-        bits += 4;
-
-        if (bits >= itemSize)
-        {
-            items.push_back(value);
-            value = 0;
-            bits = 0;
-            leftside = false;
-        }
-    }
-
-    if (bits > 0)
-    {
-        cout << "Warning: Incomplete item found at the end of the file!" << endl;
-    }
-
-    file.close();
-    std::cout << "CTA: Finish readHexFile()\n";
-}
-
-void CTA_Scheduler::assignMetadata(const std::vector<uint64_t> &metadata, meta_data_t &mtd)
-{
-    std::cout << "CTA: assignMetadata, metadata size=" << metadata.size() << "\n";
-
-    int index = 0;
-
-    mtd.startaddr = metadata[index++];
-
-    mtd.kernel_id = metadata[index++];
-
-    for (int i = 0; i < 3; i++)
-    {
-        mtd.kernel_size[i] = metadata[index++];
-    }
-
-    mtd.wf_size = metadata[index++];
-    mtd.wg_size = metadata[index++];
-    mtd.metaDataBaseAddr = metadata[index++];
-    mtd.ldsSize = metadata[index++];
-    mtd.pdsSize = metadata[index++];
-    mtd.sgprUsage = metadata[index++];
-    mtd.vgprUsage = metadata[index++];
-    mtd.pdsBaseAddr = metadata[index++];
-
-    mtd.num_buffer = metadata[index++] + 1; // add localmem buffer
-    cout << "CTA: assign mtd.num_buffer=" << mtd.num_buffer << "(including the extra local memory buffer)\n";
-
-    mtd.buffer_base = new uint64_t[mtd.num_buffer];
-
-    for (int i = 0; i < mtd.num_buffer - 1; i++)
-    {
-        mtd.buffer_base[i] = metadata[index++];
-        if (mtd.buffer_base[i] == mtd.startaddr)
-            mtd.insBufferIndex = i;
-    }
-    mtd.buffer_base[mtd.num_buffer - 1] = ldsBaseAddr_core; // localmem base addr
-    cout << "CTA: mtd.buffer_base=" << std::hex;
-    for (int i = 0; i < mtd.num_buffer; i++)
-        cout << mtd.buffer_base[i] << ",";
-    cout << std::dec << "\n";
-
-    mtd.buffer_size = new uint64_t[mtd.num_buffer];
-    for (int i = 0; i < mtd.num_buffer - 1; i++)
-    {
-        mtd.buffer_size[i] = metadata[index++];
-    }
-    mtd.buffer_size[mtd.num_buffer - 1] = 0;
-    cout << "CTA: mtd.buffer_size=" << std::hex;
-    for (int i = 0; i < mtd.num_buffer; i++)
-        cout << mtd.buffer_size[i] << ",";
-    cout << std::dec << "\n";
-
-    mtd.buffer_allocsize = new uint64_t[mtd.num_buffer];
-    for (int i = 0; i < mtd.num_buffer - 1; i++)
-    {
-        mtd.buffer_allocsize[i] = metadata[index++];
-    }
-    mtd.buffer_allocsize[mtd.num_buffer - 1] = mtd.ldsSize;
-    cout << "CTA: mtd.buffer_allocsize=" << std::hex;
-    for (int i = 0; i < mtd.num_buffer; i++)
-        cout << mtd.buffer_allocsize[i] << ",";
-    cout << std::dec << "\n";
-
-    std::cout << "CTA: Finish assignMetadata()\n";
-}
-
 void CTA_Scheduler::freeMetadata(meta_data_t &mtd)
 {
     delete[] mtd.buffer_base;
@@ -151,13 +30,13 @@ void CTA_Scheduler::activate_warp()
 
     // 处理metadata数据
     uint64_t knum_workgroup = mtd.kernel_size[0] * mtd.kernel_size[1] * mtd.kernel_size[2]; // k means kernel
-    cout << "CTA: knum_workgroup=" << knum_workgroup << "\n";
+    std::cout << "CTA: knum_workgroup=" << knum_workgroup << "\n";
     if (knum_workgroup > 2)
-        cout << "CTA warning: currently not support so many workgroups\n";
+        std::cout << "CTA warning: currently not support so many workgroups\n";
     int warp_limit = hw_num_warp;
-    cout << "wg_size=" << mtd.wg_size << "\n";
+    std::cout << "wg_size=" << mtd.wg_size << "\n";
     if (mtd.wg_size > warp_limit)
-        cout << "CTA error: wg_size=" << mtd.wg_size << " > warp_limit per SM\n";
+        std::cout << "CTA error: wg_size=" << mtd.wg_size << " > warp_limit per SM\n";
     for (int i = 0; i < knum_workgroup; i++)
     {
         int warp_counter = 0;
@@ -166,7 +45,7 @@ void CTA_Scheduler::activate_warp()
             // sm_group[i]->m_hw_warps[warp_counter] = new WARP_BONE;
             // sm_group[i]->m_hw_warps[warp_counter]->warp_id = warp_counter;
 
-            cout << "CTA: SM" << i << " warp" << warp_counter << " is activated\n";
+            std::cout << "CTA: SM" << i << " warp" << warp_counter << " is activated\n";
             sm_group[i]->m_hw_warps[warp_counter]->is_warp_activated = true;
             sm_group[i]->m_hw_warps[warp_counter]->will_warp_activate = true;
 

@@ -1,0 +1,46 @@
+Number of records: 42764
+Finding the 5 closest neighbors.
+Number of platforms detected:1
+Platform 0:	Vendor: The pocl project
+[INFO]: [HW DRIVER] in [FILE] ventus.cpp,[LINE]25,[fn] vt_dev_open: vt_dev_open : hello world from ventus.cpp
+spike device initialize: allocating local memory: to allocate at 0x70000000 with 268435456 bytes 
+spike device initialize: allocating pc source memory: to allocate at 0x80000000 with 268435456 bytes 
+	Device: 0	Vendor: THU
+		Name: Ventus GPGPU device
+Using Platform 0 	 Device No 0 
+Creating GPU Context
+
+	nearestNeighbor_kernel.cl
+### Triple: riscv32, CPU: ventus-gpgpu
+to allocate at 0x90000000 with 344064 bytes 
+to copy to 0x90000000 with 342112 bytes
+to allocate at 0x90054000 with 172032 bytes 
+notice that ventus hasn't support local buffer as argument yet.
+to allocate at 0x9007e000 with 4096 bytes 
+to copy to 0x9007e000 with 20 bytes
+to allocate at 0x9007f000 with 176160768 bytes 
+to allocate at 0x9a87f000 with 4096 bytes 
+to copy to 0x9a87f000 with 64 bytes
+arg gpgpu is numw:14,numt:16,numwg:192,kernelx:192,kernely:1,kernelz:1,ldssize:0x1000,pdssize:0x10000,pdsbase:0x9007f000,knlbase:0x9a87f000
+vaddr mem scope is -m0x70000000:0x9a880000
+src file is object.riscv, run log is written to object.riscv.log
+spike -l --log-commits -p2688 --isa rv32gcv_zfh --pc=0x80000000 -m0x70000000:0x9a880000 --varch vlen:512,elen:32 --gpgpuarch numw:14,numt:16,numwg:192,kernelx:192,kernely:1,kernelz:1,ldssize:0x1000,pdssize:0x10000,pdsbase:0x9007f000,knlbase:0x9a87f000 --log=object.riscv.log object.riscv 
+warp number: 14 thread number = 16  workgroup number = 192 workgroup dimension:192*1*1 lds size: 0x1000 pds size: 0x10000 lds base: 0x70000000 pds base: 0x9007f000 knl base: 0x9a87f000
+all warps reach the endprg. now proc 0 will end the simulation.
+Log file object.riscv.log renamed successfully to NearestNeighbor_0.log.
+to copy from 0x90054000 with 171056 bytes
+# Records	Write(s) [size]		Kernel(s)	Read(s)  [size]		Total(s)
+42764        	0.000173 [0.34MB]	14.520502	0.000116 [0.17MB]	14.520790
+
+Init: 50.926998
+MemAlloc: 0.005000
+HtoD: 0.172664
+Exec: 14520.501953
+DtoH: 0.115576
+Close: 0.179000
+Total: 14869.630859
+1988 12 27  0 18 TONY       30.0  89.8  113   39 --> Distance=0.199997
+1980 10 22 18  3 ISAAC      30.1  90.4  110  778 --> Distance=0.412312
+1997 11 14 12 24 HELENE     30.5  89.8  134  529 --> Distance=0.538515
+2003  8 27 12 10 TONY       29.9  89.4  160  286 --> Distance=0.608275
+1974 12 22 18 24 JOYCE      30.6  89.9   80  593 --> Distance=0.608276

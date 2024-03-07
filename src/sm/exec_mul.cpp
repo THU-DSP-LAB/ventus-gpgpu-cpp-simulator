@@ -10,7 +10,7 @@ void BASE::MUL_IN()
         if (emito_mul)
         {
             if (mul_ready_old == false)
-                cout << "mul error: not ready at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                std::cout << "mul error: not ready at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
             mul_unready.notify();
             switch (emit_ins.read().op)
             {
@@ -27,7 +27,7 @@ void BASE::MUL_IN()
                 mul_dq.push(new_data);
                 a_delay = 3;
                 b_delay = 1;
-                // cout << "mul: receive VADD_VV_, will notify eq, at " << sc_time_stamp() <<","<< sc_delta_count_at_current_time() << "\n";
+                // std::cout << "mul: receive VADD_VV_, will notify eq, at " << sc_time_stamp() <<","<< sc_delta_count_at_current_time() << "\n";
                 if (a_delay == 0)
                     mul_eva.notify();
                 else if (muleqa_triggered)
@@ -47,7 +47,7 @@ void BASE::MUL_IN()
                 break;
 
                 // default:
-                //     cout << "mul error: receive wrong ins " << emit_ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                //     std::cout << "mul error: receive wrong ins " << emit_ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 // break;
             }
         }
@@ -80,7 +80,7 @@ void BASE::MUL_CALC()
             wait(SC_ZERO_TIME);
             muleqa_triggered = false;
         }
-        // cout << "mul_eqa.default_event triggered at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+        // std::cout << "mul_eqa.default_event triggered at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
         multmp1 = mul_dq.front();
         mul_dq.pop();
         if (multmp1.ins.ddd.wxd | multmp1.ins.ddd.wvd)
@@ -101,20 +101,20 @@ void BASE::MUL_CALC()
 
             case DecodeParams::alu_fn_t::FN_MADD:
                 // VMADD
-                cout << "EXEC_MUL: FN_MADD,{thread,s1,s2,s3}: " << std::hex;
+                std::cout << "EXEC_MUL: FN_MADD,{thread,s1,s2,s3}: " << std::hex;
                 for (int i = 0; i < m_hw_warps[multmp1.warp_id]->CSR_reg[0x802]; i++)
                 {
                     if (multmp2.ins.mask[i] == 1)
                     {
-                        cout << "{" << i << "," << multmp1.rsv1_data[i] << "," << multmp1.rsv2_data[i] << "," << multmp1.rsv3_data[i] << "};";
+                        std::cout << "{" << i << "," << multmp1.rsv1_data[i] << "," << multmp1.rsv2_data[i] << "," << multmp1.rsv3_data[i] << "};";
                         multmp2.rdv1_data[i] = multmp1.rsv1_data[i] * multmp1.rsv3_data[i] + multmp1.rsv2_data[i];
                     }
                 }
-                cout << std::dec << "\n";
+                std::cout << std::dec << "\n";
                 break;
 
             default:
-                cout << "MUL_CALC warning: switch to unrecognized ins" << multmp1.ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                std::cout << "MUL_CALC warning: switch to unrecognized ins" << multmp1.ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 break;
             }
             mulfifo.push(multmp2);
@@ -125,7 +125,7 @@ void BASE::MUL_CALC()
             {
 
             default:
-                cout << "MUL_CALC warning: switch to unrecognized ins" << multmp1.ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                std::cout << "MUL_CALC warning: switch to unrecognized ins" << multmp1.ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 break;
             }
         }

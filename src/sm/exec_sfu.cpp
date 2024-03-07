@@ -10,7 +10,7 @@ void BASE::SFU_IN()
         if (emito_sfu)
         {
             if (sfu_ready_old == false)
-                cout << "sfu error: not ready at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                std::cout << "sfu error: not ready at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
             sfu_unready.notify();
             switch (emit_ins.read().op)
             {
@@ -26,7 +26,7 @@ void BASE::SFU_IN()
                 sfu_dq.push(new_data);
                 a_delay = 3;
                 b_delay = 1;
-                // cout << "sfu: receive VADD_VV_, will notify eq, at " << sc_time_stamp() <<","<< sc_delta_count_at_current_time() << "\n";
+                // std::cout << "sfu: receive VADD_VV_, will notify eq, at " << sc_time_stamp() <<","<< sc_delta_count_at_current_time() << "\n";
                 if (a_delay == 0)
                     sfu_eva.notify();
                 else if (sfueqa_triggered)
@@ -46,7 +46,7 @@ void BASE::SFU_IN()
                 break;
 
                 // default:
-                //     cout << "sfu error: receive wrong ins " << emit_ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                //     std::cout << "sfu error: receive wrong ins " << emit_ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 // break;
             }
         }
@@ -79,7 +79,7 @@ void BASE::SFU_CALC()
             wait(SC_ZERO_TIME);
             sfueqa_triggered = false;
         }
-        // cout << "sfu_eqa.default_event triggered at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+        // std::cout << "sfu_eqa.default_event triggered at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
         sfutmp1 = sfu_dq.front();
         sfu_dq.pop();
         if (sfutmp1.ins.ddd.wxd | sfutmp1.ins.ddd.wvd)
@@ -112,7 +112,7 @@ void BASE::SFU_CALC()
                                     if ((unsigned)sfutmp1.rsv1_data[i] != 0)
                                         sfutmp2.rdv1_data[i] = (unsigned)sfutmp1.rsv2_data[i] % sfutmp1.rsv1_data[i];
                                     else
-                                        cout << "SFU_CALC error: warp " << sfutmp1.warp_id << " ins pc=0x" << std::hex << sfutmp1.ins.currentpc << sfutmp1.ins
+                                        std::cout << "SFU_CALC error: warp " << sfutmp1.warp_id << " ins pc=0x" << std::hex << sfutmp1.ins.currentpc << sfutmp1.ins
                                              << ", ins.s1=" << sfutmp1.ins.s1 << ", rsv1_data[" << i << "]=0 at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                                 }
                             }
@@ -143,7 +143,7 @@ void BASE::SFU_CALC()
                                 if ((unsigned)sfutmp1.rsv1_data[i] != 0)
                                     sfutmp2.rdv1_data[i] = (unsigned)sfutmp1.rsv2_data[i] / (unsigned)sfutmp1.rsv1_data[i];
                                 else
-                                    cout << "SFU_CALC error: warp " << sfutmp1.warp_id << " ins pc=0x" << std::hex << sfutmp1.ins.currentpc << sfutmp1.ins
+                                    std::cout << "SFU_CALC error: warp " << sfutmp1.warp_id << " ins pc=0x" << std::hex << sfutmp1.ins.currentpc << sfutmp1.ins
                                          << ", ins.s1=" << sfutmp1.ins.s1 << ", rsv1_data[" << i << "]=0 at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                             }
                         }
@@ -159,7 +159,7 @@ void BASE::SFU_CALC()
                 break;
 
             default:
-                cout << "SFU_CALC warning: switch to unrecognized ins" << sfutmp1.ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                std::cout << "SFU_CALC warning: switch to unrecognized ins" << sfutmp1.ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 break;
             }
             sfufifo.push(sfutmp2);
@@ -170,7 +170,7 @@ void BASE::SFU_CALC()
             {
 
             default:
-                cout << "SFU_CALC warning: switch to unrecognized ins" << sfutmp1.ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                std::cout << "SFU_CALC warning: switch to unrecognized ins" << sfutmp1.ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 break;
             }
         }

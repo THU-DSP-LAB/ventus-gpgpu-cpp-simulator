@@ -24,10 +24,7 @@ public:
     void INIT_INSMEM();
     uint32_t getBufferData(const std::vector<std::vector<uint8_t>> &buffers, unsigned int virtualAddress, int num_buffer, uint64_t *buffer_base, uint64_t *buffer_size, bool &addrOutofRangeException, I_TYPE ins);
     uint32_t readInsBuffer(unsigned int virtualAddress, bool &addrOutofRangeException);
-    void readTextFile(const std::string &filename, std::vector<std::vector<uint8_t>> &buffers, meta_data_t mtd);
     void writeBufferData(int writevalue, std::vector<std::vector<uint8_t>> &buffers, unsigned int virtualAddress, int num_buffer, uint64_t *buffer_base, uint64_t *buffer_size, I_TYPE ins);
-    void activate_warp(int warp_id);
-    void remove_warp(int warp_id);
 
     // fetch
     void INIT_INS();
@@ -106,8 +103,8 @@ public:
         issue_ins = I_TYPE(INVALID_, 0, 0, 0);
     }
 
-    BASE(sc_core::sc_module_name name, std::string _inssrc, int _sm_id)
-        : sc_module(name), inssrc(_inssrc), sm_id(_sm_id),
+    BASE(sc_core::sc_module_name name, int _sm_id)
+        : sc_module(name), sm_id(_sm_id),
           m_cta_scheduler(nullptr)
     {
         for (int warp_id = 0; warp_id < hw_num_warp; warp_id++)
@@ -427,7 +424,6 @@ public:
     meta_data_t mtd;
 
     // 命令行参数
-    std::string inssrc; // 指令的来源，ireg为I_TYPE，imem为32bit二进制
     std::string metafile;
     std::string datafile;
 
