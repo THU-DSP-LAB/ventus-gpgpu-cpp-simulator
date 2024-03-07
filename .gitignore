@@ -32,5 +32,5 @@
 *.app
 
 # others
-
+.metals
 *.vcd
