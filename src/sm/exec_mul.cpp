@@ -101,16 +101,16 @@ void BASE::MUL_CALC()
 
             case DecodeParams::alu_fn_t::FN_MADD:
                 // VMADD
-                std::cout << "EXEC_MUL: FN_MADD,{thread,s1,s2,s3}: " << std::hex;
+                // std::cout << "EXEC_MUL: FN_MADD,{thread,s1,s2,s3}: " << std::hex;
                 for (int i = 0; i < m_hw_warps[multmp1.warp_id]->CSR_reg[0x802]; i++)
                 {
                     if (multmp2.ins.mask[i] == 1)
                     {
-                        std::cout << "{" << i << "," << multmp1.rsv1_data[i] << "," << multmp1.rsv2_data[i] << "," << multmp1.rsv3_data[i] << "};";
+                        // std::cout << "{" << i << "," << multmp1.rsv1_data[i] << "," << multmp1.rsv2_data[i] << "," << multmp1.rsv3_data[i] << "};";
                         multmp2.rdv1_data[i] = multmp1.rsv1_data[i] * multmp1.rsv3_data[i] + multmp1.rsv2_data[i];
                     }
                 }
-                std::cout << std::dec << "\n";
+                // std::cout << std::dec << "\n";
                 break;
 
             default:

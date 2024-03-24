@@ -94,31 +94,32 @@ void BASE::WRITE_REG(int warp_id)
             // 后续regfile要一次只能写一个，否则报错
             if (write_s)
             {
-
+#ifdef SPIKE_OUTPUT
                 std::cout << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex << wb_ins.read().currentpc << std::dec
-                     << " " << wb_ins
-                     << " x " << std::setfill('0') << std::setw(3) << rdv1_addr.read() << " "
-                     << std::hex << std::setw(8)
-                     << rdv1_data[0]
-                     << std::dec << std::setfill(' ') << std::setw(0)
-                     << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                          << " " << wb_ins
+                          << " x " << std::setfill('0') << std::setw(3) << rdv1_addr.read() << " "
+                          << std::hex << std::setw(8)
+                          << rdv1_data[0]
+                          << std::dec << std::setfill(' ') << std::setw(0)
+                          << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+#endif
                 if (rdv1_addr != 0)
                     m_hw_warps[warp_id]->s_regfile[rdv1_addr.read()] = rdv1_data[0];
             }
             if (write_v)
             {
-
+#ifdef SPIKE_OUTPUT
                 std::cout << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex << wb_ins.read().currentpc << std::dec
-                     << " " << wb_ins
-                     << " v " << std::setfill('0') << std::setw(3) << rdv1_addr.read() << " "
-                     << std::hex << std::setw(8);
+                          << " " << wb_ins
+                          << " v " << std::setfill('0') << std::setw(3) << rdv1_addr.read() << " "
+                          << std::hex << std::setw(8);
                 for (int i = m_hw_warps[wb_warpid]->CSR_reg[0x802] - 1; i > 0; i--)
                     std::cout << rdv1_data[i] << " ";
                 std::cout << rdv1_data[0];
                 std::cout << std::dec << std::setfill(' ') << std::setw(0)
-                     << "; mask=" << wb_ins.read().mask << ", s1=" << wb_ins.read().s1 << ",s2=" << wb_ins.read().s2 << ",s3=" << wb_ins.read().s3
-                     << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-
+                          << "; mask=" << wb_ins.read().mask << ", s1=" << wb_ins.read().s1 << ",s2=" << wb_ins.read().s2 << ",s3=" << wb_ins.read().s3
+                          << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+#endif
                 for (int i = 0; i < m_hw_warps[wb_warpid]->CSR_reg[0x802]; i++)
                     if (wb_ins.read().mask[i] == 1)
                         m_hw_warps[warp_id]->v_regfile[rdv1_addr.read()][i] = rdv1_data[i];

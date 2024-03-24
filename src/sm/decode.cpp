@@ -56,7 +56,7 @@ void BASE::DECODE(int warp_id)
                 ext2 = extractBits32(tmpins.origin32bit, 28, 26);
                 ext1 = extractBits32(tmpins.origin32bit, 25, 23);
                 extd = extractBits32(tmpins.origin32bit, 22, 20);
-                std::cout << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex << tmpins.currentpc << tmpins << " DECODE: set regext(3,2,1,d)=" << ext3 << "," << ext2 << "," << ext1 << "," << extd << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                // std::cout << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex << tmpins.currentpc << tmpins << " DECODE: set regext(3,2,1,d)=" << ext3 << "," << ext2 << "," << ext1 << "," << extd << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
             }
             else
             {

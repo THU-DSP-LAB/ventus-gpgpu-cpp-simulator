@@ -111,7 +111,9 @@ void BASE::SALU_CALC()
 
                 if (salutmp1.ins.ddd.branch == DecodeParams::branch_t::B_J) // jal
                 {
+#ifdef SPIKE_OUTPUT
                     std::cout << "SM" << sm_id << " warp " << salutmp1.warp_id << " 0x" << std::hex << salutmp1.ins.currentpc << " " << salutmp1.ins << " jump=true, jumpTO 0x" << std::hex << salutmp1.rss3_data << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+#endif
                     m_hw_warps[salutmp1.warp_id]->branch_sig = true;
                     m_hw_warps[salutmp1.warp_id]->jump = 1;
                     m_hw_warps[salutmp1.warp_id]->jump_addr = salutmp1.rss3_data;
@@ -119,7 +121,9 @@ void BASE::SALU_CALC()
                 else if (salutmp1.ins.ddd.branch == DecodeParams::branch_t::B_R) // jalr
                 {
                     jump_addr_tmp = (salutmp1.rss3_data + salutmp1.ins.imm) & (~1);
+#ifdef SPIKE_OUTPUT
                     std::cout << "SM" << sm_id << " warp " << salutmp1.warp_id << " 0x" << std::hex << salutmp1.ins.currentpc << " " << salutmp1.ins << " jump=true, jumpTO 0x" << std::hex << jump_addr_tmp << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+#endif
                     m_hw_warps[salutmp1.warp_id]->branch_sig = true;
                     m_hw_warps[salutmp1.warp_id]->jump = 1;
                     m_hw_warps[salutmp1.warp_id]->jump_addr = jump_addr_tmp;
@@ -241,7 +245,9 @@ void BASE::SALU_CALC()
         }
         else
         {
+#ifdef SPIKE_OUTPUT
             std::cout << "SM" << sm_id << " warp " << salutmp1.warp_id << " 0x" << std::hex << salutmp1.ins.currentpc << " " << salutmp1.ins << " jump=";
+#endif
             switch (salutmp1.ins.ddd.alu_fn)
             {
             // case BEQ_:
@@ -251,11 +257,15 @@ void BASE::SALU_CALC()
                 {
                     m_hw_warps[salutmp1.warp_id]->jump = 1;
                     m_hw_warps[salutmp1.warp_id]->jump_addr = salutmp1.rss3_data;
+#ifdef SPIKE_OUTPUT
                     std::cout << "true, jumpTO 0x" << std::hex << salutmp1.rss3_data << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+#endif
                 }
                 else
                 {
+#ifdef SPIKE_OUTPUT
                     std::cout << "false at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+#endif
                 }
                 break;
 
@@ -266,11 +276,15 @@ void BASE::SALU_CALC()
                 {
                     m_hw_warps[salutmp1.warp_id]->jump = 1;
                     m_hw_warps[salutmp1.warp_id]->jump_addr = salutmp1.rss3_data;
+#ifdef SPIKE_OUTPUT
                     std::cout << "true, jumpTO 0x" << std::hex << salutmp1.rss3_data << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+#endif
                 }
                 else
                 {
+#ifdef SPIKE_OUTPUT
                     std::cout << "false at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+#endif
                 }
                 break;
             // case BGEU_:
@@ -280,11 +294,15 @@ void BASE::SALU_CALC()
                 {
                     m_hw_warps[salutmp1.warp_id]->jump = 1;
                     m_hw_warps[salutmp1.warp_id]->jump_addr = salutmp1.rss3_data;
+#ifdef SPIKE_OUTPUT
                     std::cout << "true, jumpTO 0x" << std::hex << salutmp1.rss3_data << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+#endif
                 }
                 else
                 {
+#ifdef SPIKE_OUTPUT
                     std::cout << "false at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+#endif
                 }
                 break;
             // case BLT_:
@@ -294,11 +312,15 @@ void BASE::SALU_CALC()
                 {
                     m_hw_warps[salutmp1.warp_id]->jump = 1;
                     m_hw_warps[salutmp1.warp_id]->jump_addr = salutmp1.rss3_data;
+#ifdef SPIKE_OUTPUT
                     std::cout << "true, jumpTO 0x" << std::hex << salutmp1.rss3_data << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+#endif
                 }
                 else
                 {
+#ifdef SPIKE_OUTPUT
                     std::cout << "false at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+#endif
                 }
                 break;
             // case BLTU_:
@@ -308,11 +330,15 @@ void BASE::SALU_CALC()
                 {
                     m_hw_warps[salutmp1.warp_id]->jump = 1;
                     m_hw_warps[salutmp1.warp_id]->jump_addr = salutmp1.rss3_data;
+#ifdef SPIKE_OUTPUT
                     std::cout << "true, jumpTO 0x" << std::hex << salutmp1.rss3_data << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+#endif
                 }
                 else
                 {
+#ifdef SPIKE_OUTPUT
                     std::cout << "false at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+#endif
                 }
                 break;
 
@@ -323,11 +349,15 @@ void BASE::SALU_CALC()
                 {
                     m_hw_warps[salutmp1.warp_id]->jump = 1;
                     m_hw_warps[salutmp1.warp_id]->jump_addr = salutmp1.rss3_data;
+#ifdef SPIKE_OUTPUT
                     std::cout << "true, jumpTO 0x" << std::hex << salutmp1.rss3_data << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+#endif
                 }
                 else
                 {
+#ifdef SPIKE_OUTPUT
                     std::cout << "false at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+#endif
                 }
                 break;
 

@@ -74,5 +74,6 @@
     "C_Cpp.default.cppStandard": "c++20",
     "files.watcherExclude": {
         "**/target": true
-    }
+    },
+    "C_Cpp.default.compilerPath": "/usr/bin/g++"
 }

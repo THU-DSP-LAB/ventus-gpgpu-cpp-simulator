@@ -42,8 +42,9 @@ void BASE::LSU_IN()
                 lsu_eqb.notify(sc_time((b_delay)*PERIOD, SC_NS));
                 ev_lsuready_updated.notify();
             }
-
+#ifdef SPIKE_OUTPUT
             std::cout << "SM" << sm_id << " warp " << emitins_warpid << " 0x" << std::hex << emit_ins.read().currentpc << " " << emit_ins << " LSU addr=" << std::hex << std::setw(8) << std::setfill('0');
+
             switch (emit_ins.read().op)
             {
             case LW_:
@@ -57,6 +58,7 @@ void BASE::LSU_IN()
                 break;
             }
             std::cout << std::setw(0) << std::setfill(' ') << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+#endif
         }
         else
         {
@@ -124,14 +126,16 @@ void BASE::LSU_CALC()
             {
                 m_kernel->writeBufferData(lsutmp1.rsv3_data[i], LSUaddr[i], lsutmp1.ins);
             }
+#ifdef SPIKE_OUTPUT
             std::cout << "SM" << sm_id << " warp " << lsutmp1.warp_id << " 0x" << std::hex << lsutmp1.ins.currentpc << " " << lsutmp1.ins << std::hex
-                 << " data=" << std::setw(8) << std::setfill('0');
+                      << " data=" << std::setw(8) << std::setfill('0');
             for (int i = m_hw_warps[lsutmp1.warp_id]->CSR_reg[0x802] - 1; i >= 0; i--)
                 std::cout << lsutmp1.rsv3_data[i] << " ";
             std::cout << "@ ";
             for (int i = m_hw_warps[lsutmp1.warp_id]->CSR_reg[0x802] - 1; i >= 0; i--)
                 std::cout << LSUaddr[i] << " ";
             std::cout << std::setw(0) << std::setfill(' ') << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+#endif
         }
         ev_lsufifo_pushed.notify();
     }

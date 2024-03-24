@@ -105,7 +105,8 @@ void BASE::TC_CALC()
                 //     std::cout << std::endl;
                 // }
 
-                static_assert(hw_num_thread >= 8, "hw_num_thread must be at least 8.");
+                assert(hw_num_thread >= 8);
+                // static_assert(hw_num_thread >= 8, "hw_num_thread must be at least 8.");
                 for (int i = 0; i < 2; ++i)
                 {
                     for (int j = 0; j < 2; ++j)

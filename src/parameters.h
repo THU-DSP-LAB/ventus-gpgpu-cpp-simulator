@@ -2,6 +2,7 @@
 #define _PARAMETERS_H
 
 #define SC_INCLUDE_DYNAMIC_PROCESSES
+#define SPIKE_OUTPUT
 #include "systemc.h"
 // #include "tlm.h"
 // #include "tlm_core/tlm_1/tlm_req_rsp/tlm_channels/tlm_fifo/tlm_fifo.h"
@@ -21,11 +22,10 @@
 
 // #include <format>  // gcc13支持std::format
 
-inline constexpr int hw_num_warp = 32;
+inline constexpr int hw_num_warp = 4;   // 每个SM支持的最大warp数目
 inline constexpr unsigned MAX_CTA_PER_CORE = 32;
-inline constexpr int depth_warp = 2;
 inline constexpr int xLen = 32;
-inline constexpr long unsigned int hw_num_thread = 8; // 每个warp支持的最大thread
+inline constexpr long unsigned int hw_num_thread = 4; // 每个warp支持的最大thread数目
 inline constexpr int ireg_bitsize = 10;
 inline constexpr int ireg_size = 1 << ireg_bitsize;
 inline constexpr int INS_LENGTH = 32; // the length of per instruction

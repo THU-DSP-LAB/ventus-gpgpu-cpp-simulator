@@ -65,8 +65,10 @@ void BASE::PROGRAM_COUNTER(int warp_id)
             {
                 m_hw_warps[warp_id]->pc = m_hw_warps[warp_id]->jump_addr;
                 m_hw_warps[warp_id]->fetch_valid = true;
+#ifdef SPIKE_OUTPUT
                 std::cout << "SM" << sm_id << " warp " << warp_id << " pc jumps to 0x" << std::hex << m_hw_warps[warp_id]->jump_addr << std::dec
-                     << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                          << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+#endif
             }
             else if (m_hw_warps[warp_id]->simtstk_jump == 1)
             {
