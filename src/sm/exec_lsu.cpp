@@ -94,7 +94,7 @@ void BASE::LSU_CALC()
         lsutmp1 = lsu_dq.front();
         lsu_dq.pop();
 
-        for (int i = 0; i < hw_num_thread; i++)
+        for (int i = 0; i < m_hw_warps[lsutmp1.warp_id]->CSR_reg[0x802]; i++)
         {
             LSUaddr[i] = (lsutmp1.ins.ddd.isvec & lsutmp1.ins.ddd.disable_mask)
                              ? lsutmp1.ins.ddd.is_vls12()

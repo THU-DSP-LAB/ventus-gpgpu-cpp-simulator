@@ -195,15 +195,20 @@ void BASE::VALU_CALC()
             valufifo.push(valutmp2);
         }
         else
-        {
+        { // for branch instructions
             _velsemask = 0;
             _vifmask = 0;
-            switch (valutmp1.ins.op)
-            {
-            case VBEQ_:
+            switch (valutmp1.ins.ddd.alu_fn)
+            { // mask低位对应有效线程数；else分支为跳转
+            case DecodeParams::alu_fn_t::FN_SEQ:
                 for (int i = 0; i < m_hw_warps[valutmp1.warp_id]->CSR_reg[0x802]; i++)
-                { // mask低位对应有效线程数
-                    if (valutmp1.rsv1_data[i] == valutmp1.rsv2_data[i])
+                {
+                    if (valutmp1.ins.mask[i] == 0)
+                    {
+                        _velsemask[i] = 0;
+                        _vifmask[i] = 0;
+                    }
+                    else if (valutmp1.rsv1_data[i] == valutmp1.rsv2_data[i])
                     {
                         _velsemask[i] = 1;
                         _vifmask[i] = 0;
@@ -221,10 +226,16 @@ void BASE::VALU_CALC()
                 vbranch_ins = valutmp1.ins;
                 vbranchins_warpid = valutmp1.warp_id;
                 break;
-            case VBNE_:
+
+            case DecodeParams::alu_fn_t::FN_SNE:
                 for (int i = 0; i < hw_num_thread; i++)
                 {
-                    if (valutmp1.rsv1_data[i] != valutmp1.rsv2_data[i])
+                    if (valutmp1.ins.mask[i] == 0)
+                    {
+                        _velsemask[i] = 0;
+                        _vifmask[i] = 0;
+                    }
+                    else if (valutmp1.rsv1_data[i] != valutmp1.rsv2_data[i])
                     {
                         _velsemask[i] = 1;
                         _vifmask[i] = 0;
@@ -242,6 +253,115 @@ void BASE::VALU_CALC()
                 vbranch_ins = valutmp1.ins;
                 vbranchins_warpid = valutmp1.warp_id;
                 break;
+
+            case DecodeParams::alu_fn_t::FN_SGE:
+                for (int i = 0; i < hw_num_thread; i++)
+                {
+                    if (valutmp1.ins.mask[i] == 0)
+                    {
+                        _velsemask[i] = 0;
+                        _vifmask[i] = 0;
+                    }
+                    else if (valutmp1.rsv2_data[i] >= valutmp1.rsv1_data[i])
+                    {
+                        _velsemask[i] = 1;
+                        _vifmask[i] = 0;
+                    }
+                    else
+                    {
+                        _velsemask[i] = 0;
+                        _vifmask[i] = 1;
+                    }
+                }
+                branch_elsemask = _velsemask;
+                branch_ifmask = _vifmask;
+                branch_elsepc = valutmp1.rsv3_data[0];
+                valuto_simtstk = true;
+                vbranch_ins = valutmp1.ins;
+                vbranchins_warpid = valutmp1.warp_id;
+                break;
+
+            case DecodeParams::alu_fn_t::FN_SLT:
+                for (int i = 0; i < hw_num_thread; i++)
+                {
+                    if (valutmp1.ins.mask[i] == 0)
+                    {
+                        _velsemask[i] = 0;
+                        _vifmask[i] = 0;
+                    }
+                    else if (valutmp1.rsv2_data[i] < valutmp1.rsv1_data[i])
+                    {
+                        _velsemask[i] = 1;
+                        _vifmask[i] = 0;
+                    }
+                    else
+                    {
+                        _velsemask[i] = 0;
+                        _vifmask[i] = 1;
+                    }
+                }
+                branch_elsemask = _velsemask;
+                branch_ifmask = _vifmask;
+                branch_elsepc = valutmp1.rsv3_data[0];
+                valuto_simtstk = true;
+                vbranch_ins = valutmp1.ins;
+                vbranchins_warpid = valutmp1.warp_id;
+                break;
+
+            case DecodeParams::alu_fn_t::FN_SGEU:
+                for (int i = 0; i < hw_num_thread; i++)
+                {
+                    if (valutmp1.ins.mask[i] == 0)
+                    {
+                        _velsemask[i] = 0;
+                        _vifmask[i] = 0;
+                    }
+                    else if (static_cast<unsigned>(valutmp1.rsv2_data[i]) >= static_cast<unsigned>(valutmp1.rsv1_data[i]))
+                    {
+                        _velsemask[i] = 1;
+                        _vifmask[i] = 0;
+                    }
+                    else
+                    {
+                        _velsemask[i] = 0;
+                        _vifmask[i] = 1;
+                    }
+                }
+                branch_elsemask = _velsemask;
+                branch_ifmask = _vifmask;
+                branch_elsepc = valutmp1.rsv3_data[0];
+                valuto_simtstk = true;
+                vbranch_ins = valutmp1.ins;
+                vbranchins_warpid = valutmp1.warp_id;
+                break;
+
+            case DecodeParams::alu_fn_t::FN_SLTU:
+                for (int i = 0; i < hw_num_thread; i++)
+                {
+                    if (valutmp1.ins.mask[i] == 0)
+                    {
+                        _velsemask[i] = 0;
+                        _vifmask[i] = 0;
+                    }
+                    else if (static_cast<unsigned>(valutmp1.rsv2_data[i]) < static_cast<unsigned>(valutmp1.rsv1_data[i]))
+                    {
+                        _velsemask[i] = 1;
+                        _vifmask[i] = 0;
+                    }
+                    else
+                    {
+                        _velsemask[i] = 0;
+                        _vifmask[i] = 1;
+                    }
+                }
+                branch_elsemask = _velsemask;
+                branch_ifmask = _vifmask;
+                branch_elsepc = valutmp1.rsv3_data[0];
+                valuto_simtstk = true;
+                vbranch_ins = valutmp1.ins;
+                vbranchins_warpid = valutmp1.warp_id;
+                break;
+
             default:
                 std::cout << "VALU_CALC warning: switch to unrecognized ins" << valutmp1.ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 break;

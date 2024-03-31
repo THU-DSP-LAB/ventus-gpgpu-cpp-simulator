@@ -22,10 +22,10 @@
 
 // #include <format>  // gcc13支持std::format
 
-inline constexpr int hw_num_warp = 4;   // 每个SM支持的最大warp数目
+inline constexpr int hw_num_warp = 8;   // 每个SM支持的最大warp数目
 inline constexpr unsigned MAX_CTA_PER_CORE = 32;
 inline constexpr int xLen = 32;
-inline constexpr long unsigned int hw_num_thread = 4; // 每个warp支持的最大thread数目
+inline constexpr long unsigned int hw_num_thread = 32; // 每个warp支持的最大thread数目
 inline constexpr int ireg_bitsize = 10;
 inline constexpr int ireg_size = 1 << ireg_bitsize;
 inline constexpr int INS_LENGTH = 32; // the length of per instruction
@@ -885,8 +885,8 @@ public:
     bool fp;
     bool barrier;
     DecodeParams::branch_t branch;
-    bool IPDOM_stack;
-    bool IPDOM_stack_op;
+    bool simtSTK;
+    bool simtop;
     DecodeParams::csr_t csr;
     bool reverse;
     DecodeParams::sel_alu3_t sel_alu3;
@@ -907,7 +907,7 @@ public:
     bool tc;
     bool disable_mask;
     bool custom_signal_0;
-    bool undefined2;
+    bool atomic;
 
     // 自己加的decode信号
     DecodeParams::sel_execunit_t sel_execunit;

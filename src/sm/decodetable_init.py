@@ -100,8 +100,8 @@ headers = [
     "wxd",
     "tc",
     "dismask",
-    "X",
-    "X",
+    "custom",
+    "atomic",
 ]
 # 构建表格数据
 table_data = []

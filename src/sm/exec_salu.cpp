@@ -244,7 +244,7 @@ void BASE::SALU_CALC()
             salufifo.push(salutmp2);
         }
         else
-        {
+        {   // for branch instructions
 #ifdef SPIKE_OUTPUT
             std::cout << "SM" << sm_id << " warp " << salutmp1.warp_id << " 0x" << std::hex << salutmp1.ins.currentpc << " " << salutmp1.ins << " jump=";
 #endif
