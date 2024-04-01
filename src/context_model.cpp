@@ -1,6 +1,6 @@
 #include "context_model.hpp"
 
-uint32_t kernel_info_t::getBufferData(unsigned int virtualAddress, bool &addrOutofRangeException, I_TYPE ins)
+uint32_t kernel_info_t::getBufferData(unsigned int virtualAddress, bool &addrOutofRangeException, const I_TYPE &ins)
 {
     addrOutofRangeException = 0;
     int bufferIndex = -1;
@@ -17,7 +17,7 @@ uint32_t kernel_info_t::getBufferData(unsigned int virtualAddress, bool &addrOut
     if (bufferIndex == -1)
     {
         std::cerr << "getBufferData Error: No buffer found for the given virtual address 0x" << std::hex << virtualAddress
-                  << " for ins pc=0x" << ins.currentpc << ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n ";
+                  << " for ins pc=0x" << ins.currentpc << ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
         addrOutofRangeException = 1;
         return 0;
     }
@@ -27,17 +27,44 @@ uint32_t kernel_info_t::getBufferData(unsigned int virtualAddress, bool &addrOut
     int startIndex = offset;
 
     uint32_t data = 0;
-    for (int i = 0; i < 4; i++)
+
+    int bytesToRead = 0; // 将要读取的字节数
+
+    // 确定读取的字节数
+    if (ins.ddd.mem_whb == DecodeParams::MEM_W)
+        bytesToRead = 4;
+    else if (ins.ddd.mem_whb == DecodeParams::MEM_H)
+        bytesToRead = 2;
+    else if (ins.ddd.mem_whb == DecodeParams::MEM_B)
+        bytesToRead = 1;
+
+    for (int i = 0; i < bytesToRead; i++)
     {
         // std::cout << "getBufferData: fetching buffers[" << bufferIndex << "][" << (startIndex + i) << "], buffer size=" << buffers[bufferIndex].size() << "\n";
         uint8_t byte = (*m_buffer_data)[bufferIndex][startIndex + i];
         data |= static_cast<uint32_t>(byte) << (i * 8);
     }
 
+    // 如果不是读取4个字节，则根据mem_unsigned来决定如何处理剩余的位
+    if (bytesToRead < 4)
+    {
+        if (ins.ddd.mem_unsigned == 1)
+        {
+            // 无需操作，data已正确设置
+        }
+        else
+        {
+            // 符号位扩展
+            int shift = (4 - bytesToRead) * 8;
+            int32_t signExtension = (static_cast<int32_t>(data) << shift) >> shift;
+            data = static_cast<uint32_t>(signExtension);
+        }
+    }
+
     return data;
 }
 
-void kernel_info_t::writeBufferData(int writevalue, unsigned int virtualAddress, I_TYPE ins)
+void kernel_info_t::writeBufferData(int writevalue, unsigned int virtualAddress, const I_TYPE &ins)
 {
     int bufferIndex = -1;
     for (int i = 0; i < m_metadata.num_buffer; i++)
@@ -58,6 +85,14 @@ void kernel_info_t::writeBufferData(int writevalue, unsigned int virtualAddress,
 
     int offset = virtualAddress - m_metadata.buffer_base[bufferIndex];
     int startIndex = offset;
+
+    int bytesToWrite = 0; // 将要写入的字节数
+    if (ins.ddd.mem_whb == DecodeParams::MEM_W)
+        bytesToWrite = 4;
+    else if (ins.ddd.mem_whb == DecodeParams::MEM_H)
+        bytesToWrite = 2;
+    else if (ins.ddd.mem_whb == DecodeParams::MEM_B)
+        bytesToWrite = 1;
 
     for (int i = 0; i < 4; i++)
     {

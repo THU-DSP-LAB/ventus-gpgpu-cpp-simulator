@@ -17,7 +17,7 @@ void BASE::LSU_IN()
 
             new_data.ins = emit_ins;
             new_data.warp_id = emitins_warpid;
-            for (int i = 0; i < hw_num_thread; i++)
+            for (int i = 0; i < m_hw_warps[new_data.warp_id]->CSR_reg[0x802]; i++)
             {
                 new_data.rsv1_data[i] = tolsu_data1[i];
                 new_data.rsv2_data[i] = tolsu_data2[i];
@@ -48,10 +48,10 @@ void BASE::LSU_IN()
             switch (emit_ins.read().op)
             {
             case LW_:
-                std::cout << new_data.rsv1_data[0] << std::setw(0) << "+" << std::setw(8) << new_data.rsv2_data[0];
+                std::cout << new_data.rsv1_data[0] << std::setw(0) << "+" << std::setw(8) << new_data.rsv2_data[0] << "=" << (new_data.rsv1_data[0] + new_data.rsv2_data[0]);
                 break;
             case SW_:
-                std::cout << new_data.rsv1_data[0] << std::setw(0) << "+" << std::setw(8) << new_data.rsv2_data[0];
+                std::cout << new_data.rsv1_data[0] << std::setw(0) << "+" << std::setw(8) << new_data.rsv2_data[0] << "=" << (new_data.rsv1_data[0] + new_data.rsv2_data[0]);
                 break;
             case VLE32_V_:
                 std::cout << new_data.rsv1_data[0];
@@ -113,7 +113,10 @@ void BASE::LSU_CALC()
             lsutmp2.warp_id = lsutmp1.warp_id;
             for (int i = 0; i < m_hw_warps[lsutmp1.warp_id]->CSR_reg[0x802]; i++)
             {
-                lsutmp2.rdv1_data[i] = m_kernel->getBufferData(LSUaddr[i], addrOutofRangeException, lsutmp2.ins);
+                if (lsutmp1.ins.mask[i])
+                    lsutmp2.rdv1_data[i] = m_kernel->getBufferData(LSUaddr[i], addrOutofRangeException, lsutmp2.ins);
+                else
+                    lsutmp2.rdv1_data[i] = 0;
                 if (addrOutofRangeException)
                     std::cout << "SM" << sm_id << " LSU detect addrOutofRange, ins=" << lsutmp1.ins << ",addr=" << LSUaddr[i] << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
             }
@@ -124,7 +127,8 @@ void BASE::LSU_CALC()
         {
             for (int i = 0; i < m_hw_warps[lsutmp1.warp_id]->CSR_reg[0x802]; i++)
             {
-                m_kernel->writeBufferData(lsutmp1.rsv3_data[i], LSUaddr[i], lsutmp1.ins);
+                if (lsutmp1.ins.mask[i])
+                    m_kernel->writeBufferData(lsutmp1.rsv3_data[i], LSUaddr[i], lsutmp1.ins);
             }
 #ifdef SPIKE_OUTPUT
             std::cout << "SM" << sm_id << " warp " << lsutmp1.warp_id << " 0x" << std::hex << lsutmp1.ins.currentpc << " " << lsutmp1.ins << std::hex

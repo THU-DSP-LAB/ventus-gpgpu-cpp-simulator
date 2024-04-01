@@ -74,8 +74,8 @@ public:
     uint64_t get_metadata_baseaddr() { return m_metadata.metaDataBaseAddr; }
 
     // 通过虚拟地址获取对应缓冲区的数据并转换为整数
-    uint32_t getBufferData(unsigned int virtualAddress, bool &addrOutofRangeException, I_TYPE ins);
-    void writeBufferData(int writevalue, unsigned int virtualAddress, I_TYPE ins);
+    uint32_t getBufferData(unsigned int virtualAddress, bool &addrOutofRangeException, const I_TYPE &ins);
+    void writeBufferData(int writevalue, unsigned int virtualAddress, const I_TYPE &ins);
     uint32_t readInsBuffer(unsigned int virtualAddr, bool &addrOutofRangeException);
 
 private:

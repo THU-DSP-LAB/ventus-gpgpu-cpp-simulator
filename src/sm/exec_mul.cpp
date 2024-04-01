@@ -18,7 +18,7 @@ void BASE::MUL_IN()
             default:
                 new_data.ins = emit_ins;
                 new_data.warp_id = emitins_warpid;
-                for (int i = 0; i < hw_num_thread; i++)
+                for (int i = 0; i < m_hw_warps[new_data.warp_id]->CSR_reg[0x802]; i++)
                 {
                     new_data.rsv1_data[i] = tomul_data1[i];
                     new_data.rsv2_data[i] = tomul_data2[i];

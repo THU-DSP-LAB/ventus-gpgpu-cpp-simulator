@@ -20,7 +20,6 @@ int compareOnesInSCBV(const sc_bv<hw_num_thread> &mask1, const sc_bv<hw_num_thre
 
 bool checkMaskAllZero(const sc_bv<hw_num_thread> &mask, const sc_bv<hw_num_thread> &branch_mask)
 {
-    std::cout << "checkMaskAllZero: mask=" << mask << ", branch_mask=" << branch_mask << "\n";
     for (int i = 0; i < hw_num_thread; i++)
     {
         // 如果 mask[i] 为 1，检查 branch_mask[i] 是否为 0
@@ -36,6 +35,7 @@ void BASE::SIMT_STACK(int warp_id)
 {
     simtstack_t newstkelem;
     I_TYPE readins;
+    simtstack_t tmpstkelem;
     while (true)
     {
         wait(clk.posedge_event());
@@ -46,14 +46,21 @@ void BASE::SIMT_STACK(int warp_id)
             m_hw_warps[warp_id]->vbran_sig = true;
             readins = vbranch_ins.read();
             if (emito_simtstk)
-                std::cout << "SIMT-STACK error: receive join & beq at the same time at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                std::cout << "SM" << sm_id << " warp " << warp_id << " SIMT-STACK error: receive join & beq at the same time at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
 
+#ifdef SPIKE_OUTPUT
+            std::cout << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex << readins.currentpc << std::dec
+                      << " " << readins
+                      << " from VALU, current mask=" << readins.mask << ", branch_mask=" << branch_elsemask.read()
+                      << ", stack-size=" << std::dec << m_hw_warps[warp_id]->IPDOM_stack.size() << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+#endif
             if (checkMaskAllZero(readins.mask, branch_elsemask.read()))
             { // VALU计算出的elsemask全为0，不对stack操作，不跳转
 #ifdef SPIKE_OUTPUT
                 std::cout << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex << readins.currentpc << std::dec
                           << " " << readins
-                          << " join " << readins.mask << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                          << " join " << readins.mask
+                          << ", stack-size=" << std::dec << m_hw_warps[warp_id]->IPDOM_stack.size() << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
 #endif
             }
             else if (checkMaskAllZero(readins.mask, branch_ifmask.read()))
@@ -61,19 +68,21 @@ void BASE::SIMT_STACK(int warp_id)
                 // 不对stack操作
                 // 跳转
                 m_hw_warps[warp_id]->simtstk_jumpaddr = branch_elsepc;
-                m_hw_warps[warp_id]->current_mask = branch_elsemask; // 全为1
+                m_hw_warps[warp_id]->current_mask = branch_elsemask; // 其实不变
                 m_hw_warps[warp_id]->simtstk_jump = true;
 #ifdef SPIKE_OUTPUT
                 std::cout << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex << readins.currentpc << std::dec
                           << " " << readins
                           << " goto elsepath(jump) mask=" << branch_elsemask << " jumpTO 0x"
-                          << std::hex << branch_elsepc << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                          << std::hex << branch_elsepc << std::dec
+                          << ", stack-size=" << std::dec << m_hw_warps[warp_id]->IPDOM_stack.size() << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
 #endif
             }
             else
             {
                 if (compareOnesInSCBV(branch_ifmask, branch_elsemask, readins.mask, m_hw_warps[warp_id]->CSR_reg[0x802]) != 1)
                 { // if_mask线程数更少，不跳转，pc+4
+                    m_hw_warps[warp_id]->current_mask = branch_ifmask;
                     // 压栈两次
                     newstkelem.rpc = m_hw_warps[warp_id]->CSR_reg[0x80c];
                     newstkelem.nextpc = m_hw_warps[warp_id]->CSR_reg[0x80c];
@@ -88,7 +97,8 @@ void BASE::SIMT_STACK(int warp_id)
 #ifdef SPIKE_OUTPUT
                     std::cout << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex << readins.currentpc << std::dec
                               << " " << readins
-                              << " goto ifpath(pc+4) mask=" << branch_ifmask << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                              << " goto ifpath(pc+4) mask=" << branch_ifmask
+                              << ", stack-size=" << std::dec << m_hw_warps[warp_id]->IPDOM_stack.size() << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
 #endif
                 }
                 else
@@ -112,7 +122,8 @@ void BASE::SIMT_STACK(int warp_id)
                     std::cout << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex << readins.currentpc << std::dec
                               << " " << readins
                               << " going to elsepath(jump) mask=" << branch_elsemask << " jumpTO 0x"
-                              << std::hex << branch_elsepc << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                              << std::hex << branch_elsepc << std::dec
+                              << ", stack-size=" << std::dec << m_hw_warps[warp_id]->IPDOM_stack.size() << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
 #endif
                 }
             }
@@ -122,28 +133,43 @@ void BASE::SIMT_STACK(int warp_id)
         {
 #ifdef SPIKE_OUTPUT
             std::cout << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex << emit_ins.read().currentpc << std::dec
-                      << " SIMT_STK receive join ins" << emit_ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                      << " SIMT_STK receive join ins" << emit_ins
+                      << ", stack-size=" << std::dec << m_hw_warps[warp_id]->IPDOM_stack.size() << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
 #endif
             m_hw_warps[warp_id]->vbran_sig = true;
             /*** 以下为分支控制 ***/
-            if (!m_hw_warps[warp_id]->IPDOM_stack.empty())
+            if (not m_hw_warps[warp_id]->IPDOM_stack.empty())
             {
-                simtstack_t &tmpstkelem = m_hw_warps[warp_id]->IPDOM_stack.top();
+                tmpstkelem = m_hw_warps[warp_id]->IPDOM_stack.top();
                 readins = emit_ins;
                 if (readins.currentpc == tmpstkelem.rpc)
                 {
+                    m_hw_warps[warp_id]->IPDOM_stack.pop();
 #ifdef SPIKE_OUTPUT
                     std::cout << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex << emit_ins.read().currentpc
-                              << " " << emit_ins << "jump=true, jumpTO 0x" << tmpstkelem.nextpc
+                              << " " << emit_ins << " jump=true, jumpTO 0x" << std::hex << tmpstkelem.nextpc
                               << ", mask change from " << m_hw_warps[warp_id]->current_mask << " to " << tmpstkelem.nextmask
-                              << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                              << ", stack-size=" << std::dec << m_hw_warps[warp_id]->IPDOM_stack.size() << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
 #endif
                     m_hw_warps[warp_id]->simtstk_jumpaddr = tmpstkelem.nextpc;
                     m_hw_warps[warp_id]->current_mask = tmpstkelem.nextmask;
 
                     m_hw_warps[warp_id]->simtstk_jump = true;
-                    m_hw_warps[warp_id]->IPDOM_stack.pop();
                 }
+                else
+                {
+// 栈顶元素不是当前rpc，什么都不做。在循环时适用
+#ifdef SPIKE_OUTPUT
+                    std::cout << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex << emit_ins.read().currentpc << std::dec
+                              << " SIMT_STK receive join ins and nothing to do"
+                              << ", stack-size=" << std::dec << m_hw_warps[warp_id]->IPDOM_stack.size()
+                              << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+#endif
+                }
+            }
+            else
+            {
+                // 栈为空，什么都不做（这是正确的，不用报错）
             }
         }
     }

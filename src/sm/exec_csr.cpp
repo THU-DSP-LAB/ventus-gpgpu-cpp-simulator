@@ -144,7 +144,7 @@ void BASE::CSR_CALC()
 #ifdef SPIKE_OUTPUT
                 std::cout << "SM" << sm_id << " warp " << csrtmp1.warp_id
                           << std::hex << " 0x" << csrtmp1.ins.currentpc << " " << csrtmp1.ins
-                          << std::hex << " CSR[0X80c]=" << m_hw_warps[csrtmp1.warp_id]->CSR_reg[0x80c] << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                          << std::hex << " CSR[0X80c]=0x" << m_hw_warps[csrtmp1.warp_id]->CSR_reg[0x80c] << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
 #endif
                 break;
             default:
