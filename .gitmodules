@@ -1,0 +1,3 @@
+[submodule "submodules/membox2"]
+	path = submodules/membox2
+	url = git@github.com:liuxd17thu/membox2.git
