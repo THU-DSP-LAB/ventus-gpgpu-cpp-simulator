@@ -31,6 +31,7 @@ public:
 
     void activate_warp();
     void schedule_kernel2core();
+    void set_tasks(std::map<std::string, TaskInfo> &_tasks) { driver_tasks = &_tasks; }
     void set_running_kernels(std::vector<std::shared_ptr<kernel_info_t>> &_kernels) { m_running_kernels = _kernels; }
     std::shared_ptr<kernel_info_t> select_kernel();
 
@@ -44,8 +45,10 @@ private:
 
     sc_event_or_list all_warp_ev_kernel_ret;
 
+    std::map<std::string, TaskInfo> *driver_tasks;
     std::vector<std::shared_ptr<kernel_info_t>> m_running_kernels;
     std::vector<std::shared_ptr<kernel_info_t>> m_executed_kernels; // kernel第一次被issue，加入executed列表
+    std::vector<std::shared_ptr<kernel_info_t>> m_finished_kernels; // kernel执行完，加入finished列表，从running和executed列表中删除
     uint32_t m_last_issued_kernel = 0;
     uint32_t m_last_issue_core = 0;
 };

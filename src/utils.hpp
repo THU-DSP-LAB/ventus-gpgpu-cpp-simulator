@@ -51,4 +51,41 @@ public:
     void set_valid(bool v) override { valid.write(v); }
 };
 
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/ini_parser.hpp>
+
+struct TaskInfo {   // every task contains multiple kernels that run sequentially
+    std::string name;
+    std::queue<std::string> kernels;
+    int nWarps;
+    int simCycles;
+};
+
+std::map<std::string, TaskInfo> load_tasks_from_ini(const std::string& ini_file, const std::set<std::string>& allowed_tasks) {
+    boost::property_tree::ptree pt;
+    boost::property_tree::ini_parser::read_ini(ini_file, pt);
+
+    std::map<std::string, TaskInfo> tasks;
+    for (auto& section : pt) {
+        if (allowed_tasks.find(section.first) == allowed_tasks.end()) {
+            continue;  // 跳过不在allowed_tasks中的任务
+        }
+
+        TaskInfo task;
+        task.name = section.first;
+        task.nWarps = pt.get<int>(section.first + ".nWarps", 0);
+        task.simCycles = pt.get<int>(section.first + ".SimCycles", 0);
+        std::string files = pt.get<std::string>(section.first + ".Files");
+        std::istringstream ss(files);
+        std::string file;
+        while (getline(ss, file, ',')) {
+            task.kernels.push(file);
+        }
+        tasks[section.first] = task;
+    }
+    return tasks;
+}
+
+
+
 #endif

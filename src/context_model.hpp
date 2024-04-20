@@ -37,9 +37,9 @@ class kernel_info_t
 public:
     std::vector<std::vector<uint8_t>> *m_buffer_data;
 
-    kernel_info_t(const std::string &kernel_name, const std::string &metadata_file, const std::string &data_file)
+    kernel_info_t(const std::string &task_name, const std::string &kernel_name, const std::string &metadata_file, const std::string &data_file, std::vector<std::vector<uint8_t>> *existing_buffers = nullptr)
+        : m_task_name(task_name), m_kernel_name(kernel_name)
     {
-        m_kernel_name = kernel_name;
         initMetaData(metadata_file);
         init_extmem(data_file);
         std::cout << "kernel " << kernel_name << " initialized, set grid_dim=" << m_grid_dim.x << m_grid_dim.y << m_grid_dim.z << "\n";
@@ -53,6 +53,7 @@ public:
     }
     uint32_t get_kid() { return kernelID; }
     std::string get_kname() { return m_kernel_name; }
+    std::string get_tname() { return m_task_name; }
     dim3 get_next_cta_id() const { return m_next_cta; }
     unsigned get_next_cta_id_single() const
     {
@@ -79,6 +80,7 @@ public:
     uint32_t readInsBuffer(unsigned int virtualAddr, bool &addrOutofRangeException);
 
 private:
+    std::string m_task_name;
     std::string m_kernel_name;
     meta_data_t m_metadata;
     uint32_t kernelID;

@@ -97,7 +97,7 @@ std::shared_ptr<kernel_info_t> CTA_Scheduler::select_kernel()
         {
             if (std::find(m_executed_kernels.begin(), m_executed_kernels.end(),
                           m_running_kernels[idx]) == m_executed_kernels.end())
-            {
+            { // kernel has not been executed before
                 m_executed_kernels.push_back(m_running_kernels[idx]);
                 m_running_kernels[idx]->start_cycle = uint64_t(sc_time_stamp().to_double() / PERIOD);
             }
@@ -123,6 +123,42 @@ void CTA_Scheduler::schedule_kernel2core()
             if (kernel == nullptr ||
                 (kernel->no_more_ctas_to_run() && sm_group[sm_idx]->is_current_kernel_completed()))
             {
+                if (std::find(m_finished_kernels.begin(), m_finished_kernels.end(), kernel) == m_running_kernels.end())
+                {
+                    m_finished_kernels.push_back(kernel);
+                    if (std::find(m_running_kernels.begin(), m_running_kernels.end(), kernel) != m_running_kernels.end())
+                    {
+                        m_running_kernels.erase(std::find(m_running_kernels.begin(), m_running_kernels.end(), kernel));
+                    }
+                    else
+                        std::cout << "CTA Scheduler Error: finished kernel not found in running list\n";
+                    if (std::find(m_executed_kernels.begin(), m_executed_kernels.end(), kernel) != m_executed_kernels.end())
+                    {
+                        m_executed_kernels.erase(std::find(m_executed_kernels.begin(), m_executed_kernels.end(), kernel));
+                    }
+                    else
+                        std::cout << "CTA Scheduler Error: finished kernel not found in executed list\n";
+
+                    std::string task_name = kernel->get_tname();
+                    auto task_iter = driver_tasks->find(task_name);
+                    if (task_iter != driver_tasks->end())
+                    {
+                        // 检查任务中是否还有更多 kernel 待执行
+                        if (!task_iter->second.kernels.empty())
+                        {
+                            std::string next_kernel_name = task_iter->second.kernels.front();
+                            task_iter->second.kernels.pop();
+                            m_running_kernels.push_back(std::make_shared<kernel_info_t>(kernel->m_buffer_data, task_name, next_kernel_name, "./testcase/" + task_name + "/" + next_kernel_name + ".metadata", "./testcase/" + task_name + "/" + next_kernel_name + ".data"));
+                        }
+                    }
+                    else
+                    {
+                        std::cout << "CTA Scheduler Error: Task for the finished kernel not found\n";
+                    }
+
+                    kernel->m_buffer_data = nullptr;
+                }
+
                 kernel = select_kernel();
                 if (kernel != nullptr)
                 {

@@ -7,10 +7,13 @@
 
 int sc_main(int argc, char *argv[])
 {
-    // 处理命令行参数
-    std::string metafile, datafile, numcycle, kernelName;
-    int numkernel = 0;
+
+    std::string metafile, datafile, numcycle, kernelName, inifile;
+    int numkernel = 0, numtask = 0;
     std::vector<std::shared_ptr<kernel_info_t>> m_running_kernels;
+    std::set<std::string> task_names;
+
+    // 处理命令行参数
     for (int i = 1; i < argc; i++)
     {
         if (strcmp(argv[i], "--numkernel") == 0)
@@ -30,22 +33,41 @@ int sc_main(int argc, char *argv[])
                 m_running_kernels[j] = std::make_shared<kernel_info_t>(kernelName, "./testcase/" + metafile, "./testcase/" + datafile);
             }
         }
-        if (strcmp(argv[i], "--metafile") == 0)
-        { // like "vecadd/vecadd.riscv.meta"
-            metafile = argv[i + 1];
-            i++;
-        }
-        if (strcmp(argv[i], "--datafile") == 0)
-        {
-            datafile = argv[i + 1];
-            i++;
-        }
         if (strcmp(argv[i], "--numcycle") == 0)
         {
             numcycle = argv[i + 1];
             i++;
         }
+        if (strcmp(argv[i], "--inifile") == 0)
+        {
+            inifile = argv[i + 1];
+            i++;
+        }
+        if (strcmp(argv[i], "--numtask") == 0)
+        {
+            numtask = std::stoi(argv[i + 1]);
+            i++;
+            for (int j = 0; j < numtask; j++)
+            {
+                task_names.insert(argv[i + 1]);
+                i++;
+            }
+        }
     }
+
+    std::map<std::string, TaskInfo> tasks = load_tasks_from_ini("./testcase/" + inifile, task_names);
+
+    for (auto &task_pair : tasks)
+    {
+        auto &task = task_pair.second;
+        if (!task.kernels.empty())
+        {
+            std::string first_kernel = task.kernels.front();
+            task.kernels.pop();
+            m_running_kernels.push_back(std::make_shared<kernel_info_t>(task.name, first_kernel, "./testcase/" + task.name + "/" + first_kernel + ".metadata", "./testcase/" + task.name + "/" + first_kernel + ".data"));
+        }
+    }
+
     std::cout << "Finish reading runtime args\n";
 
     std::cout << "----------Initializing SM data-structures----------\n";
@@ -59,6 +81,7 @@ int sc_main(int argc, char *argv[])
 
     std::cout << "----------Initializing CTAs----------\n";
     CTA_Scheduler cta_impl("CTA_Scheduler");
+    cta_impl.set_tasks(tasks);
     cta_impl.set_running_kernels(m_running_kernels);
     cta_impl.sm_group = BASE_impl;
     // cta_impl.CTA_INIT();

@@ -33,4 +33,5 @@
 
 # others
 .metals
+.scala-build
 *.vcd
