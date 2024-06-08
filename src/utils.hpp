@@ -61,27 +61,27 @@ struct TaskInfo {   // every task contains multiple kernels that run sequentiall
     int simCycles;
 };
 
-std::map<std::string, TaskInfo> load_tasks_from_ini(const std::string& ini_file, const std::set<std::string>& allowed_tasks) {
+std::map<std::string, TaskInfo> load_tasks_from_ini(const std::string& ini_file, const std::vector<std::string>& task_names) {
     boost::property_tree::ptree pt;
     boost::property_tree::ini_parser::read_ini(ini_file, pt);
 
     std::map<std::string, TaskInfo> tasks;
-    for (auto& section : pt) {
-        if (allowed_tasks.find(section.first) == allowed_tasks.end()) {
-            continue;  // 跳过不在allowed_tasks中的任务
-        }
+    std::set<std::string> task_set(task_names.begin(), task_names.end()); // 将task_names转换为set便于查找，所以目前不支持重复的task_name，且kernel包含task_name区分所属task
 
-        TaskInfo task;
-        task.name = section.first;
-        task.nWarps = pt.get<int>(section.first + ".nWarps", 0);
-        task.simCycles = pt.get<int>(section.first + ".SimCycles", 0);
-        std::string files = pt.get<std::string>(section.first + ".Files");
-        std::istringstream ss(files);
-        std::string file;
-        while (getline(ss, file, ',')) {
-            task.kernels.push(file);
+    for (const auto& task_name : task_names) {
+        if (pt.find(task_name) != pt.not_found()) { // 检查.ini文件中是否存在该task
+            TaskInfo task;
+            task.name = task_name;
+            task.nWarps = pt.get<int>(task_name + ".nWarps", 0);
+            task.simCycles = pt.get<int>(task_name + ".SimCycles", 0);
+            std::string files = pt.get<std::string>(task_name + ".Files");
+            std::istringstream ss(files);
+            std::string file;
+            while (getline(ss, file, ',')) {
+                task.kernels.push(file);
+            }
+            tasks[task_name] = task;
         }
-        tasks[section.first] = task;
     }
     return tasks;
 }

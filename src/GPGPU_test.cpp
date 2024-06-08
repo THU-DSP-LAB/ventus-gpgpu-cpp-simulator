@@ -11,28 +11,28 @@ int sc_main(int argc, char *argv[])
     std::string metafile, datafile, numcycle, kernelName, inifile;
     int numkernel = 0, numtask = 0;
     std::vector<std::shared_ptr<kernel_info_t>> m_running_kernels;
-    std::set<std::string> task_names;
+    std::vector<std::string> task_names;
 
     // 处理命令行参数
     for (int i = 1; i < argc; i++)
     {
-        if (strcmp(argv[i], "--numkernel") == 0)
-        {
-            numkernel = std::stoi(argv[i + 1]);
-            i++;
-            m_running_kernels.resize(numkernel);
-            for (int j = 0; j < numkernel; j++)
-            {
-                kernelName = argv[i + 1];
-                i++;
-                metafile = argv[i + 1];
-                i++;
-                datafile = argv[i + 1];
-                i++;
-                std::cout << "Initializing kernel " << kernelName << " info ...\n";
-                m_running_kernels[j] = std::make_shared<kernel_info_t>(kernelName, "./testcase/" + metafile, "./testcase/" + datafile);
-            }
-        }
+        // if (strcmp(argv[i], "--numkernel") == 0)
+        // {
+        //     numkernel = std::stoi(argv[i + 1]);
+        //     i++;
+        //     m_running_kernels.resize(numkernel);
+        //     for (int j = 0; j < numkernel; j++)
+        //     {
+        //         kernelName = argv[i + 1];
+        //         i++;
+        //         metafile = argv[i + 1];
+        //         i++;
+        //         datafile = argv[i + 1];
+        //         i++;
+        //         std::cout << "Initializing kernel " << kernelName << " info ...\n";
+        //         m_running_kernels[j] = std::make_shared<kernel_info_t>(kernelName, "./testcase/" + metafile, "./testcase/" + datafile);
+        //     }
+        // }
         if (strcmp(argv[i], "--numcycle") == 0)
         {
             numcycle = argv[i + 1];
@@ -49,7 +49,7 @@ int sc_main(int argc, char *argv[])
             i++;
             for (int j = 0; j < numtask; j++)
             {
-                task_names.insert(argv[i + 1]);
+                task_names.push_back(argv[i + 1]);
                 i++;
             }
         }
