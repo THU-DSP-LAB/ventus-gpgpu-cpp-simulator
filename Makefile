@@ -56,7 +56,7 @@ RUNFLAGS_vectormma = --numkernel 1 tensor tensor/wmma484fp32/vectormma.metadata 
 RUNFLAGS_rodinia_bfs = --numkernel 1 bfs gpu-rodinia/bfs/4x8/BFS_1_0.metadata gpu-rodinia/bfs/4x8/BFS_1_0.data --numcycle 30000
 
 run: $(BINARY)
-	./$(BINARY) $(RUNFLAGS_rodinia_bfs)
+	./$(BINARY) $(RUNFLAGS)
 
 gdb: $(BINARY)
 	gdb --tui -s $(BINARY) --args $(BINARY) $(RUNFLAGS)
@@ -65,4 +65,7 @@ clean:
 	-rm -rf $(BUILD_DIR)
 	-rm -rf output/*.vcd
 
-.PHONY: default clean run gdb
+.PHONY: init default clean run gdb
+
+init:
+	git submodule init && git submodule update --recursive
