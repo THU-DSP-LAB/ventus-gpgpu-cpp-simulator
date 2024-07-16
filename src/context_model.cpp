@@ -1,123 +1,182 @@
 #include "context_model.hpp"
+#include "utils/log.h"
 
-uint32_t kernel_info_t::getBufferData(unsigned int virtualAddress, bool &addrOutofRangeException, const I_TYPE &ins)
-{
-    addrOutofRangeException = 0;
-    int bufferIndex = -1;
-    for (int i = 0; i < m_metadata.num_buffer; i++)
-    {
-        // std::cout << std::hex << "getBufferData: ranging from " << buffer_base[i] << " to " << (buffer_base[i] + buffer_size[i]) << ", virtualAddr=" << virtualAddress << std::dec << "\n";
-        if (virtualAddress >= m_metadata.buffer_base[i] && virtualAddress < (m_metadata.buffer_base[i] + m_metadata.buffer_allocsize[i]))
-        {
-            bufferIndex = i;
-            break;
-        }
-    }
-
-    if (bufferIndex == -1)
-    {
-        std::cerr << "getBufferData Error: No buffer found for the given virtual address 0x" << std::hex << virtualAddress
-                  << " for ins pc=0x" << ins.currentpc << ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-        addrOutofRangeException = 1;
-        return 0;
-    }
-
-    int offset = virtualAddress - m_metadata.buffer_base[bufferIndex];
-    // std::cout << "getBufferData: offset=" << std::hex << offset << "\n";
-    int startIndex = offset;
-
-    uint32_t data = 0;
-
-    int bytesToRead = 0; // 将要读取的字节数
-
-    // 确定读取的字节数
-    if (ins.ddd.mem_whb == DecodeParams::MEM_W)
-        bytesToRead = 4;
-    else if (ins.ddd.mem_whb == DecodeParams::MEM_H)
-        bytesToRead = 2;
-    else if (ins.ddd.mem_whb == DecodeParams::MEM_B)
-        bytesToRead = 1;
-
-    for (int i = 0; i < bytesToRead; i++)
-    {
-        // std::cout << "getBufferData: fetching buffers[" << bufferIndex << "][" << (startIndex + i) << "], buffer size=" << buffers[bufferIndex].size() << "\n";
-        uint8_t byte = (*m_buffer_data)[bufferIndex][startIndex + i];
-        data |= static_cast<uint32_t>(byte) << (i * 8);
-    }
-
-    // 如果不是读取4个字节，则根据mem_unsigned来决定如何处理剩余的位
-    if (bytesToRead < 4)
-    {
-        if (ins.ddd.mem_unsigned == 1)
-        {
-            // 无需操作，data已正确设置
-        }
-        else
-        {
-            // 符号位扩展
-            int shift = (4 - bytesToRead) * 8;
-            int32_t signExtension = (static_cast<int32_t>(data) << shift) >> shift;
-            data = static_cast<uint32_t>(signExtension);
-        }
-    }
-
-    return data;
+kernel_info_t::kernel_info_t(const std::string& kernel_name, const std::string& metadata_file,
+                             const std::string& data_file, uint64_t pagetable, Memory* mem) {
+    m_pagetable = pagetable;
+    m_kernel_name = kernel_name;
+    initMetaData(metadata_file);
+    init_extmem(data_file, mem);
+    log_info("kernel %s initialized, set grid_dim = %d,%d,%d", kernel_name.c_str(), m_grid_dim.x, m_grid_dim.y,
+             m_grid_dim.z);
 }
 
-void kernel_info_t::writeBufferData(int writevalue, unsigned int virtualAddress, const I_TYPE &ins)
-{
-    int bufferIndex = -1;
-    for (int i = 0; i < m_metadata.num_buffer; i++)
-    {
-        if (virtualAddress >= m_metadata.buffer_base[i] &&
-            virtualAddress < (m_metadata.buffer_base[i] + m_metadata.buffer_allocsize[i]))
-        {
-            bufferIndex = i;
-            break;
-        }
-    }
+bool kernel_info_t::no_more_ctas_to_run() const {
+    return (m_next_cta.x >= m_grid_dim.x || m_next_cta.y >= m_grid_dim.y || m_next_cta.z >= m_grid_dim.z);
+}
 
-    if (bufferIndex == -1)
-    {
-        std::cerr << "writeBufferData Error: No buffer found for the given virtual address 0x" << std::hex << virtualAddress << " for ins" << ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+unsigned kernel_info_t::get_next_cta_id_single() const {
+    return m_next_cta.x + m_grid_dim.x * m_next_cta.y + m_grid_dim.x * m_grid_dim.y * m_next_cta.z;
+}
+
+// Helpers
+bool kernel_info_t::isHexCharacter(char c) {
+    return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f');
+}
+int kernel_info_t::charToHex(char c) {
+    if (c >= '0' && c <= '9')
+        return c - '0';
+    else if (c >= 'A' && c <= 'F')
+        return c - 'A' + 10;
+    else if (c >= 'a' && c <= 'f')
+        return c - 'a' + 10;
+    else
+        return -1; // Invalid character
+}
+
+void kernel_info_t::initMetaData(const std::string& filename) {
+    std::vector<uint64_t> metadata;
+    readHexFile(filename, 64, metadata);
+    assignMetadata(metadata, m_metadata);
+}
+
+// convert (.metadata) hex file into raw metadata buffer
+void kernel_info_t::readHexFile(const std::string& filename, int itemSize, std::vector<uint64_t>& items) {
+    // itemSize为每个数据的比特数，这里为64
+    ifstream file(filename);
+
+    if (!file) {
+        std::cout << "Error opening file: " << filename << std::endl;
         return;
     }
 
-    int offset = virtualAddress - m_metadata.buffer_base[bufferIndex];
-    int startIndex = offset;
+    char c;
+    int bits = 0;
+    uint64_t value = 0;
+    bool leftside = false;
 
-    int bytesToWrite = 0; // 将要写入的字节数
-    if (ins.ddd.mem_whb == DecodeParams::MEM_W)
-        bytesToWrite = 4;
-    else if (ins.ddd.mem_whb == DecodeParams::MEM_H)
-        bytesToWrite = 2;
-    else if (ins.ddd.mem_whb == DecodeParams::MEM_B)
-        bytesToWrite = 1;
+    while (file.get(c)) {
+        if (c == '\n') {
+            if (bits != 0)
+                leftside = true;
+            continue;
+        }
 
-    for (int i = 0; i < 4; i++)
-    {
-        uint8_t byte = static_cast<uint8_t>(writevalue >> (i * 8));
-        (*m_buffer_data)[bufferIndex][startIndex + i] = byte;
+        if (!isHexCharacter(c)) {
+            log_error("Invalid character found: '%c' in %s", c, filename.c_str());
+            continue;
+        }
+
+        int hexValue = charToHex(c);
+        if (leftside)
+            value = value | ((uint64_t)hexValue << (92 - bits));
+        else
+            value = (value << 4) | hexValue;
+        bits += 4;
+
+        if (bits >= itemSize) {
+            items.push_back(value);
+            value = 0;
+            bits = 0;
+            leftside = false;
+        }
     }
 
-    // std::cout << "SM" << sm_id << std::hex << " write extmem[" << virtualAddress << "]=" << writevalue << std::dec << ",ins=" << ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+    if (bits > 0) {
+        log_error("Warning: Incomplete item found at the end of the file!");
+    }
+
+    file.close();
 }
 
-uint32_t kernel_info_t::readInsBuffer(unsigned int virtualAddr, bool &addrOutofRangeException)
-{
-    addrOutofRangeException = 0;
-    int startIndex = virtualAddr - m_metadata.startaddr;
-    if (startIndex < 0 || startIndex > m_metadata.buffer_allocsize[m_metadata.insBufferIndex])
-    {
-        std::cout << "readInsBuffer Error: virtualAddr(pc)=0x" << std::hex << virtualAddr << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-        addrOutofRangeException = 1;
-        return 0;
+// convert raw metadata buffer into struct meta_data_t
+void kernel_info_t::assignMetadata(const std::vector<uint64_t>& metadata, meta_data_t& mtd) {
+    int index = 0;
+
+    mtd.startaddr = metadata[index++];
+
+    mtd.kernel_id = metadata[index++];
+
+    for (int i = 0; i < 3; i++) {
+        mtd.kernel_size[i] = metadata[index++];
     }
-    uint32_t data = 0;
-    for (int i = 0; i < 4; i++)
-    {
-        uint8_t byte = (*m_buffer_data)[m_metadata.insBufferIndex][startIndex + i];
-        data |= static_cast<uint32_t>(byte) << (i * 8);
+    m_grid_dim.x = mtd.kernel_size[0];
+    m_grid_dim.y = mtd.kernel_size[1];
+    m_grid_dim.z = mtd.kernel_size[2];
+
+    mtd.wf_size = metadata[index++];
+    mtd.wg_size = metadata[index++];
+    mtd.metaDataBaseAddr = metadata[index++];
+    mtd.ldsSize = metadata[index++];
+    mtd.pdsSize = metadata[index++];
+    mtd.sgprUsage = metadata[index++];
+    mtd.vgprUsage = metadata[index++];
+    mtd.pdsBaseAddr = metadata[index++];
+
+    mtd.num_buffer = metadata[index++] + 1; // add localmem buffer
+
+    mtd.buffer_base = new uint64_t[mtd.num_buffer];
+
+    for (int i = 0; i < mtd.num_buffer - 1; i++) {
+        mtd.buffer_base[i] = metadata[index++];
+        if (mtd.buffer_base[i] == mtd.startaddr)
+            mtd.insBufferIndex = i;
     }
-    return data;
+    mtd.buffer_base[mtd.num_buffer - 1] = ldsBaseAddr_core; // localmem base addr
+
+    mtd.buffer_size = new uint64_t[mtd.num_buffer];
+    for (int i = 0; i < mtd.num_buffer - 1; i++) {
+        mtd.buffer_size[i] = metadata[index++];
+    }
+    mtd.buffer_size[mtd.num_buffer - 1] = 0;
+
+    mtd.buffer_allocsize = new uint64_t[mtd.num_buffer];
+    for (int i = 0; i < mtd.num_buffer - 1; i++) {
+        mtd.buffer_allocsize[i] = metadata[index++];
+    }
+    mtd.buffer_allocsize[mtd.num_buffer - 1] = mtd.ldsSize;
+}
+
+// read (testcase.data) hexfile, and setup initial memory
+void kernel_info_t::readTextFile(const std::string& filename, std::vector<std::vector<uint8_t>>& buffers,
+                                 meta_data_t mtd, Memory* mem) {
+
+    std::ifstream file(filename);
+    if (!file.is_open()) {
+        log_fatal("Failed to open file: %s", filename.c_str());
+        return;
+    }
+
+    std::string line;
+    int bufferIndex = 0;
+    std::vector<uint8_t> buffer;
+    for (int bufferIndex = 0; bufferIndex < mtd.num_buffer; bufferIndex++) {
+        buffer.reserve(mtd.buffer_allocsize[bufferIndex]); // 提前分配空间
+        mem->allocateMemory(get_pagetable(), mtd.buffer_base[bufferIndex], mtd.buffer_allocsize[bufferIndex]);
+        int readbytes = 0;
+        while (readbytes < mtd.buffer_size[bufferIndex]) {
+            std::getline(file, line);
+            for (int i = line.length(); i > 0; i -= 2) {
+                std::string hexChars = line.substr(i - 2, 2);
+                uint8_t byte = std::stoi(hexChars, nullptr, 16);
+                buffer.push_back(byte);
+            }
+            readbytes += 4;
+        }
+        buffer.resize(mtd.buffer_allocsize[bufferIndex]);
+        buffers[bufferIndex] = buffer;
+        mem->writeDataVirtual(get_pagetable(), mtd.buffer_base[bufferIndex], mtd.buffer_size[bufferIndex],
+                              buffer.data());
+        buffer.clear();
+    }
+    // buffers[mtd.num_buffer-1] is localmem(LDS)
+    // It contains no initial data, mtd.buffer_size[mtd.num_buffer-1] = 0
+
+    file.close();
+}
+
+void kernel_info_t::init_extmem(std::string datafile, Memory* mem) {
+    // 此时num_buffer已经是.meta文件里的num_buffer+1，包含了末尾的local buffer
+    m_buffer_data = new std::vector<std::vector<uint8_t>>(m_metadata.num_buffer);
+    readTextFile(datafile, *m_buffer_data, m_metadata, mem);
 }

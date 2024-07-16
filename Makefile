@@ -1,4 +1,5 @@
 # Library and include path
+SYSTEMC_HOME ?= $(HOME)/.local/systemc/current
 LIB_DIR=-L$(SYSTEMC_HOME)/lib-linux64
 INC_DIR=-I$(SYSTEMC_HOME)/include
 LIB=-lsystemc -Wl,-rpath,$(SYSTEMC_HOME)/lib-linux64
@@ -22,14 +23,19 @@ else
     GCC_PATH := $(GCC11_PATH)
     CXX := $(GCC_PATH)/bin/g++ -L$(GCC_PATH)/lib64 -I$(GCC_PATH)/include -Wl,-rpath,$(GCC_PATH)/lib64
 endif
-LD  = $(CXX)
+CC = gcc
+LD = $(CXX)
 
 # Sources and objects
-SRCS := $(shell find ./src -name '*.cpp')
-OBJS = $(SRCS:%.cpp=$(OBJ_DIR)/%.o)
+SRCS_CPP := $(shell find ./src -name '*.cpp')
+SRCS_C   := $(shell find ./src -name '*.c')
+DEPS  = $(SRCS_CPP:%.cpp=$(OBJ_DIR)/%.d)
+DEPS += $(SRCS_C:%.c=$(OBJ_DIR)/%.d)
+OBJS  = $(SRCS_CPP:%.cpp=$(OBJ_DIR)/%.o)
+OBJS += $(SRCS_C:%.c=$(OBJ_DIR)/%.o)
 
 # Build options
-CFLAGS   += $(INC_DIR) -O0 -ggdb3
+CFLAGS   += $(INC_DIR) -O0 -ggdb3 -MMD
 #CFLAGS   += -Wall -Wno-sign-compare
 #CFLAGS   += -fsanitize=address -fsanitize=undefined
 CXXFLAGS += $(CFLAGS) -std=c++20
@@ -41,6 +47,15 @@ $(OBJ_DIR)/%.o: %.cpp
 	@mkdir -p $(dir $@)
 	@$(CXX) $(CXXFLAGS) -c -o $@ $<
 
+# Rule to compile c files
+$(OBJ_DIR)/%.o: %.c
+	@echo + CC  $<
+	@mkdir -p $(dir $@)
+	@$(CC) $(CFLAGS) -c -o $@ $<
+
+# Dependences
+-include $(DEPS)
+
 # Linking
 $(BINARY): $(OBJS) 
 	@echo + LD $@
@@ -48,7 +63,6 @@ $(BINARY): $(OBJS)
 	@$(LD) -o $@ $(OBJS) $(LDFLAGS)
 
 RUNFLAGS = --numkernel 2 vecadd adv_vecadd/vecadd4x4.metadata adv_vecadd/vecadd4x4.data matadd adv_matadd/matadd.metadata adv_matadd/matadd.data --numcycle 30000
-
 RUNFLAGS_tensor484 = --numkernel 1 tensor tensor/wmma484fp32/wmma484fp32.metadata tensor/wmma484fp32/wmma484fp32.data --numcycle 2000
 RUNFLAGS_tensor242 = --numkernel 1 tensor tensor/wmma424fp32/wmma424fp32.metadata tensor/wmma424fp32/wmma424fp32.data --numcycle 2000
 RUNFLAGS_vectormma = --numkernel 1 tensor tensor/wmma484fp32/vectormma.metadata tensor/wmma484fp32/vectormma.data --numcycle 6000

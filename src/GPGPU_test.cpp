@@ -4,9 +4,14 @@
 #include "CTA_Scheduler.hpp"
 #include <chrono>
 #include <fstream>
+#include "membox_sv39/memory.h"
+#include "utils/log.h"
 
 int sc_main(int argc, char *argv[])
 {
+    // 虚拟内存与页表
+    Memory mem(1ull << 32ull);
+
     // 处理命令行参数
     std::string metafile, datafile, numcycle, kernelName;
     int numkernel = 0;
@@ -26,8 +31,10 @@ int sc_main(int argc, char *argv[])
                 i++;
                 datafile = argv[i + 1];
                 i++;
-                std::cout << "Initializing kernel " << kernelName << " info ...\n";
-                m_running_kernels[j] = std::make_shared<kernel_info_t>(kernelName, "./testcase/" + metafile, "./testcase/" + datafile);
+                log_trace("Initializing kernel %s info ...", kernelName.c_str());
+                m_running_kernels[j] = std::make_shared<kernel_info_t>(
+                    kernelName, "./testcase/" + metafile, "./testcase/" + datafile,
+                    mem.createRootPageTable(), &mem);
             }
         }
         if (strcmp(argv[i], "--metafile") == 0)
@@ -53,7 +60,7 @@ int sc_main(int argc, char *argv[])
     BASE_impl = new BASE *[NUM_SM];
     for (int i = 0; i < NUM_SM; i++)
     {
-        BASE_impl[i] = new BASE(("SM" + std::to_string(i)).c_str(), i);
+        BASE_impl[i] = new BASE(("SM" + std::to_string(i)).c_str(), i, &mem);
     }
     BASE_sti BASE_sti_impl("BASE_STI");
 

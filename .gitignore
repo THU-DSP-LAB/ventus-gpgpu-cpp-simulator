@@ -35,3 +35,5 @@
 .metals
 *.vcd
 .scala-build
+compile_commands.json
+.cache/

@@ -127,7 +127,9 @@ void BASE::INSTRUCTION_REG(int warp_id)
 
                 // if (sm_id == 0 && warp_id == 0)
                 //     std::cout << "SM" << sm_id << " warp" << warp_id << " INSTRUCTION_REG: fetch_ins pc=" << std::hex << m_hw_warps[warp_id]->pc.read() << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-                m_hw_warps[warp_id]->fetch_ins = m_kernel->readInsBuffer(m_hw_warps[warp_id]->pc.read(), addrOutofRangeException);
+                //m_hw_warps[warp_id]->fetch_ins = m_kernel->readInsBuffer(m_hw_warps[warp_id]->pc.read(), addrOutofRangeException);
+                addrOutofRangeException = 
+                    m_mem->readDataVirtual(m_kernel->get_pagetable(), m_hw_warps[warp_id]->pc.read(), 4, &m_hw_warps[warp_id]->fetch_ins);
                 if (addrOutofRangeException)
                     std::cout << "SM" << sm_id << " warp" << warp_id << "INS_REG error: pc out of range at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
 

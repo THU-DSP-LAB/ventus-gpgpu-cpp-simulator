@@ -3,7 +3,7 @@
 
 #define SC_INCLUDE_DYNAMIC_PROCESSES
 #include "../parameters.h"
-#include "../CTA_Scheduler.hpp"
+//#include "../CTA_Scheduler.hpp"
 #include "../context_model.hpp"
 #include "../utils.hpp"
 #include "../gpgpu_model.hpp"
@@ -15,6 +15,8 @@ class BASE : public sc_core::sc_module
 public:
     sc_in_clk clk{"clk"};
     sc_in<bool> rst_n{"rst_n"};
+
+    Memory *m_mem;
 
     void debug_sti();
     void debug_display();
@@ -103,9 +105,9 @@ public:
         issue_ins = I_TYPE(INVALID_, 0, 0, 0);
     }
 
-    BASE(sc_core::sc_module_name name, int _sm_id)
+    BASE(sc_core::sc_module_name name, int _sm_id, Memory *mem)
         : sc_module(name), sm_id(_sm_id),
-          m_cta_scheduler(nullptr)
+          m_cta_scheduler(nullptr), m_mem(mem)
     {
         for (int warp_id = 0; warp_id < hw_num_warp; warp_id++)
         {

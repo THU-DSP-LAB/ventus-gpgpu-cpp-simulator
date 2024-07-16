@@ -1,5 +1,49 @@
 #include "BASE.h"
 
+static uint32_t mem_read(uint32_t vaddr, bool &addrOutofRangeException, const I_TYPE &ins, Memory *mem, uint64_t pagetable) {
+    uint32_t data = 0;
+    int bytesToRead;
+
+    // 确定读取的字节数
+    if (ins.ddd.mem_whb == DecodeParams::MEM_W)
+        bytesToRead = 4;
+    else if (ins.ddd.mem_whb == DecodeParams::MEM_H)
+        bytesToRead = 2;
+    else if (ins.ddd.mem_whb == DecodeParams::MEM_B)
+        bytesToRead = 1;
+    else
+        assert(0);
+
+    int result = mem->readDataVirtual(pagetable, vaddr, bytesToRead, &data);
+    addrOutofRangeException = (result == 0) ? 0 : 1;
+
+    // 如果不是读取4个字节，则根据mem_unsigned来决定如何处理剩余的位
+    if (bytesToRead < 4) {
+        if (ins.ddd.mem_unsigned == 1) {
+            // 零扩展，data已正确设置
+        } else {
+            // 符号位扩展
+            int shift = (4 - bytesToRead) * 8;
+            int32_t signExtension = (static_cast<int32_t>(data) << shift) >> shift;
+            data = static_cast<uint32_t>(signExtension);
+        }
+    }
+    return data;
+}
+
+void mem_write(int writevalue, uint32_t vaddr, const I_TYPE &ins, Memory *mem, uint64_t pagetable) {
+    int bytesToWrite = 0; // 将要写入的字节数
+    if (ins.ddd.mem_whb == DecodeParams::MEM_W)
+        bytesToWrite = 4;
+    else if (ins.ddd.mem_whb == DecodeParams::MEM_H)
+        bytesToWrite = 2;
+    else if (ins.ddd.mem_whb == DecodeParams::MEM_B)
+        bytesToWrite = 1;
+    else assert(0);
+
+    mem->writeDataVirtual(pagetable, vaddr, 4, &writevalue);
+}
+
 void BASE::LSU_IN()
 {
     lsu_in_t new_data;
@@ -114,7 +158,7 @@ void BASE::LSU_CALC()
             for (int i = 0; i < m_hw_warps[lsutmp1.warp_id]->CSR_reg[0x802]; i++)
             {
                 if (lsutmp1.ins.mask[i])
-                    lsutmp2.rdv1_data[i] = m_kernel->getBufferData(LSUaddr[i], addrOutofRangeException, lsutmp2.ins);
+                    lsutmp2.rdv1_data[i] = mem_read(LSUaddr[i], addrOutofRangeException, lsutmp2.ins, m_mem, m_kernel->get_pagetable());
                 else
                     lsutmp2.rdv1_data[i] = 0;
                 if (addrOutofRangeException)
@@ -128,7 +172,7 @@ void BASE::LSU_CALC()
             for (int i = 0; i < m_hw_warps[lsutmp1.warp_id]->CSR_reg[0x802]; i++)
             {
                 if (lsutmp1.ins.mask[i])
-                    m_kernel->writeBufferData(lsutmp1.rsv3_data[i], LSUaddr[i], lsutmp1.ins);
+                    mem_write(lsutmp1.rsv3_data[i], LSUaddr[i], lsutmp1.ins, m_mem, m_kernel->get_pagetable());
             }
 #ifdef SPIKE_OUTPUT
             std::cout << "SM" << sm_id << " warp " << lsutmp1.warp_id << " 0x" << std::hex << lsutmp1.ins.currentpc << " " << lsutmp1.ins << std::hex
