@@ -105,6 +105,9 @@ void BASE::WRITE_REG(int warp_id)
 #endif
                 if (rdv1_addr != 0)
                     m_hw_warps[warp_id]->s_regfile[rdv1_addr.read()] = rdv1_data[0];
+                //if (sm_id == 0 && warp_id == 2 && rdv1_addr == 2)
+                //    std::cout << "Warning! " << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex << wb_ins.read().currentpc << std::dec
+                //          << " " << wb_ins << " x " << std::setfill('0') << std::setw(3) << rdv1_addr.read() << " written as 0x" << std::hex << rdv1_data[0] << "\n";
             }
             if (write_v)
             {
