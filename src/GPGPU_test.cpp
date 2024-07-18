@@ -74,7 +74,7 @@ int sc_main(int argc, char *argv[])
         {
             if (warp_ != nullptr)
             {
-                BASE_impl[i]->ev_issue_list &= warp_->ev_issue;
+                BASE_impl[i]->ev_warp_dispatch_list &= warp_->ev_warp_dispatch;
             }
         }
     }
@@ -87,6 +87,7 @@ int sc_main(int argc, char *argv[])
         (*BASE_impl[i]).clk(clk);
         (*BASE_impl[i]).rst_n(rst_n);
     }
+    cta_impl.rst_n(rst_n);
     BASE_sti_impl.rst_n(rst_n);
 
     cta_impl.clk(clk);

@@ -1671,7 +1671,7 @@ public:
         CSR_reg.fill(0);
         std::stack<simtstack_t>().swap(IPDOM_stack);
 
-        flush_pipeline.write(true);
+        endprg_flush_pipe.write(true);
     }
 
     sc_signal<bool, SC_MANY_WRITERS> is_warp_activated;
@@ -1701,8 +1701,8 @@ public:
     I_TYPE _scoretmpins;
     std::set<SCORE_TYPE> score; // record regfile addr that's to be written
     bool wait_bran;             // 应该使用C++类型；dispatch了分支指令，则要暂停dispatch等待分支指令被执行
-    // issue
-    sc_event ev_issue;
+    // warp scheduling
+    sc_event ev_warp_dispatch;
     // regfile
     std::array<reg_t, num_register_per_warp> s_regfile;
     std::array<v_regfile_t, num_register_per_warp> v_regfile;
@@ -1713,7 +1713,7 @@ public:
     sc_signal<int> simtstk_jumpaddr;                               // out_pc
     sc_signal<bool> simtstk_jump;                                  // fetch跳转的控制信号
 
-    sc_signal<bool> flush_pipeline;
+    sc_signal<bool> endprg_flush_pipe;
 };
 
 // union FloatAndInt

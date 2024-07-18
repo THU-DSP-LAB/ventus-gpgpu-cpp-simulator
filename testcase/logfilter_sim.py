@@ -3,11 +3,11 @@ import re
 
 current_dir = os.path.dirname(__file__)
 
-input_filename = "gpu-rodinia/bfs/4x8/BFS_1_0.sim.log"
+input_filename = "../log.txt"
 output_filename = input_filename + ".filtered.log"
 
 # 保留以SMk warp s开头的行
-k = 1
+k = 0
 s = 0
 
 with open(os.path.join(current_dir, input_filename), "r") as file:

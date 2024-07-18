@@ -11,8 +11,9 @@ void BASE::DECODE(int warp_id)
         // std::cout << "SM" << sm_id << " warp" << warp_id << " DECODE: finish at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
         wait(m_hw_warps[warp_id]->ev_decode);
             
-        if (m_hw_warps[warp_id]->jump == 1 |
-            m_hw_warps[warp_id]->simtstk_jump == 1)
+        if (m_hw_warps[warp_id]->jump == 1 ||
+            m_hw_warps[warp_id]->simtstk_jump == 1||
+            m_hw_warps[warp_id]->endprg_flush_pipe)
         {
             m_hw_warps[warp_id]->fetch_valid2 = false;
             WILLregext = false;

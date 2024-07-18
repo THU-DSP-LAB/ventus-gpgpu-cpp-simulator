@@ -25,6 +25,7 @@ void CTA_Scheduler::freeMetadata(meta_data_t &mtd)
 
 void CTA_Scheduler::activate_warp()
 {
+    // 这个函数似乎没被调用
 
     SC_REPORT_INFO("CTA_Scheduler", "Activating warps...");
 
@@ -58,7 +59,7 @@ void CTA_Scheduler::activate_warp()
             sm_group[i]->m_hw_warps[warp_counter]->CSR_reg[0x804] = 0;
             sm_group[i]->m_hw_warps[warp_counter]->CSR_reg[0x805] = (mtd.wg_size - warp_counter - 1); // warp标号反了
             sm_group[i]->m_hw_warps[warp_counter]->CSR_reg[0x806] = ldsBaseAddr_core;
-            sm_group[i]->m_hw_warps[warp_counter]->CSR_reg[0x807] = 0;
+            sm_group[i]->m_hw_warps[warp_counter]->CSR_reg[0x807] = mtd.pdsBaseAddr;
             sm_group[i]->m_hw_warps[warp_counter]->CSR_reg[0x808] = 0;
             sm_group[i]->m_hw_warps[warp_counter]->CSR_reg[0x809] = 0;
             sm_group[i]->m_hw_warps[warp_counter]->CSR_reg[0x810] = 0;
@@ -115,25 +116,55 @@ void CTA_Scheduler::schedule_kernel2core()
     {
         wait(clk.posedge_event());
 
+        if(!rst_n) {
+            for(int i = 0; i < NUM_SM; i++) {
+                sm_group[i]->m_current_kernel_completed = false;
+                sm_group[i]->m_current_kernel_running = false;
+            }
+            continue;
+        }
+
         for (int i = 0; i < NUM_SM; i++)
         {
-            unsigned sm_idx = (i + m_last_issue_core + 1) % NUM_SM;
-            // select kernel for each SM
-            auto kernel = sm_group[sm_idx]->get_current_kernel();
-            if (kernel == nullptr ||
-                (kernel->no_more_ctas_to_run() && sm_group[sm_idx]->is_current_kernel_completed()))
+            const unsigned sm_idx = (i + m_last_issue_core + 1) % NUM_SM;
+            BASE * const sm = sm_group[sm_idx];
+
+            // Check if this SM needs changing to a new kernel, and change it if needed
+            auto kernel = sm->get_current_kernel();
+            if (kernel == nullptr)
             {
                 kernel = select_kernel();
                 if (kernel != nullptr)
-                {
-                    sm_group[sm_idx]->set_kernel(kernel);
+                    sm->set_kernel(kernel);
+            } 
+            else if(kernel->no_more_ctas_to_run() && sm->m_current_kernel_running)
+            {
+                // check
+                bool warp_all_finished = true;  // default
+                for(auto &warp : sm->m_hw_warps) {
+                    if(warp->is_warp_activated) {
+                        warp_all_finished = false;
+                        break;
+                    }
+                }
+                if (warp_all_finished) {        // change to a new kernel
+                    sm->m_current_kernel_completed = true;
+                    sm->m_current_kernel_running = false;       // The new kernel will start to run later
+                    std::cout << "SM" << sm_idx << " finishing kernel " << kernel->get_kname() << " at " << sc_time_stamp() << std::endl;
+                    kernel = select_kernel();
+                    if (kernel != nullptr)
+                        sm->set_kernel(kernel);
                 }
             }
 
+            for(int w = 0; w < hw_num_warp; w++) {
+                sm->m_issue_block2warp[w] = false;    // default: not issued
+            }
+
             // issue 1 block for each SM
-            if (kernel != nullptr && !kernel->no_more_ctas_to_run() && sm_group[sm_idx]->can_issue_1block(kernel))
+            if (kernel != nullptr && !kernel->no_more_ctas_to_run() && sm->can_issue_1block(kernel))
             {
-                sm_group[sm_idx]->issue_block2core(kernel);
+                sm->issue_block2core(kernel);
                 m_last_issue_core = sm_idx;
                 break;
             }
