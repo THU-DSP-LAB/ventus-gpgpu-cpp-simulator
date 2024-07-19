@@ -37,3 +37,4 @@
 .scala-build
 compile_commands.json
 .cache/
+log.txt
