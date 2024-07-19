@@ -84,11 +84,10 @@ void BASE::PROGRAM_COUNTER(int warp_id)
                 m_hw_warps[warp_id]->fetch_valid = true;
             }
         }
-        m_hw_warps[warp_id]->ev_fetchpc.notify();
-        if (m_hw_warps[warp_id]->flush_pipeline)
+        m_hw_warps[warp_id]->ev_fetchpc.notify();       // Not used
+        if (m_hw_warps[warp_id]->endprg_flush_pipe)
         {
             m_hw_warps[warp_id]->fetch_valid = false;
-            m_hw_warps[warp_id]->fetch_valid2 = false;
         }
     }
 }
@@ -139,6 +138,9 @@ void BASE::INSTRUCTION_REG(int warp_id)
 
                 m_hw_warps[warp_id]->ev_decode.notify();
             }
+        } else if(m_hw_warps[warp_id]->endprg_flush_pipe) {
+            m_hw_warps[warp_id]->fetch_valid12 = false;
+            m_hw_warps[warp_id]->ev_decode.notify();
         }
     }
 }
@@ -359,17 +361,17 @@ void BASE::BEFORE_DISPATCH(int warp_id)
             cycle_IBUF_ACTION(warp_id, dispatch_ins_, _readdata3);
             cycle_UPDATE_SCORE(warp_id, tmpins, it, regtype_, insertscore);
             cycle_JUDGE_DISPATCH(warp_id, _readibuf);
-            m_hw_warps[warp_id]->ev_issue.notify();
+            m_hw_warps[warp_id]->ev_warp_dispatch.notify();
         }
         else
         {
             // 某个warp结束后，依然出发issue_list，否则warp_scheduler无法运行
-            m_hw_warps[warp_id]->ev_issue.notify();
+            m_hw_warps[warp_id]->ev_warp_dispatch.notify();
         }
-
-        if (m_hw_warps[warp_id]->flush_pipeline)
+        if (m_hw_warps[warp_id]->endprg_flush_pipe)
         {
-            m_hw_warps[warp_id]->ififo_elem_num = m_hw_warps[warp_id]->ififo.used();
+            m_hw_warps[warp_id]->ififo.clear();
+            m_hw_warps[warp_id]->wait_bran = false;
         }
     }
 }
@@ -398,12 +400,12 @@ unsigned BASE::max_cta_num(std::shared_ptr<kernel_info_t> kernel)
 
     // limited by warps
     unsigned result_warp;
-    result_warp = hw_num_warp / kernel_num_warp_per_cta;
+    result_warp = (hw_num_warp - m_num_warp_activated) / kernel_num_warp_per_cta;
 
     // limited by local memory size
     unsigned kernel_ldsSize_per_cta = kernel->get_ldsSize_per_cta();
     unsigned result_localmem;
-    result_localmem = hw_lds_size / kernel_ldsSize_per_cta;
+    result_localmem = hw_lds_size / kernel_ldsSize_per_cta - m_num_active_cta;
 
     return result_warp < result_localmem ? result_warp : result_localmem;
 }
@@ -448,8 +450,7 @@ void BASE::issue_block2core(std::shared_ptr<kernel_info_t> kernel)
         m_hw_warps[hw_wid]->CSR_reg[0x806] = ldsBaseAddr_core + free_ctaid_in_core * kernel->get_ldsSize_per_cta();
         m_hw_warps[hw_wid]->CSR_reg[0x807] =
             kernel->get_pdsBaseAddr() +
-            ctaid_kernel_single * kernel_num_warp_per_cta *
-                kernel_num_thread_per_warp * kernel->get_pdsSize_per_thread();
+            (ctaid_kernel_single * kernel_num_warp_per_cta + widINcta) * kernel_num_thread_per_warp * kernel->get_pdsSize_per_thread();
         m_hw_warps[hw_wid]->CSR_reg[0x808] = ctaid_kernel.x;
         m_hw_warps[hw_wid]->CSR_reg[0x809] = ctaid_kernel.y;
         m_hw_warps[hw_wid]->CSR_reg[0x80a] = ctaid_kernel.z;
@@ -457,16 +458,17 @@ void BASE::issue_block2core(std::shared_ptr<kernel_info_t> kernel)
         m_hw_warps[hw_wid]->CSR_reg[0x300] = 0x00001800; // WHY?
 
         m_hw_warps[hw_wid]->is_warp_activated.write(true);
-        std::cout << "SM " << sm_id << " warp " << hw_wid << " is activated at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+        std::cout << std::dec << "SM " << sm_id << " warp " << hw_wid << " is activated at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << " (kernel " << kernel->get_kname() << " CTA " << ctaid_kernel_single << ")\n";
         m_hw_warps[hw_wid]->pc.write(kernel->get_startaddr());
-        m_hw_warps[hw_wid]->fetch_valid.write(true);
+        //m_hw_warps[hw_wid]->fetch_valid = true;
 
-        sc_bv<8> _validmask = 0;
+        sc_bv<hw_num_thread> _validmask = 0;
         for (int i = 0; i < kernel_num_thread_per_warp; i++)
         {
             _validmask[i] = 1;
         }
         m_hw_warps[hw_wid]->current_mask.write(_validmask);
+        m_issue_block2warp[hw_wid] = true;
     }
     m_num_warp_activated += kernel_num_warp_per_cta;
     m_current_kernel_running.write(true);

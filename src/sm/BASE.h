@@ -223,7 +223,7 @@ public:
 
     /*** SIMD backend ***/
     // issue
-    sc_event_and_list ev_issue_list;
+    sc_event_and_list ev_warp_dispatch_list;
     sc_signal<I_TYPE> issue_ins{"issue_ins"};
     sc_signal<int> issueins_warpid{"issueins_warpid"};
     sc_signal<int> last_dispatch_warpid{"last_dispatch_warpid"}; // 需要设为sc_signal，否则dispatch判断对i的循环边界【i < last_dispatch_warpid + hw_num_warp】会变化
@@ -255,7 +255,7 @@ public:
     bool findemit; // 轮询时，找到了全ready且执行单元也ready的entry
     sc_signal<bool> doemit{"doemit"};
     // regfile
-    sc_signal<int> rds1_addr{"rds1_addr"}, rdv1_addr{"rdv1_addr"};
+    sc_signal<int> rdv1_addr{"rdv1_addr"};
     sc_signal<reg_t> rds1_data{"rds1_data"};
     sc_vector<sc_signal<reg_t>> rdv1_data{"rdv1_data", hw_num_thread};
 
@@ -443,6 +443,7 @@ public:
     sc_signal<bool, SC_MANY_WRITERS> m_current_kernel_running{"m_current_kernel_running"};     // 是否应用signal待定
     sc_signal<bool, SC_MANY_WRITERS> m_current_kernel_completed{"m_current_kernel_completed"}; // 是否应用signal待定
     bool is_current_kernel_completed() { return m_current_kernel_completed.read(); }
+    std::array<sc_signal<bool>, hw_num_warp> m_issue_block2warp;
 
     unsigned max_cta_num(std::shared_ptr<kernel_info_t> kernel);
     int m_cta_status[MAX_CTA_PER_CORE];

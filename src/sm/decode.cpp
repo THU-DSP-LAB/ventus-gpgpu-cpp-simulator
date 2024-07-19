@@ -5,16 +5,18 @@ void BASE::DECODE(int warp_id)
     I_TYPE tmpins;
     sc_bv<32> scinsbit;
     bool WILLregext = false;
-    int ext1, ext2, ext3, extd;
+    int ext1, ext2, ext3, extd, extimm;
     while (true)
     {
         // std::cout << "SM" << sm_id << " warp" << warp_id << " DECODE: finish at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
         wait(m_hw_warps[warp_id]->ev_decode);
-
-        if (m_hw_warps[warp_id]->jump == 1 |
-            m_hw_warps[warp_id]->simtstk_jump == 1)
+            
+        if (m_hw_warps[warp_id]->jump == 1 ||
+            m_hw_warps[warp_id]->simtstk_jump == 1||
+            m_hw_warps[warp_id]->endprg_flush_pipe)
         {
             m_hw_warps[warp_id]->fetch_valid2 = false;
+            WILLregext = false;
         }
         else
         { // std::cout << "SM" << sm_id << " warp" << warp_id << " DECODE: start at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
@@ -47,16 +49,35 @@ void BASE::DECODE(int warp_id)
 
             tmpins.ddd = decode_table[(OP_TYPE)tmpins.op];
 
-            if (tmpins.op == (int)REGEXT_ || tmpins.op == (int)REGEXTI_)
+            if (tmpins.op == (int)REGEXT_)
             {
                 m_hw_warps[warp_id]->fetch_valid2 = false;
                 WILLregext = true;
 
+                extimm = 0;
                 ext3 = extractBits32(tmpins.origin32bit, 31, 29);
                 ext2 = extractBits32(tmpins.origin32bit, 28, 26);
                 ext1 = extractBits32(tmpins.origin32bit, 25, 23);
                 extd = extractBits32(tmpins.origin32bit, 22, 20);
-                // std::cout << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex << tmpins.currentpc << tmpins << " DECODE: set regext(3,2,1,d)=" << ext3 << "," << ext2 << "," << ext1 << "," << extd << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+#ifdef SPIKE_OUTPUT
+                std::cout << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex << tmpins.currentpc << tmpins
+                    << " DECODE: set regext(s3,s2,s1,d)=" << ext3 << "," << ext2 << "," << ext1 << "," << extd << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+#endif
+            }
+            else if (tmpins.op == (int)REGEXTI_)
+            {
+                m_hw_warps[warp_id]->fetch_valid2 = false;
+                WILLregext = true;
+
+                extimm = extractBits32(tmpins.origin32bit, 31, 26);
+                ext3 = 0;
+                ext2 = extractBits32(tmpins.origin32bit, 25, 23);
+                ext1 = 0;
+                extd = extractBits32(tmpins.origin32bit, 22, 20);
+#ifdef SPIKE_OUTPUT
+                std::cout << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex << tmpins.currentpc << tmpins
+                    << " DECODE: set regexti(s3,s2,s1,d)=" << ext3 << "," << ext2 << "," << ext1 << "," << extd << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+#endif
             }
             else
             {
@@ -93,11 +114,18 @@ void BASE::DECODE(int warp_id)
                 tmpins.d = extractBits32(tmpins.origin32bit, 11, 7);
                 if (WILLregext)
                 {
+                    tmpins.imm += extimm << 5;
                     tmpins.s1 += ext1 << 5;
                     tmpins.s2 += ext2 << 5;
                     tmpins.s3 += ext3 << 5;
                     tmpins.d += extd << 5;
                     WILLregext = false;
+#ifdef SPIKE_OUTPUT
+                std::cout << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex << tmpins.currentpc << tmpins
+                    << " DECODE: regext(s3,s2,s1,d)=" << ext3 << "," << ext2 << "," << ext1 << "," << extd
+                    << " is used to set s3,s2,s1,d=" << tmpins.s3 << "," << tmpins.s2 << "," << tmpins.s1 << "," << tmpins.d
+                    << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+#endif
                 }
                 scinsbit = tmpins.origin32bit;
                 tmpins.ddd.mop = tmpins.ddd.readmask ? 3 : (scinsbit.range(27, 26)).to_uint();

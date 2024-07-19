@@ -128,6 +128,16 @@ void BASE::SALU_CALC()
                     m_hw_warps[salutmp1.warp_id]->jump = 1;
                     m_hw_warps[salutmp1.warp_id]->jump_addr = jump_addr_tmp;
                 }
+                else{
+#ifdef SPIKE_OUTPUT
+                    if (salutmp1.warp_id == 2 && sm_id == 0){
+                        std::cout << "SM" << sm_id << " warp " << salutmp1.warp_id << " 0x" << std::hex << salutmp1.ins.currentpc << " " << salutmp1.ins << ", rs1=" << std::hex << salutmp1.rss1_data << ", rs2=" << salutmp1.rss2_data << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                        std::cout << "↑currently, rs1_addr=" << salutmp1.ins.s1 << ",rs2_addr=" << salutmp1.ins.s2 << ",rd_addr=" << salutmp1.ins.d
+                            << ", s_regfile[rs1_addr]=" << m_hw_warps[salutmp1.warp_id]->s_regfile[salutmp1.ins.s1]
+                            << ", s_regfile[rs2_addr]=" << m_hw_warps[salutmp1.warp_id]->s_regfile[salutmp1.ins.s2] << std::endl;
+                    }
+#endif
+                }
 
                 break;
 

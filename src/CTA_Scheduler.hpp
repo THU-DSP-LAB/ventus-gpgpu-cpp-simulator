@@ -15,6 +15,7 @@ class CTA_Scheduler : public sc_core::sc_module
 {
 public:
     sc_in_clk clk{"clk"};
+    sc_in<bool> rst_n{"rst_n"};
     sc_vector<sc_port<IO_out_if<int>>> outs;
 
 public:

@@ -35,6 +35,7 @@
 .metals
 *.vcd
 .scala-build
-compile_commands.json
+
 .cache/
+compile_commands.json
 log.txt

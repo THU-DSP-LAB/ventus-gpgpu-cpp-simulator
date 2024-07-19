@@ -96,6 +96,12 @@ void BASE::LSU_IN()
                 break;
             case SW_:
                 std::cout << new_data.rsv1_data[0] << std::setw(0) << "+" << std::setw(8) << new_data.rsv2_data[0] << "=" << (new_data.rsv1_data[0] + new_data.rsv2_data[0]);
+                if (sm_id == 0 && emitins_warpid == 2) {
+                    std::cout << "\nthis inst rs1_addr=" << std::dec << new_data.ins.s1 << ", rs2_addr=" << new_data.ins.s2
+                        << std::hex
+                        << ", s_regfile[rs1]=" << m_hw_warps[emitins_warpid]->s_regfile[new_data.ins.s1]
+                        << ", s_regfile[rs2]=" << m_hw_warps[emitins_warpid]->s_regfile[new_data.ins.s2] << std::endl;
+                }
                 break;
             case VLE32_V_:
                 std::cout << new_data.rsv1_data[0];
@@ -143,7 +149,7 @@ void BASE::LSU_CALC()
             LSUaddr[i] = (lsutmp1.ins.ddd.isvec & lsutmp1.ins.ddd.disable_mask)
                              ? lsutmp1.ins.ddd.is_vls12()
                                    ? (lsutmp1.rsv1_data[i] + lsutmp1.rsv2_data[i])
-                                   : ((lsutmp1.rsv1_data[i] + lsutmp1.rsv2_data[i]) * hw_num_thread + i << 2 + m_hw_warps[lsutmp1.warp_id]->CSR_reg[0x807])
+                                   : ((lsutmp1.rsv1_data[i] + lsutmp1.rsv2_data[i]) * hw_num_thread + (i << 2) + m_hw_warps[lsutmp1.warp_id]->CSR_reg[0x807])
                          : lsutmp1.ins.ddd.isvec
                              ? (lsutmp1.rsv1_data[i] + (lsutmp1.ins.ddd.mop == 0
                                                             ? i << 2

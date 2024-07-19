@@ -62,7 +62,7 @@ $(BINARY): $(OBJS)
 	@mkdir -p $(dir $@)
 	@$(LD) -o $@ $(OBJS) $(LDFLAGS)
 
-RUNFLAGS = --numkernel 2 vecadd adv_vecadd/vecadd4x4.metadata adv_vecadd/vecadd4x4.data matadd adv_matadd/matadd.metadata adv_matadd/matadd.data --numcycle 30000
+RUNFLAGS = --numkernel 2 vecadd adv_vecadd/vecadd4x4.metadata adv_vecadd/vecadd4x4.data matadd multiblock/matadd/matadd.metadata multiblock/matadd/matadd.data --numcycle 1000000
 RUNFLAGS_tensor484 = --numkernel 1 tensor tensor/wmma484fp32/wmma484fp32.metadata tensor/wmma484fp32/wmma484fp32.data --numcycle 2000
 RUNFLAGS_tensor242 = --numkernel 1 tensor tensor/wmma424fp32/wmma424fp32.metadata tensor/wmma424fp32/wmma424fp32.data --numcycle 2000
 RUNFLAGS_vectormma = --numkernel 1 tensor tensor/wmma484fp32/vectormma.metadata tensor/wmma484fp32/vectormma.data --numcycle 6000

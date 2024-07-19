@@ -34,7 +34,7 @@ inline constexpr int IFIFO_SIZE = 10;
 inline constexpr int OPCFIFO_SIZE = 4;
 inline constexpr int BANK_NUM = 4;
 inline constexpr int NUM_SM = 2;
-inline constexpr int num_register_per_warp = 64; // 每个warp寄存器数目
+inline constexpr int num_register_per_warp = 256; // 每个warp寄存器数目
 inline constexpr int NUM_MAX_KERNEL = 8;
 inline constexpr unsigned max_concurrent_kernel = 4; // 正在运行的kernel的最大数量
 inline constexpr unsigned hw_lds_size = 0x1000000;   // core的总localmem大小
@@ -1637,24 +1637,24 @@ public:
 
     explicit WARP_BONE(int warp_id)
         : warp_id(warp_id),
-          is_warp_activated(("is_warp_activated_W" + std::to_string(warp_id)).c_str()),
-          ibuf_swallow(("ibuf_swallow_warp_W" + std::to_string(warp_id)).c_str()),
-          fetch_valid(("fetch_valid_W" + std::to_string(warp_id)).c_str()),
-          fetch_valid2(("fetch_valid2_W" + std::to_string(warp_id)).c_str()),
-          jump(("jump_W" + std::to_string(warp_id)).c_str()),
-          branch_sig(("branch_sig_W" + std::to_string(warp_id)).c_str()),
-          vbran_sig(("vbran_sig_W" + std::to_string(warp_id)).c_str()),
-          jump_addr(("jump_addr_W" + std::to_string(warp_id)).c_str()),
-          pc(("pc_W" + std::to_string(warp_id)).c_str()),
-          decode_ins(("decode_ins_W" + std::to_string(warp_id)).c_str()),
-          ibuf_empty(("ibuf_empty_W" + std::to_string(warp_id)).c_str()),
-          ibuf_full(("ibuf_full_W" + std::to_string(warp_id)).c_str()),
-          ibuftop_ins(("ibuftop_ins_W" + std::to_string(warp_id)).c_str()),
-          ififo_elem_num(("ififo_elem_num_W" + std::to_string(warp_id)).c_str()),
-          dispatch_warp_valid(("dispatch_warp_valid_W" + std::to_string(warp_id)).c_str()),
-          current_mask(("current_mask_W" + std::to_string(warp_id)).c_str()),
-          simtstk_jumpaddr(("simtstk_jumpaddr_W" + std::to_string(warp_id)).c_str()),
-          simtstk_jump(("simtstk_jump_W" + std::to_string(warp_id)).c_str())
+          is_warp_activated(("is_warp_activated_Warp" + std::to_string(warp_id)).c_str()),
+          ibuf_swallow(("ibuf_swallow_warp_Warp" + std::to_string(warp_id)).c_str()),
+          fetch_valid(("fetch_valid_Warp" + std::to_string(warp_id)).c_str()),
+          fetch_valid2(("fetch_valid2_Warp" + std::to_string(warp_id)).c_str()),
+          jump(("jump_Warp" + std::to_string(warp_id)).c_str()),
+          branch_sig(("branch_sig_Warp" + std::to_string(warp_id)).c_str()),
+          vbran_sig(("vbran_sig_Warp" + std::to_string(warp_id)).c_str()),
+          jump_addr(("jump_addr_Warp" + std::to_string(warp_id)).c_str()),
+          pc(("pc_Warp" + std::to_string(warp_id)).c_str()),
+          decode_ins(("decode_ins_Warp" + std::to_string(warp_id)).c_str()),
+          ibuf_empty(("ibuf_empty_Warp" + std::to_string(warp_id)).c_str()),
+          ibuf_full(("ibuf_full_Warp" + std::to_string(warp_id)).c_str()),
+          ibuftop_ins(("ibuftop_ins_Warp" + std::to_string(warp_id)).c_str()),
+          ififo_elem_num(("ififo_elem_num_Warp" + std::to_string(warp_id)).c_str()),
+          dispatch_warp_valid(("dispatch_warp_valid_Warp" + std::to_string(warp_id)).c_str()),
+          current_mask(("current_mask_Warp" + std::to_string(warp_id)).c_str()),
+          simtstk_jumpaddr(("simtstk_jumpaddr_Warp" + std::to_string(warp_id)).c_str()),
+          simtstk_jump(("simtstk_jump_Warp" + std::to_string(warp_id)).c_str())
     {
         current_mask.write(~sc_bv<hw_num_thread>());
     }
@@ -1671,7 +1671,7 @@ public:
         CSR_reg.fill(0);
         std::stack<simtstack_t>().swap(IPDOM_stack);
 
-        flush_pipeline.write(true);
+        endprg_flush_pipe.write(true);
     }
 
     sc_signal<bool, SC_MANY_WRITERS> is_warp_activated;
@@ -1701,8 +1701,8 @@ public:
     I_TYPE _scoretmpins;
     std::set<SCORE_TYPE> score; // record regfile addr that's to be written
     bool wait_bran;             // 应该使用C++类型；dispatch了分支指令，则要暂停dispatch等待分支指令被执行
-    // issue
-    sc_event ev_issue;
+    // warp scheduling
+    sc_event ev_warp_dispatch;
     // regfile
     std::array<reg_t, num_register_per_warp> s_regfile;
     std::array<v_regfile_t, num_register_per_warp> v_regfile;
@@ -1713,7 +1713,7 @@ public:
     sc_signal<int> simtstk_jumpaddr;                               // out_pc
     sc_signal<bool> simtstk_jump;                                  // fetch跳转的控制信号
 
-    sc_signal<bool> flush_pipeline;
+    sc_signal<bool> endprg_flush_pipe;
 };
 
 // union FloatAndInt
