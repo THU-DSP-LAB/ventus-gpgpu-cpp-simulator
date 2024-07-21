@@ -38,6 +38,7 @@ static struct {
   Callback callbacks[MAX_CALLBACKS];
 } L;
 
+void log_get_timestamp(char *buf, int len);
 
 static const char *level_strings[] = {
   "TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL"
@@ -53,6 +54,7 @@ static const char *level_colors[] = {
 static void stdout_callback(log_Event *ev) {
   char buf[16] = {0};
   //buf[strftime(buf, sizeof(buf), "%H:%M:%S", ev->time)] = '\0';
+  log_get_timestamp(buf, 16);
 #ifdef LOG_USE_COLOR
   fprintf(
     ev->udata, "%s %s%-5s\x1b[0m \x1b[90m%s:%d:\x1b[0m ",
