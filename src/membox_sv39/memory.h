@@ -1,6 +1,7 @@
 #pragma once
 
 #include "page.h"
+#include <cassert>
 
 class Memory{
 public:
@@ -16,12 +17,14 @@ public:
     uint64_t createRootPageTable(){
         uint64_t root = pmm->findUsable(SV39::PageSize);
         if(root != 0)
-            pmm->insertBlock(Block(root, SV39::PageSize, true));
+            pmm->insertBlock(std::move(Block(root, SV39::PageSize, true).initialize_zero())); // init all PTEs to 0
+        else 
+            log_error("Failed to create pagetable root");
         return root;
     }
     // 申请物理地址, 根据虚拟地址创建/写入页表项
     uint64_t allocateMemory(uint64_t root, uint64_t v_addr, uint64_t length){
-        length = (length + SV39::PageSize - 1) / SV39::PageSize * SV39::PageSize;
+        length = (length + SV39::PageSize - 1) / SV39::PageSize * SV39::PageSize;   // align to page size
         uint64_t p_addr = pmm->findUsable(length);
         if(p_addr == 0ull)
             return 0ull;
@@ -37,7 +40,9 @@ public:
                     if(!pt1_addr){
                         return 0;
                     }
-                    pmm->insertBlock(Block(pt1_addr, SV39::PageSize, true)); // create and insert a PT1
+                    auto new_block = Block(pt1_addr, SV39::PageSize, true);
+                    new_block.initialize_zero();        // init all PTEs to 0
+                    pmm->insertBlock(Block(new_block)); // create and insert a PT1
                     uint64_t rootpt_entry = SV39::SetPTE(pt1_addr, SV39::V);
                     pmm->writeWord<uint64_t>(root + pt_idx[0]*sizeof(uint64_t), rootpt_entry);  // set rootPT entry
                 }
@@ -51,7 +56,7 @@ public:
                     if(!pt2_addr){
                         return 0;
                     }
-                    pmm->insertBlock(Block(pt2_addr, SV39::PageSize, true)); // create and insert a PT2
+                    pmm->insertBlock(std::move(Block(pt2_addr, SV39::PageSize, true).initialize_zero())); // create and insert a PT2
                     uint64_t pt1_entry = SV39::SetPTE(pt2_addr, SV39::V);
                     pmm->writeWord<uint64_t>(pt1_addr + pt_idx[1]*sizeof(uint64_t), pt1_entry);  // set PT1 entry
                 }
@@ -80,8 +85,12 @@ public:
     }
     // 用虚拟地址读数据
     int readDataVirtual(uint64_t root, uint64_t v_addr, uint64_t size, void *out){
+        assert(v_addr < (1ull << 32ull));               // 当前版本Ventus只支持32bit地址空间
         uint64_t vpn = 0ull; uint64_t len = 0ull;
         uint64_t p_addr = addrConvert(root, v_addr);
+        if(p_addr > (1ull << 32ull)){                   // for debug
+            log_error("Pagetable return incorrect physical address");
+        }
         for(uint64_t it = 0ull; it < size; it++){
             if(vpn != ((v_addr + it) & 0x0000007ffffff000ull)){
                 if(len){

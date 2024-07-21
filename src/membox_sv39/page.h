@@ -31,7 +31,7 @@ public:
     Block(uint64_t addr, uint64_t size, bool create_pages = true):
     addr(addr), size(size){
         if(create_pages) {
-            uint64_t num = (size + SV39::PageSize - 1) / SV39::PageSize;
+            uint64_t num = (size + SV39::PageSize - 1) / SV39::PageSize;    // number of pages needed
             pages = new Pages(num * SV39::PageSize);
         }
         else
@@ -104,6 +104,12 @@ public:
             out[i] = pages->data[base + i];
         }
         return 0;
+    }
+    Block& initialize_zero() {
+        if (pages != nullptr) {
+            std::fill(pages->data, pages->data + size, 0);
+        }
+        return *this;
     }
 };
 
@@ -253,5 +259,6 @@ public:
             }
         }
         return 0ull;
+        log_warn("Usable memory address not found");
     }
 };
