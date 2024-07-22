@@ -4,13 +4,33 @@
 #include "CTA_Scheduler.hpp"
 #include <chrono>
 #include <fstream>
+#include <memory>
 #include "membox_sv39/memory.h"
+#include "task.hpp"
 #include "utils/log.h"
+#include "host.hpp"
 
 int sc_main(int argc, char *argv[])
 {
+    std::ios::sync_with_stdio(true);
     // 虚拟内存与页表
     Memory mem(1ull << 32ull);
+
+    std::cout << "----------Initializing SM data-structures----------\n";
+    BASE **BASE_impl;
+    BASE_impl = new BASE *[NUM_SM];
+    for (int i = 0; i < NUM_SM; i++)
+    {
+        BASE_impl[i] = new BASE(("SM" + std::to_string(i)).c_str(), i, &mem);
+    }
+    BASE_sti BASE_sti_impl("BASE_STI");
+
+    std::cout << "----------Initializing CTAs----------\n";
+    CTA_Scheduler cta_impl("CTA_Scheduler");
+    cta_impl.sm_group = BASE_impl;
+    // cta_impl.CTA_INIT();
+    
+    Host host_impl("Host_GPGPU_Driver", &mem, &cta_impl);
 
     // 处理命令行参数
     std::string metafile, datafile, numcycle, kernelName;
@@ -20,9 +40,10 @@ int sc_main(int argc, char *argv[])
     {
         if (strcmp(argv[i], "--numkernel") == 0)
         {
+            std::shared_ptr<task_t> task = std::make_shared<task_t>(0, "Main task", mem.createRootPageTable());
+            host_impl.add_task(task);
             numkernel = std::stoi(argv[i + 1]);
             i++;
-            m_running_kernels.resize(numkernel);
             for (int j = 0; j < numkernel; j++)
             {
                 kernelName = argv[i + 1];
@@ -31,10 +52,11 @@ int sc_main(int argc, char *argv[])
                 i++;
                 datafile = argv[i + 1];
                 i++;
-                log_trace("Initializing kernel %s info ...", kernelName.c_str());
-                m_running_kernels[j] = std::make_shared<kernel_info_t>(
+                log_debug("Initializing kernel %s info ...", kernelName.c_str());
+                auto root = mem.createRootPageTable();
+                task->add_kernel(std::make_shared<kernel_info_t>(j, 
                     kernelName, "./testcase/" + metafile, "./testcase/" + datafile,
-                    mem.createRootPageTable(), &mem);
+                    root, &mem));
             }
         }
         if (strcmp(argv[i], "--metafile") == 0)
@@ -55,20 +77,6 @@ int sc_main(int argc, char *argv[])
     }
     std::cout << "Finish reading runtime args\n";
 
-    std::cout << "----------Initializing SM data-structures----------\n";
-    BASE **BASE_impl;
-    BASE_impl = new BASE *[NUM_SM];
-    for (int i = 0; i < NUM_SM; i++)
-    {
-        BASE_impl[i] = new BASE(("SM" + std::to_string(i)).c_str(), i, &mem);
-    }
-    BASE_sti BASE_sti_impl("BASE_STI");
-
-    std::cout << "----------Initializing CTAs----------\n";
-    CTA_Scheduler cta_impl("CTA_Scheduler");
-    cta_impl.set_running_kernels(m_running_kernels);
-    cta_impl.sm_group = BASE_impl;
-    // cta_impl.CTA_INIT();
 
     for (int i = 0; i < NUM_SM; i++)
     {
@@ -94,10 +102,11 @@ int sc_main(int argc, char *argv[])
         (*BASE_impl[i]).clk(clk);
         (*BASE_impl[i]).rst_n(rst_n);
     }
-    cta_impl.rst_n(rst_n);
     BASE_sti_impl.rst_n(rst_n);
-
     cta_impl.clk(clk);
+    cta_impl.rst_n(rst_n);
+    host_impl.clk(clk);
+    host_impl.rst_n(rst_n);
 
     sc_trace_file *tf[hw_num_warp];
     BASE *recordwave_SM = BASE_impl[1];

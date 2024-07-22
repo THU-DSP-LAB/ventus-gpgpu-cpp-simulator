@@ -2,6 +2,7 @@
 #define BASE_H_
 
 #define SC_INCLUDE_DYNAMIC_PROCESSES
+#include <systemc.h>
 #include "../parameters.h"
 //#include "../CTA_Scheduler.hpp"
 #include "../context_model.hpp"
@@ -105,102 +106,7 @@ public:
         issue_ins = I_TYPE(INVALID_, 0, 0, 0);
     }
 
-    BASE(sc_core::sc_module_name name, int _sm_id, Memory *mem)
-        : sc_module(name), sm_id(_sm_id),
-          m_cta_scheduler(nullptr), m_mem(mem)
-    {
-        for (int warp_id = 0; warp_id < hw_num_warp; warp_id++)
-        {
-            WARP_BONE *new_warp_bone_ = new WARP_BONE(warp_id);
-            m_hw_warps[warp_id] = new_warp_bone_;
-        }
-        SC_HAS_PROCESS(BASE);
-
-        SC_THREAD(debug_sti);
-        // SC_THREAD(debug_display);
-        // SC_THREAD(debug_display1);
-        // SC_THREAD(debug_display2);
-        // SC_THREAD(debug_display3);
-        SC_THREAD(INIT_INSTABLE);
-        SC_THREAD(INIT_DECODETABLE);
-
-        for (int i = 0; i < hw_num_warp; i++)
-        {
-            sc_spawn(sc_bind(&BASE::PROGRAM_COUNTER, this, i), ("warp" + std::to_string(i) + "_PROGRAM_COUNTER").c_str());
-            sc_spawn(sc_bind(&BASE::INSTRUCTION_REG, this, i), ("warp" + std::to_string(i) + "_INSTRUCTION_REG").c_str());
-            sc_spawn(sc_bind(&BASE::DECODE, this, i), ("warp" + std::to_string(i) + "_DECODE").c_str());
-            // sc_spawn(sc_bind(&BASE::IBUF_ACTION, this, i), ("warp" + std::to_string(i) + "_IBUF_ACTION").c_str());
-            // sc_spawn(sc_bind(&BASE::JUDGE_DISPATCH, this, i), ("warp" + std::to_string(i) + "_JUDGE_DISPATCH").c_str());
-            sc_spawn(sc_bind(&BASE::BEFORE_DISPATCH, this, i), ("warp" + std::to_string(i) + "_BEFORE_DISPATCH").c_str());
-            // sc_spawn(sc_bind(&BASE::INIT_REG, this, i), ("warp" + std::to_string(i) + "_INIT_REG").c_str());
-            sc_spawn(sc_bind(&BASE::SIMT_STACK, this, i), ("warp" + std::to_string(i) + "_SIMT_STACK").c_str());
-            sc_spawn(sc_bind(&BASE::WRITE_REG, this, i), ("warp" + std::to_string(i) + "_WRITE_REG").c_str());
-        }
-
-        // issue
-        SC_THREAD(WARP_SCHEDULER);
-        // opc
-        SC_THREAD(OPC_FIFO);
-        sensitive << clk.pos();
-        SC_THREAD(OPC_FETCH);
-        sensitive << clk.pos();
-        SC_THREAD(OPC_EMIT);
-        sensitive << clk.pos();
-        // regfile
-        SC_THREAD(READ_REG);
-        // exec
-        SC_THREAD(SALU_IN);
-        sensitive << clk.pos();
-        SC_THREAD(SALU_CALC);
-        sensitive << clk.pos();
-        SC_THREAD(SALU_CTRL);
-
-        SC_THREAD(VALU_IN);
-        sensitive << clk.pos();
-        SC_THREAD(VALU_CALC);
-        sensitive << clk.pos();
-        SC_THREAD(VALU_CTRL);
-
-        SC_THREAD(VFPU_IN);
-        sensitive << clk.pos();
-        SC_THREAD(VFPU_CALC);
-        sensitive << clk.pos();
-        SC_THREAD(VFPU_CTRL);
-
-        SC_THREAD(LSU_IN);
-        sensitive << clk.pos();
-        SC_THREAD(LSU_CALC);
-        sensitive << clk.pos();
-        SC_THREAD(LSU_CTRL);
-
-        SC_THREAD(CSR_IN);
-        sensitive << clk.pos();
-        SC_THREAD(CSR_CALC);
-        sensitive << clk.pos();
-        SC_THREAD(CSR_CTRL);
-
-        SC_THREAD(MUL_IN);
-        sensitive << clk.pos();
-        SC_THREAD(MUL_CALC);
-        sensitive << clk.pos();
-        SC_THREAD(MUL_CTRL);
-
-        SC_THREAD(SFU_IN);
-        sensitive << clk.pos();
-        SC_THREAD(SFU_CALC);
-        sensitive << clk.pos();
-        SC_THREAD(SFU_CTRL);
-
-        SC_THREAD(TC_IN);
-        sensitive << clk.pos();
-        SC_THREAD(TC_CALC);
-        sensitive << clk.pos();
-        SC_THREAD(TC_CTRL);
-
-        // writeback
-        SC_THREAD(WRITE_BACK);
-        sensitive << clk.pos();
-    }
+    BASE(sc_core::sc_module_name name, int _sm_id, Memory *mem);
 
 public:
     std::map<OP_TYPE, decodedat> decode_table;

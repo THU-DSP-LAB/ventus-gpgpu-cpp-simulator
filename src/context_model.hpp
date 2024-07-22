@@ -2,7 +2,9 @@
 #define CONTEXT_MODEL_H_
 
 #include "parameters.h"
+#include <functional>
 #include <memory>
+#include <string>
 #include "membox_sv39/memory.h"
 
 struct dim3
@@ -26,23 +28,25 @@ struct meta_data_t
     uint64_t vgprUsage;         ///> 每个thread使用的向量寄存器数目
     uint64_t pdsBaseAddr;       ///> private memory的基址，要转成每个workgroup的基地址， wf_size*wg_size*pdsSize
     uint64_t num_buffer;        ///> buffer的数目，包括pc
-    uint64_t *buffer_base;      ///> 各buffer的基址。第一块buffer是给硬件用的metadata
+    uint64_t *buffer_base;      ///> 各buffer的基址
     uint64_t *buffer_size;      ///> 各buffer的size，以Bytes为单位。实际使用的大小，用于初始化.data
     uint64_t *buffer_allocsize; ///> 各buffer的size，以Bytes为单位。分配的大小
 
     int insBufferIndex; // 指令在哪一个buffer
 };
 
+class task_t;
+
 class kernel_info_t
 {
 public:
-    std::vector<std::vector<uint8_t>> *m_buffer_data;
-
-    kernel_info_t(const std::string &kernel_name, const std::string &metadata_file, const std::string &data_file,
+    kernel_info_t(uint32_t kernel_id, const std::string &kernel_name, const std::string &metadata_file, const std::string &data_file,
                   uint64_t pagetable, Memory *mem);
+    kernel_info_t(uint32_t kernel_id, const std::string &kernel_name, const std::string &metadata_file, const std::string &data_file,
+                  task_t *task, Memory *mem);
 
     bool no_more_ctas_to_run() const;
-    uint32_t get_kid() { return kernelID; }
+    uint32_t get_kid() { return m_kernel_id; }
     std::string get_kname() { return m_kernel_name; }
     dim3 get_next_cta_id() const { return m_next_cta; }
     unsigned get_next_cta_id_single() const;
@@ -58,11 +62,18 @@ public:
     uint64_t get_metadata_baseaddr() { return m_metadata.metaDataBaseAddr; }
     uint64_t get_pagetable() const { return m_pagetable; }
 
+    int m_num_sm_running_this;
+
+    // After kernel finished
+    void finish();
+    std::function<void ()> m_finish_callback;
+
 private:
     uint64_t m_pagetable;        // pagetable root (address space ID), see membox_sv39/memory.h
-    std::string m_kernel_name;
+    const std::string m_data_filename;
+    const std::string m_kernel_name;
     meta_data_t m_metadata;
-    uint32_t kernelID;
+    const uint32_t m_kernel_id;
     unsigned m_running_cta;      // 当前正在运行的cta数量
     std::array<int, MAX_RUNNING_CTA_PER_KERNEL> m_cta_status_panel;
 
@@ -76,11 +87,14 @@ private:
     void assignMetadata(const std::vector<uint64_t> &metadata, meta_data_t &mtd);
 
     // Load testcase.data file
-    void readTextFile(const std::string &filename, std::vector<std::vector<uint8_t>> &buffers, meta_data_t mtd, Memory *mem);
-    void init_extmem(std::string datafile, Memory *mem);
+    void readTextFile(const std::string &filename, meta_data_t mtd, Memory *mem);
+    void activate(std::string datafile, Memory *mem);
 
     dim3 m_next_cta = {0, 0, 0}; // start from 0 ~ (grid_dim - 1)
     dim3 m_grid_dim;
+    
+    // After kernel finished
+    task_t *m_task;
 
 public:
     uint64_t start_cycle;

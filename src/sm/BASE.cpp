@@ -1,5 +1,102 @@
 #include "BASE.h"
 
+BASE::BASE(sc_core::sc_module_name name, int _sm_id, Memory *mem)
+    : sc_module(name), sm_id(_sm_id),
+      m_cta_scheduler(nullptr), m_mem(mem)
+{
+    for (int warp_id = 0; warp_id < hw_num_warp; warp_id++)
+    {
+        WARP_BONE *new_warp_bone_ = new WARP_BONE(warp_id);
+        m_hw_warps[warp_id] = new_warp_bone_;
+    }
+    SC_HAS_PROCESS(BASE);
+
+    SC_THREAD(debug_sti);
+    // SC_THREAD(debug_display);
+    // SC_THREAD(debug_display1);
+    // SC_THREAD(debug_display2);
+    // SC_THREAD(debug_display3);
+    SC_THREAD(INIT_INSTABLE);
+    SC_THREAD(INIT_DECODETABLE);
+
+    for (int i = 0; i < hw_num_warp; i++)
+    {
+        sc_core::sc_spawn(sc_bind(&BASE::PROGRAM_COUNTER, this, i), ("warp" + std::to_string(i) + "_PROGRAM_COUNTER").c_str());
+        sc_core::sc_spawn(sc_bind(&BASE::INSTRUCTION_REG, this, i), ("warp" + std::to_string(i) + "_INSTRUCTION_REG").c_str());
+        sc_core::sc_spawn(sc_bind(&BASE::DECODE, this, i), ("warp" + std::to_string(i) + "_DECODE").c_str());
+        // sc_core::sc_spawn(sc_bind(&BASE::IBUF_ACTION, this, i), ("warp" + std::to_string(i) + "_IBUF_ACTION").c_str());
+        // sc_core::sc_spawn(sc_bind(&BASE::JUDGE_DISPATCH, this, i), ("warp" + std::to_string(i) + "_JUDGE_DISPATCH").c_str());
+        sc_core::sc_spawn(sc_bind(&BASE::BEFORE_DISPATCH, this, i), ("warp" + std::to_string(i) + "_BEFORE_DISPATCH").c_str());
+        // sc_core::sc_spawn(sc_bind(&BASE::INIT_REG, this, i), ("warp" + std::to_string(i) + "_INIT_REG").c_str());
+        sc_core::sc_spawn(sc_bind(&BASE::SIMT_STACK, this, i), ("warp" + std::to_string(i) + "_SIMT_STACK").c_str());
+        sc_core::sc_spawn(sc_bind(&BASE::WRITE_REG, this, i), ("warp" + std::to_string(i) + "_WRITE_REG").c_str());
+    }
+
+    // issue
+    SC_THREAD(WARP_SCHEDULER);
+    // opc
+    SC_THREAD(OPC_FIFO);
+    sensitive << clk.pos();
+    SC_THREAD(OPC_FETCH);
+    sensitive << clk.pos();
+    SC_THREAD(OPC_EMIT);
+    sensitive << clk.pos();
+    // regfile
+    SC_THREAD(READ_REG);
+    // exec
+    SC_THREAD(SALU_IN);
+    sensitive << clk.pos();
+    SC_THREAD(SALU_CALC);
+    sensitive << clk.pos();
+    SC_THREAD(SALU_CTRL);
+
+    SC_THREAD(VALU_IN);
+    sensitive << clk.pos();
+    SC_THREAD(VALU_CALC);
+    sensitive << clk.pos();
+    SC_THREAD(VALU_CTRL);
+
+    SC_THREAD(VFPU_IN);
+    sensitive << clk.pos();
+    SC_THREAD(VFPU_CALC);
+    sensitive << clk.pos();
+    SC_THREAD(VFPU_CTRL);
+
+    SC_THREAD(LSU_IN);
+    sensitive << clk.pos();
+    SC_THREAD(LSU_CALC);
+    sensitive << clk.pos();
+    SC_THREAD(LSU_CTRL);
+
+    SC_THREAD(CSR_IN);
+    sensitive << clk.pos();
+    SC_THREAD(CSR_CALC);
+    sensitive << clk.pos();
+    SC_THREAD(CSR_CTRL);
+
+    SC_THREAD(MUL_IN);
+    sensitive << clk.pos();
+    SC_THREAD(MUL_CALC);
+    sensitive << clk.pos();
+    SC_THREAD(MUL_CTRL);
+
+    SC_THREAD(SFU_IN);
+    sensitive << clk.pos();
+    SC_THREAD(SFU_CALC);
+    sensitive << clk.pos();
+    SC_THREAD(SFU_CTRL);
+
+    SC_THREAD(TC_IN);
+    sensitive << clk.pos();
+    SC_THREAD(TC_CALC);
+    sensitive << clk.pos();
+    SC_THREAD(TC_CTRL);
+
+    // writeback
+    SC_THREAD(WRITE_BACK);
+    sensitive << clk.pos();
+}
+
 void BASE::debug_sti()
 {
     while (true)
@@ -387,8 +484,27 @@ bool BASE::can_issue_1block(std::shared_ptr<kernel_info_t> kernel)
 {
     if (max_cta_num(kernel) < 1)
         return false;
-    else
-        return true;
+    else {
+        // 若找到core中空闲的一组warp，则可以分派线程块
+        bool found_idle_cta_slot;
+        for (int idx = 0; idx < MAX_CTA_PER_CORE; idx++)
+        {
+            found_idle_cta_slot = true;
+            for(int i = 0; i < kernel->get_num_warp_per_cta(); i++) {
+                uint32_t wid = idx * kernel->get_num_warp_per_cta() + i;
+                if(wid >= hw_num_warp) {
+                    return false;
+                } else {
+                    found_idle_cta_slot = !m_hw_warps[wid]->is_warp_activated;
+                    if(!found_idle_cta_slot) break;
+                }
+            }
+            if(found_idle_cta_slot) {
+                return true;
+            }
+        }
+        return false;
+    }
 }
 
 unsigned BASE::max_cta_num(std::shared_ptr<kernel_info_t> kernel)
@@ -419,14 +535,22 @@ void BASE::issue_block2core(std::shared_ptr<kernel_info_t> kernel)
     unsigned free_ctaid_in_core; // 为cta分配的core内ctaid. 对于给定kernel，存在ctaid和warp之间的确定映射
     unsigned hw_start_warpid = (unsigned)-1;
 
+    assert(can_issue_1block(kernel));
     // 找到core中空闲的一组warp和相应的ctaid
     for (int idx = 0; idx < MAX_CTA_PER_CORE; idx++)
     {
-        unsigned start_warpid_try = idx * kernel_num_warp_per_cta;
-        if (m_hw_warps[start_warpid_try]->is_warp_activated.read() == false)
-        {
-            free_ctaid_in_core = idx;
-            hw_start_warpid = start_warpid_try;
+        free_ctaid_in_core = idx;
+        for(int i = 0; i < kernel->get_num_warp_per_cta(); i++) {
+            uint32_t wid = idx * kernel->get_num_warp_per_cta() + i;
+            if(wid >= hw_num_warp) {
+                assert(0);
+            } else if(m_hw_warps[wid]->is_warp_activated){
+                free_ctaid_in_core = -1;
+                break;
+            }
+        }
+        if(free_ctaid_in_core == idx) {
+            hw_start_warpid = idx * kernel->get_num_warp_per_cta();
             break;
         }
     }
@@ -439,7 +563,6 @@ void BASE::issue_block2core(std::shared_ptr<kernel_info_t> kernel)
     for (unsigned widINcta = 0; widINcta < kernel_num_warp_per_cta; widINcta++)
     {
         unsigned hw_wid = widINcta + hw_start_warpid;
-        m_hw_warps[hw_wid]->is_warp_activated.write(true);
         m_hw_warps[hw_wid]->m_ctaid_in_core = free_ctaid_in_core;
         m_hw_warps[hw_wid]->CSR_reg[0x800] = widINcta * kernel_num_thread_per_warp;
         m_hw_warps[hw_wid]->CSR_reg[0x801] = kernel_num_warp_per_cta;

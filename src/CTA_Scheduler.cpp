@@ -1,4 +1,5 @@
 #include "CTA_Scheduler.hpp"
+#include <memory>
 
 bool CTA_Scheduler::isHexCharacter(char c)
 {
@@ -17,82 +18,23 @@ int CTA_Scheduler::charToHex(char c)
         return -1; // Invalid character
 }
 
-void CTA_Scheduler::freeMetadata(meta_data_t &mtd)
-{
-    delete[] mtd.buffer_base;
-    delete[] mtd.buffer_size;
-}
-
-void CTA_Scheduler::activate_warp()
-{
-    // 这个函数似乎没被调用
-
-    SC_REPORT_INFO("CTA_Scheduler", "Activating warps...");
-
-    // 处理metadata数据
-    uint64_t knum_workgroup = mtd.kernel_size[0] * mtd.kernel_size[1] * mtd.kernel_size[2]; // k means kernel
-    std::cout << "CTA: knum_workgroup=" << knum_workgroup << "\n";
-    if (knum_workgroup > 2)
-        std::cout << "CTA warning: currently not support so many workgroups\n";
-    int warp_limit = hw_num_warp;
-    std::cout << "wg_size=" << mtd.wg_size << "\n";
-    if (mtd.wg_size > warp_limit)
-        std::cout << "CTA error: wg_size=" << mtd.wg_size << " > warp_limit per SM\n";
-    for (int i = 0; i < knum_workgroup; i++)
-    {
-        int warp_counter = 0;
-        while (warp_counter < mtd.wg_size)
-        {
-            // sm_group[i]->m_hw_warps[warp_counter] = new WARP_BONE;
-            // sm_group[i]->m_hw_warps[warp_counter]->warp_id = warp_counter;
-
-            std::cout << "CTA: SM" << i << " warp" << warp_counter << " is activated\n";
-            sm_group[i]->m_hw_warps[warp_counter]->is_warp_activated = true;
-            sm_group[i]->m_hw_warps[warp_counter]->will_warp_activate = true;
-
-            sm_group[i]->m_hw_warps[warp_counter]->CSR_reg[0x300] = 0x00001800;
-
-            sm_group[i]->m_hw_warps[warp_counter]->CSR_reg[0x800] = (mtd.wg_size - warp_counter - 1) * mtd.wf_size;
-            sm_group[i]->m_hw_warps[warp_counter]->CSR_reg[0x801] = mtd.wg_size;
-            sm_group[i]->m_hw_warps[warp_counter]->CSR_reg[0x802] = mtd.wf_size;
-            sm_group[i]->m_hw_warps[warp_counter]->CSR_reg[0x803] = mtd.metaDataBaseAddr;
-            sm_group[i]->m_hw_warps[warp_counter]->CSR_reg[0x804] = 0;
-            sm_group[i]->m_hw_warps[warp_counter]->CSR_reg[0x805] = (mtd.wg_size - warp_counter - 1); // warp标号反了
-            sm_group[i]->m_hw_warps[warp_counter]->CSR_reg[0x806] = ldsBaseAddr_core;
-            sm_group[i]->m_hw_warps[warp_counter]->CSR_reg[0x807] = mtd.pdsBaseAddr;
-            sm_group[i]->m_hw_warps[warp_counter]->CSR_reg[0x808] = 0;
-            sm_group[i]->m_hw_warps[warp_counter]->CSR_reg[0x809] = 0;
-            sm_group[i]->m_hw_warps[warp_counter]->CSR_reg[0x810] = 0;
-            sm_group[i]->m_hw_warps[warp_counter]->CSR_reg[0x811] = 0;
-            ++warp_counter;
-        }
-        sm_group[i]->mtd = mtd;
-        sm_group[i]->mtd.num_buffer = sm_group[i]->mtd.num_buffer;
-        sm_group[i]->m_num_warp_activated = warp_counter;
-    }
-}
-
-void CTA_Scheduler::CTA_INIT()
-{
-    CTA_Scheduler::activate_warp();
-}
-
 std::shared_ptr<kernel_info_t> CTA_Scheduler::select_kernel()
 {
-    if (m_running_kernels[m_last_issued_kernel] != nullptr &&
+    if (m_last_issued_kernel >= 0 && m_running_kernels[m_last_issued_kernel] != nullptr &&
         !m_running_kernels[m_last_issued_kernel]->no_more_ctas_to_run())
-    {
-        if (std::find(m_executed_kernels.begin(), m_executed_kernels.end(),
-                      m_running_kernels[m_last_issued_kernel]) == m_executed_kernels.end())
-        {
-            m_executed_kernels.push_back(m_running_kernels[m_last_issued_kernel]);
-            m_running_kernels[m_last_issued_kernel]->start_cycle = uint64_t(sc_time_stamp().to_double() / PERIOD);
-        }
+    {   // 贪婪策略
+        //if (std::find(m_executed_kernels.begin(), m_executed_kernels.end(),
+        //              m_running_kernels[m_last_issued_kernel]) == m_executed_kernels.end())
+        //{
+        //    m_executed_kernels.push_back(m_running_kernels[m_last_issued_kernel]);
+        //    m_running_kernels[m_last_issued_kernel]->start_cycle = uint64_t(sc_time_stamp().to_double() / PERIOD);
+        //    assert(0);
+        //}
         return m_running_kernels[m_last_issued_kernel];
     }
 
     for (unsigned i = 0; i < m_running_kernels.size(); i++)
-    {
+    {   // 贪婪不成则轮询
         unsigned idx = (i + m_last_issued_kernel + 1) % (max_concurrent_kernel < m_running_kernels.size() ? max_concurrent_kernel : m_running_kernels.size());
         if (m_running_kernels[idx] != nullptr && !m_running_kernels[idx]->no_more_ctas_to_run())
         {
@@ -101,7 +43,7 @@ std::shared_ptr<kernel_info_t> CTA_Scheduler::select_kernel()
             {
                 m_executed_kernels.push_back(m_running_kernels[idx]);
                 m_running_kernels[idx]->start_cycle = uint64_t(sc_time_stamp().to_double() / PERIOD);
-            }
+            } else assert(0);
             m_last_issued_kernel = idx;
             return m_running_kernels[idx];
         }
@@ -124,6 +66,7 @@ void CTA_Scheduler::schedule_kernel2core()
             continue;
         }
 
+        // For each SM, check its status. Dispatch new CTA or change to new kernel if needed.
         for (int i = 0; i < NUM_SM; i++)
         {
             const unsigned sm_idx = (i + m_last_issue_core + 1) % NUM_SM;
@@ -131,11 +74,13 @@ void CTA_Scheduler::schedule_kernel2core()
 
             // Check if this SM needs changing to a new kernel, and change it if needed
             auto kernel = sm->get_current_kernel();
-            if (kernel == nullptr)
+            if (kernel == nullptr || !sm->m_current_kernel_running)
             {
                 kernel = select_kernel();
-                if (kernel != nullptr)
+                if (kernel != nullptr) {
                     sm->set_kernel(kernel);
+                    kernel->m_num_sm_running_this++;
+                }
             } 
             else if(kernel->no_more_ctas_to_run() && sm->m_current_kernel_running)
             {
@@ -150,10 +95,16 @@ void CTA_Scheduler::schedule_kernel2core()
                 if (warp_all_finished) {        // change to a new kernel
                     sm->m_current_kernel_completed = true;
                     sm->m_current_kernel_running = false;       // The new kernel will start to run later
-                    std::cout << "SM" << sm_idx << " finishing kernel " << kernel->get_kname() << " at " << sc_time_stamp() << std::endl;
-                    kernel = select_kernel();
-                    if (kernel != nullptr)
+                    log_debug("SM%d finish kernel%d %s", sm_idx, kernel->get_kid(), kernel->get_kname().c_str());
+                    kernel->m_num_sm_running_this--;
+                    if(kernel->m_num_sm_running_this == 0) {
+                        kernel->finish();
+                    }
+                    kernel = select_kernel();   // get new kernel
+                    if (kernel != nullptr){
                         sm->set_kernel(kernel);
+                        kernel->m_num_sm_running_this++;
+                    }
                 }
             }
 
@@ -171,3 +122,10 @@ void CTA_Scheduler::schedule_kernel2core()
         }
     }
 }
+
+bool CTA_Scheduler::kernel_add(std::shared_ptr<kernel_info_t> kernel) {
+    m_running_kernels.push_back(kernel);
+    return true;
+}
+
+

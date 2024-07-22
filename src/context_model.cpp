@@ -1,14 +1,41 @@
 #include "context_model.hpp"
+#include "task.hpp"
 #include "utils/log.h"
+#include <iterator>
 
-kernel_info_t::kernel_info_t(const std::string& kernel_name, const std::string& metadata_file,
-                             const std::string& data_file, uint64_t pagetable, Memory* mem) {
-    m_pagetable = pagetable;
-    m_kernel_name = kernel_name;
+kernel_info_t::kernel_info_t(uint32_t kernel_id, const std::string& kernel_name, const std::string& metadata_file,
+                             const std::string& data_file, uint64_t pagetable, Memory* mem)
+    : m_kernel_id(kernel_id)
+    , m_pagetable(pagetable)
+    , m_kernel_name(kernel_name)
+    , m_data_filename(data_file)
+    , m_task(nullptr) {
+    m_num_sm_running_this = 0;
     initMetaData(metadata_file);
-    init_extmem(data_file, mem);
+    activate(data_file, mem);
     log_info("kernel %s initialized, set grid_dim = %d,%d,%d", kernel_name.c_str(), m_grid_dim.x, m_grid_dim.y,
              m_grid_dim.z);
+}
+
+kernel_info_t::kernel_info_t(uint32_t kernel_id, const std::string& kernel_name, const std::string& metadata_file,
+                             const std::string& data_file, task_t* task, Memory* mem)
+    : m_kernel_id(kernel_id)
+    , m_pagetable(task->m_pagetable)
+    , m_kernel_name(kernel_name)
+    , m_data_filename(data_file)
+    , m_task(task) {
+    m_num_sm_running_this = 0;
+    initMetaData(metadata_file);
+    activate(data_file, mem);
+    log_info("task %s kernel %s initialized, set grid_dim = %d,%d,%d", task->m_name.c_str(), kernel_name.c_str(),
+             m_grid_dim.x, m_grid_dim.y, m_grid_dim.z);
+}
+
+void kernel_info_t::finish() {
+    if(m_finish_callback) {
+        m_finish_callback();
+    }
+    log_info("Kernel%d %s finished", get_kid(), get_kname().c_str());
 }
 
 bool kernel_info_t::no_more_ctas_to_run() const {
@@ -138,8 +165,7 @@ void kernel_info_t::assignMetadata(const std::vector<uint64_t>& metadata, meta_d
 }
 
 // read (testcase.data) hexfile, and setup initial memory
-void kernel_info_t::readTextFile(const std::string& filename, std::vector<std::vector<uint8_t>>& buffers,
-                                 meta_data_t mtd, Memory* mem) {
+void kernel_info_t::readTextFile(const std::string& filename, meta_data_t mtd, Memory* mem) {
 
     std::ifstream file(filename);
     if (!file.is_open()) {
@@ -164,7 +190,6 @@ void kernel_info_t::readTextFile(const std::string& filename, std::vector<std::v
             readbytes += 4;
         }
         buffer.resize(mtd.buffer_allocsize[bufferIndex]);
-        buffers[bufferIndex] = buffer;
         mem->writeDataVirtual(get_pagetable(), mtd.buffer_base[bufferIndex], mtd.buffer_size[bufferIndex],
                               buffer.data());
         buffer.clear();
@@ -175,8 +200,5 @@ void kernel_info_t::readTextFile(const std::string& filename, std::vector<std::v
     file.close();
 }
 
-void kernel_info_t::init_extmem(std::string datafile, Memory* mem) {
-    // 此时num_buffer已经是.meta文件里的num_buffer+1，包含了末尾的local buffer
-    m_buffer_data = new std::vector<std::vector<uint8_t>>(m_metadata.num_buffer);
-    readTextFile(datafile, *m_buffer_data, m_metadata, mem);
-}
+// 激活Kernel，载入初始数据，随时开始运行
+void kernel_info_t::activate(std::string datafile, Memory* mem) { readTextFile(datafile, m_metadata, mem); }
