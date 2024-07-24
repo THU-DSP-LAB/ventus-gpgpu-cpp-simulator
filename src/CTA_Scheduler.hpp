@@ -47,6 +47,7 @@ private:
 
     std::vector<std::shared_ptr<kernel_info_t>> m_running_kernels;
     std::vector<std::shared_ptr<kernel_info_t>> m_executed_kernels; // kernel第一次被issue，加入executed列表
+    //std::vector<std::shared_ptr<kernel_info_t>> m_finished_kernels; // kernel执行完毕，加入finished列表
     int m_last_issued_kernel = -1;      // -1 = none is selected (initial state)
     uint32_t m_last_issue_core = 0;
 };

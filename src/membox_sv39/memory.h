@@ -22,9 +22,42 @@ public:
             log_error("Failed to create pagetable root");
         return root;
     }
-    // 申请物理地址, 根据虚拟地址创建/写入页表项
-    uint64_t allocateMemory(uint64_t root, uint64_t v_addr, uint64_t length){
-        length = (length + SV39::PageSize - 1) / SV39::PageSize * SV39::PageSize;   // align to page size
+    // 申请物理地址, 根据虚拟地址创建/写入页表项，允许新申请内存区域与已有分配重叠
+    void allocateMemory(uint64_t root, uint64_t v_addr, uint64_t length){
+        assert((v_addr & 0xfff) == 0);  // 当前假定v_addr总是一个页的基址，确保物理内存总以页为基本单位来分配
+                                        // 如此，只需检测虚拟地址是否能够正常解析为物理地址即可获悉此页是否已被分配
+        if(length == 0)
+            return;
+        length = (length + SV39::PageSize - 1) / SV39::PageSize * SV39::PageSize;   // ceil align to page size
+
+        // Check if these v_addr have already been allocated
+        // If so, just use the old page
+        // else, allocateMemory_raw
+
+        if(addrConvert(root, v_addr) != 0) {
+            uint64_t addr = v_addr + SV39::PageSize;
+            while((addr - v_addr < length) && addrConvert(root, addr) != 0) {
+                addr += SV39::PageSize;
+            }
+            length -= addr - v_addr;
+            return allocateMemory(root, addr, length);
+        } else {
+            uint64_t addr = v_addr + SV39::PageSize;
+            while((addr - v_addr < length) && addrConvert(root, addr) == 0) {
+                addr += SV39::PageSize;
+            }
+            length -= addr - v_addr;
+            allocateMemory_raw(root, v_addr, addr - v_addr);
+            return allocateMemory(root, addr, length);
+        }
+    }
+    // 申请物理地址, 根据虚拟地址创建/写入页表项，不允许新申请内存区域与已有分配重叠
+    uint64_t allocateMemory_raw(uint64_t root, uint64_t v_addr, uint64_t length){
+        //uint64_t v_addr_begin = v_addr &~ 0xfff;
+        //uint64_t v_addr_end = (v_addr + length + SV29::PageSize)
+        assert((v_addr & 0xfff) == 0);  // 当前假定v_addr总是一个页的基址，确保物理内存总以页为基本单位来分配
+                                        // 如此，只需检测虚拟地址是否能够正常解析为物理地址即可获悉此页是否已被分配
+        length = (length + SV39::PageSize - 1) / SV39::PageSize * SV39::PageSize;   // ceil align to page size
         uint64_t p_addr = pmm->findUsable(length);
         if(p_addr == 0ull)
             return 0ull;

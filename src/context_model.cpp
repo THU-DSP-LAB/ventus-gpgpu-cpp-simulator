@@ -4,34 +4,24 @@
 #include <iterator>
 
 kernel_info_t::kernel_info_t(uint32_t kernel_id, const std::string& kernel_name, const std::string& metadata_file,
-                             const std::string& data_file, uint64_t pagetable, Memory* mem)
+                             const std::string& data_file, uint64_t pagetable)
     : m_kernel_id(kernel_id)
     , m_pagetable(pagetable)
     , m_kernel_name(kernel_name)
     , m_data_filename(data_file)
-    , m_task(nullptr) {
+    , m_is_running(false)
+    , m_is_finished(false)
+    , m_finish_callback(nullptr) {
     m_num_sm_running_this = 0;
     initMetaData(metadata_file);
-    activate(data_file, mem);
     log_info("kernel %s initialized, set grid_dim = %d,%d,%d", kernel_name.c_str(), m_grid_dim.x, m_grid_dim.y,
              m_grid_dim.z);
 }
 
-kernel_info_t::kernel_info_t(uint32_t kernel_id, const std::string& kernel_name, const std::string& metadata_file,
-                             const std::string& data_file, task_t* task, Memory* mem)
-    : m_kernel_id(kernel_id)
-    , m_pagetable(task->m_pagetable)
-    , m_kernel_name(kernel_name)
-    , m_data_filename(data_file)
-    , m_task(task) {
-    m_num_sm_running_this = 0;
-    initMetaData(metadata_file);
-    activate(data_file, mem);
-    log_info("task %s kernel %s initialized, set grid_dim = %d,%d,%d", task->m_name.c_str(), kernel_name.c_str(),
-             m_grid_dim.x, m_grid_dim.y, m_grid_dim.z);
-}
-
 void kernel_info_t::finish() {
+    assert(is_running());
+    m_is_finished = true;
+    m_is_running = false;
     if(m_finish_callback) {
         m_finish_callback();
     }
@@ -165,11 +155,11 @@ void kernel_info_t::assignMetadata(const std::vector<uint64_t>& metadata, meta_d
 }
 
 // read (testcase.data) hexfile, and setup initial memory
-void kernel_info_t::readTextFile(const std::string& filename, meta_data_t mtd, Memory* mem) {
-
-    std::ifstream file(filename);
+void kernel_info_t::readTextFile(Memory* mem) {
+    meta_data_t &mtd = m_metadata;
+    std::ifstream file(m_data_filename);
     if (!file.is_open()) {
-        log_fatal("Failed to open file: %s", filename.c_str());
+        log_fatal("Failed to open file: %s", m_data_filename.c_str());
         return;
     }
 
@@ -201,4 +191,9 @@ void kernel_info_t::readTextFile(const std::string& filename, meta_data_t mtd, M
 }
 
 // 激活Kernel，载入初始数据，随时开始运行
-void kernel_info_t::activate(std::string datafile, Memory* mem) { readTextFile(datafile, m_metadata, mem); }
+void kernel_info_t::activate(Memory* mem, std::function<void()> finish_callback) {
+    readTextFile(mem);
+    m_finish_callback = finish_callback;
+    m_is_running = true;
+    log_info("Kernel%d %s load init data", m_kernel_id, m_kernel_name.c_str());
+}

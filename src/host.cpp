@@ -1,10 +1,11 @@
 #include "host.hpp"
 #include "CTA_Scheduler.hpp"
+#include "context_model.hpp"
 #include "membox_sv39/memory.h"
 #include "task.hpp"
 #include <memory>
 
-Host::Host(sc_core::sc_module_name name, Memory *mem, CTA_Scheduler* cta)
+Host::Host(sc_core::sc_module_name name, Memory* mem, CTA_Scheduler* cta)
     : sc_module(name)
     , m_cta(cta)
     , m_mem(mem) {
@@ -13,33 +14,51 @@ Host::Host(sc_core::sc_module_name name, Memory *mem, CTA_Scheduler* cta)
 }
 
 void Host::add_kernel(std::shared_ptr<kernel_info_t> kernel) {
-    kernel_wrapper_t kwrapper;
-    kwrapper.ptr = kernel;
-    kwrapper.dispatched = false;
-    m_kernels.push_back(kwrapper);
+    assert(!kernel->is_running() && !kernel->is_finished());
+    m_kernels.push_back(kernel);
 }
 
 void Host::add_task(std::shared_ptr<task_t> task) {
-    task_wrapper_t twrapper;
-    twrapper.ptr = task;
-    twrapper.dispatched = false;
-    m_tasks.push_back(twrapper);
+    assert(!task->is_running() && !task->is_finished());
+    m_tasks.push_back(task);
+}
+
+void Host::task_add_kernel(int taskid, std::shared_ptr<kernel_info_t> kernel) {
+    assert(!kernel->is_running() && !kernel->is_finished());
+    assert(taskid < m_tasks.size());
+    assert(!m_tasks[taskid]->is_finished());
+    m_tasks[taskid]->add_kernel(kernel);
+}
+
+std::shared_ptr<task_t> Host::get_task(int id) {
+    assert(id < m_tasks.size());
+    return m_tasks[id];
+}
+
+int Host::get_num_kernel_total() const {
+    int cnt = get_num_kernel();
+    for (auto task : m_tasks) {
+        cnt += task->get_num_kernel();
+    }
+    return cnt;
 }
 
 void Host::mainThread() {
     while (true) {
         wait(clk.posedge_event());
 
-        for (auto kwrapper : m_kernels) {
-            if (!kwrapper.dispatched) {
-                m_cta->kernel_add(kwrapper.ptr);
+        for (auto& kernel : m_kernels) {
+            if (!kernel->is_running() && !kernel->is_finished()) {
+                kernel->activate(m_mem, nullptr);
+                m_cta->kernel_add(kernel);
             }
         }
 
-        for (auto twrapper : m_tasks) {
-            if (!twrapper.dispatched && !twrapper.finished) {
-                twrapper.ptr->exec(m_mem, m_cta);
-                twrapper.dispatched = true;
+        for (auto& task : m_tasks) {
+            if (!task->is_running() && !task->is_finished()) {
+                task->activate(m_mem);
+            } else if (!task->is_finished()) {
+                task->exec(m_mem, m_cta);
             }
         }
     }

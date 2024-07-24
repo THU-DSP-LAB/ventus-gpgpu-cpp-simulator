@@ -40,7 +40,7 @@ public:
     
     Block(const Block &blk):
     addr(blk.addr), size(blk.size){
-        log_trace("MemBox page.h: Block Copy Cosntructor\n");
+        //log_trace("MemBox page.h: Block Copy Cosntructor");
         if(blk.pages != nullptr){
             pages = new Pages(blk.size);
             for(uint64_t i = 0; i < size; i++){
@@ -85,7 +85,7 @@ public:
 
     int write(uint64_t base, uint64_t length, const void *data){ // 0 <= base < size
         if(base + length > size){
-            log_error("Input 0x%016lx + 0x%016lx is too long for block @0x%016lx\n", base, length, addr);
+            log_error("Input 0x%016lx + 0x%016lx is too long for block @0x%016lx", base, length, addr);
             return -1;
         }
         uint8_t *in = (uint8_t *)data;
@@ -96,7 +96,7 @@ public:
     }
     int read(uint64_t base, uint64_t length, void *data){
         if(base + length > size){
-            log_error("Input 0x%016lx + 0x%016lx is too long for block @0x%016lx\n", base, length, addr);
+            log_error("Input 0x%016lx + 0x%016lx is too long for block @0x%016lx", base, length, addr);
             return -1;
         }
         uint8_t *out = (uint8_t *)data;
@@ -153,10 +153,10 @@ public:
             }
         }
         else{
-            log_error("Block address conflict: 0x%016lx\n", blk.addr);
+            log_error("Block address conflict: 0x%016lx", blk.addr);
             return -1;
         }
-        log_error("Insert failed by unknown reason\n");
+        log_error("Insert failed by unknown reason");
         return -1;
     }
     int removeBlock(uint64_t addr){
@@ -176,14 +176,14 @@ public:
         for(auto &iter: *blocks){
             if(addr >= iter.addr && addr + length <= iter.addr + iter.size){ // valid address
                 if(iter.pages == nullptr){
-                    log_error("No pages in this block: 0x%016lx\n", addr);
+                    log_error("No pages in this block: 0x%016lx", addr);
                     return -1;
                 }
                 iter.write(addr - iter.addr, length, data);
                 return 0;
             }
         }
-        log_error("Invalid address or too long data length: 0x%016lx\n", addr);
+        log_error("Invalid address or too long data length: 0x%016lx", addr);
         return -1;
     }
 
@@ -211,14 +211,14 @@ public:
             if(addr >= iter.addr &&
                addr + length <= iter.addr + iter.size){
                 if(iter.pages== nullptr){
-                    log_error("No pages in this block: 0x%016lx\n", addr);
+                    log_error("No pages in this block: 0x%016lx", addr);
                     return -1;
                 }
                 iter.read(addr - iter.addr, length, data);
                 return 0;
             }
         }
-        log_error("Invalid address or too long data length: 0x%016lx\n", addr);
+        log_error("Invalid address or too long data length: 0x%016lx", addr);
         return -1;
     }
 

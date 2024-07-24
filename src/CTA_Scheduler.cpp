@@ -35,7 +35,7 @@ std::shared_ptr<kernel_info_t> CTA_Scheduler::select_kernel()
 
     for (unsigned i = 0; i < m_running_kernels.size(); i++)
     {   // 贪婪不成则轮询
-        unsigned idx = (i + m_last_issued_kernel + 1) % (max_concurrent_kernel < m_running_kernels.size() ? max_concurrent_kernel : m_running_kernels.size());
+        unsigned idx = (i + m_last_issued_kernel + 1) % m_running_kernels.size();
         if (m_running_kernels[idx] != nullptr && !m_running_kernels[idx]->no_more_ctas_to_run())
         {
             if (std::find(m_executed_kernels.begin(), m_executed_kernels.end(),
@@ -99,6 +99,7 @@ void CTA_Scheduler::schedule_kernel2core()
                     kernel->m_num_sm_running_this--;
                     if(kernel->m_num_sm_running_this == 0) {
                         kernel->finish();
+                        //m_finished_kernels.push_back(kernel);
                     }
                     kernel = select_kernel();   // get new kernel
                     if (kernel != nullptr){

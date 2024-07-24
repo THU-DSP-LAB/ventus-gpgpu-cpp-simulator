@@ -41,9 +41,7 @@ class kernel_info_t
 {
 public:
     kernel_info_t(uint32_t kernel_id, const std::string &kernel_name, const std::string &metadata_file, const std::string &data_file,
-                  uint64_t pagetable, Memory *mem);
-    kernel_info_t(uint32_t kernel_id, const std::string &kernel_name, const std::string &metadata_file, const std::string &data_file,
-                  task_t *task, Memory *mem);
+                  uint64_t pagetable);
 
     bool no_more_ctas_to_run() const;
     uint32_t get_kid() { return m_kernel_id; }
@@ -52,21 +50,25 @@ public:
     unsigned get_next_cta_id_single() const;
     void increment_cta_id() { increment_x_then_y_then_z(m_next_cta, m_grid_dim); }
 
-    unsigned get_startaddr() { return m_metadata.startaddr; }
-    unsigned get_num_buffer() { return m_metadata.num_buffer; }
-    unsigned get_num_warp_per_cta() { return m_metadata.wg_size; }
-    unsigned get_num_thread_per_warp() { return m_metadata.wf_size; }
-    unsigned get_ldsSize_per_cta() { return m_metadata.ldsSize; }
-    unsigned get_pdsSize_per_thread() { return m_metadata.pdsSize; }
-    uint64_t get_pdsBaseAddr() { return m_metadata.pdsBaseAddr; }
-    uint64_t get_metadata_baseaddr() { return m_metadata.metaDataBaseAddr; }
+    unsigned get_startaddr() const { return m_metadata.startaddr; }
+    unsigned get_num_buffer() const { return m_metadata.num_buffer; }
+    unsigned get_num_warp_per_cta() const { return m_metadata.wg_size; }
+    unsigned get_num_thread_per_warp() const { return m_metadata.wf_size; }
+    unsigned get_ldsSize_per_cta() const { return m_metadata.ldsSize; }
+    unsigned get_pdsSize_per_thread() const { return m_metadata.pdsSize; }
+    uint64_t get_pdsBaseAddr() const { return m_metadata.pdsBaseAddr; }
+    uint64_t get_metadata_baseaddr() const { return m_metadata.metaDataBaseAddr; }
     uint64_t get_pagetable() const { return m_pagetable; }
 
     int m_num_sm_running_this;
 
+    // Load initial data and get ready to run
+    void activate(Memory *mem, std::function<void()> finish_callback);
+    bool is_running() const { return m_is_running; }
+
     // After kernel finished
     void finish();
-    std::function<void ()> m_finish_callback;
+    bool is_finished() const { return m_is_finished; }
 
 private:
     uint64_t m_pagetable;        // pagetable root (address space ID), see membox_sv39/memory.h
@@ -76,6 +78,8 @@ private:
     const uint32_t m_kernel_id;
     unsigned m_running_cta;      // 当前正在运行的cta数量
     std::array<int, MAX_RUNNING_CTA_PER_KERNEL> m_cta_status_panel;
+    dim3 m_next_cta = {0, 0, 0}; // start from 0 ~ (grid_dim - 1)
+    dim3 m_grid_dim;
 
     // Helpers
     bool isHexCharacter(char c);
@@ -87,14 +91,12 @@ private:
     void assignMetadata(const std::vector<uint64_t> &metadata, meta_data_t &mtd);
 
     // Load testcase.data file
-    void readTextFile(const std::string &filename, meta_data_t mtd, Memory *mem);
-    void activate(std::string datafile, Memory *mem);
+    void readTextFile(Memory *mem);
 
-    dim3 m_next_cta = {0, 0, 0}; // start from 0 ~ (grid_dim - 1)
-    dim3 m_grid_dim;
-    
     // After kernel finished
-    task_t *m_task;
+    bool m_is_running;
+    bool m_is_finished;
+    std::function<void ()> m_finish_callback;
 
 public:
     uint64_t start_cycle;

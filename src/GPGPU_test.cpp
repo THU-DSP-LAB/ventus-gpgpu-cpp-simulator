@@ -1,14 +1,22 @@
+#include "context_model.hpp"
 #include "parameters.h"
 #include "sm/BASE.h"
 #include "sm/BASE_sti.h"
 #include "CTA_Scheduler.hpp"
 #include <chrono>
+#include <cstring>
 #include <fstream>
 #include <memory>
+#include <string>
 #include "membox_sv39/memory.h"
 #include "task.hpp"
 #include "utils/log.h"
 #include "host.hpp"
+
+int cmdarg_help();
+int cmdarg_error(int argc, char *argv[]);
+int cmdarg_task(Host *host, Memory *mem, char *arg);
+int cmdarg_kernel(Host *host, Memory *mem, char *arg);
 
 int sc_main(int argc, char *argv[])
 {
@@ -36,46 +44,24 @@ int sc_main(int argc, char *argv[])
     std::string metafile, datafile, numcycle, kernelName;
     int numkernel = 0;
     std::vector<std::shared_ptr<kernel_info_t>> m_running_kernels;
-    for (int i = 1; i < argc; i++)
-    {
-        if (strcmp(argv[i], "--numkernel") == 0)
-        {
-            std::shared_ptr<task_t> task = std::make_shared<task_t>(0, "Main task", mem.createRootPageTable());
-            host_impl.add_task(task);
-            numkernel = std::stoi(argv[i + 1]);
-            i++;
-            for (int j = 0; j < numkernel; j++)
-            {
-                kernelName = argv[i + 1];
-                i++;
-                metafile = argv[i + 1];
-                i++;
-                datafile = argv[i + 1];
-                i++;
-                log_debug("Initializing kernel %s info ...", kernelName.c_str());
-                auto root = mem.createRootPageTable();
-                task->add_kernel(std::make_shared<kernel_info_t>(j, 
-                    kernelName, "./testcase/" + metafile, "./testcase/" + datafile,
-                    root, &mem));
+
+    for (int argid = 1; argid < argc; argid++) {
+        if (strcmp(argv[argid], "--task") == 0) {
+            if (cmdarg_task(&host_impl, &mem, argv[++argid])) {
+                cmdarg_error(2, argv + argid - 1);
             }
-        }
-        if (strcmp(argv[i], "--metafile") == 0)
-        { // like "vecadd/vecadd.riscv.meta"
-            metafile = argv[i + 1];
-            i++;
-        }
-        if (strcmp(argv[i], "--datafile") == 0)
-        {
-            datafile = argv[i + 1];
-            i++;
-        }
-        if (strcmp(argv[i], "--numcycle") == 0)
-        {
-            numcycle = argv[i + 1];
-            i++;
+        } else if (strcmp(argv[argid], "--kernel") == 0) {
+            if (cmdarg_kernel(&host_impl, &mem, argv[++argid])) {
+                cmdarg_error(2, argv + argid - 1);
+            }
+        } else if (strcmp(argv[argid], "--numcycle") == 0) {
+            numcycle = argv[++argid];
+            std::cout << "--numcycle argument: " << numcycle << std::endl;
+        } else {
+            cmdarg_error(0, nullptr);
         }
     }
-    std::cout << "Finish reading runtime args\n";
+    log_debug("Finish reading runtime args");
 
 
     for (int i = 0; i < NUM_SM; i++)
@@ -234,3 +220,129 @@ int sc_main(int argc, char *argv[])
     delete[] BASE_impl;
     return 0;
 }
+
+int cmdarg_help() {
+    std::cout << "Help text" << std::endl;
+    return 0;
+}
+
+int cmdarg_error(int argc, char* argv[]) {
+    std::cout << "Incorrect argument: \n";
+    for(int i = 0; i < argc; i++) {
+        std::cout << "  " << argv[i] << "\n";
+    }
+    cmdarg_help();
+    return 0;
+}
+
+int cmdarg_task(Host* host, Memory *mem, char* argraw) {
+    assert(argraw);
+    int len = strlen(argraw);
+    char* arg = new char[len + 1];
+    strcpy(arg, argraw);
+
+    char *name = nullptr;
+
+    //std::cout << "--task argument: \n";
+    char* ptr1 = NULL;
+    char* subarg = strtok_r(arg, ",", &ptr1);
+    while (subarg) {
+        if (strlen(subarg) > 0) {
+            char* ptr2 = NULL;
+            char* var = strtok_r(subarg, "=", &ptr2);
+            char* val = strtok_r(NULL, "=", &ptr2);
+            assert(var && val);
+
+            if(strcmp(var, "name") == 0) {
+                name = val;
+            } else {
+                goto RET_ERR;
+            }
+        }
+        subarg = strtok_r(NULL, ",", &ptr1);
+    }
+
+    if(!(name)) {
+        goto RET_ERR;
+    } else {
+        std::shared_ptr<task_t> task = std::make_shared<task_t>(host->get_num_task(), name, mem->createRootPageTable());
+        host->add_task(task);
+        //std::cout << "Task created: ID = " << task->m_id << ", name = " << task->m_name << std::endl;
+    }
+
+
+    return 0;
+
+RET_ERR:
+    delete[] arg;
+    return -1;
+}
+
+int cmdarg_kernel(Host* host, Memory *mem, char* argraw) {
+    assert(argraw);
+    int len = strlen(argraw);
+    char* arg = new char[len + 1];
+    strcpy(arg, argraw);
+
+    int taskid = -1;
+    char* name = nullptr;
+    char* metafile = nullptr;
+    char* datafile = nullptr;
+
+    //std::cout << "--kernel argument: \n";
+    char* ptr1 = NULL;
+    char* subarg = strtok_r(arg, ",", &ptr1);
+    while (subarg) {
+        if (strlen(subarg) > 0) {
+            char* ptr2 = NULL;
+            char* var = strtok_r(subarg, "=", &ptr2);
+            char* val = strtok_r(NULL, "=", &ptr2);
+            assert(var && val);
+
+            if (strcmp(var, "taskid") == 0) {
+                int num = std::stoi(val);
+                assert(num < host->get_num_task());
+                assert(num >= 0);
+                taskid = num;
+            } else if (strcmp(var, "name") == 0) {
+                name = val;
+            } else if (strcmp(var, "metafile") == 0) {
+                metafile = val;
+            } else if (strcmp(var, "datafile") == 0) {
+                datafile = val;
+            } else {
+                goto RET_ERR;
+            }
+        }
+        subarg = strtok_r(NULL, ",", &ptr1);
+    }
+
+    if(!(name && metafile && datafile)) {
+        goto RET_ERR;
+    }
+
+    if(taskid != -1) {
+        std::shared_ptr<kernel_info_t> kernel = std::make_shared<kernel_info_t>(
+            host->get_num_kernel_total(), name, metafile, datafile, host->get_task(taskid)->m_pagetable);
+        host->task_add_kernel(taskid, kernel);
+        //std::cout << "Kernel created: ID = " << kernel->get_kid() << ", name = " << kernel->get_kname() 
+        //    << "\n  belone to task ID = " << taskid
+        //    << "\n  metafile = " << metafile 
+        //    << "\n  datafile = " << datafile
+        //    << std::endl;
+    } else {
+        std::shared_ptr<kernel_info_t> kernel = std::make_shared<kernel_info_t>(
+            host->get_num_kernel_total(), name, metafile, datafile, mem->createRootPageTable());
+        host->add_kernel(kernel);
+        //std::cout << "Kernel created: ID = " << kernel->get_kid() << ", name = " << kernel->get_kname() 
+        //    << "\n  metafile = " << metafile 
+        //    << "\n  datafile = " << datafile
+        //    << std::endl;
+    }
+
+    return 0;
+RET_ERR:
+    delete[] arg;
+    return -1;
+}
+
