@@ -55,7 +55,7 @@ void BASE::LSU_IN()
         {
             if (lsu_ready_old == false)
             {
-                std::cout << "lsu error: not ready at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                std::cout << "lsu error: not ready at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << std::endl;
             }
             lsu_unready.notify();
 
@@ -107,7 +107,7 @@ void BASE::LSU_IN()
                 std::cout << new_data.rsv1_data[0];
                 break;
             }
-            std::cout << std::setw(0) << std::setfill(' ') << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+            std::cout << std::setw(0) << std::setfill(' ') << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << std::endl;
 #endif
         }
         else
@@ -140,7 +140,7 @@ void BASE::LSU_CALC()
             wait(SC_ZERO_TIME);
             lsueqa_triggered = false;
         }
-        // std::cout << "LSU_OUT: triggered by eva/eqa at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+        // std::cout << "LSU_OUT: triggered by eva/eqa at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << std::endl;
         lsutmp1 = lsu_dq.front();
         lsu_dq.pop();
 
@@ -168,7 +168,7 @@ void BASE::LSU_CALC()
                 else
                     lsutmp2.rdv1_data[i] = 0;
                 if (addrOutofRangeException)
-                    std::cout << "SM" << sm_id << " LSU detect addrOutofRange, ins=" << lsutmp1.ins << ",addr=" << LSUaddr[i] << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                    std::cout << "SM" << sm_id << " LSU detect addrOutofRange, ins=" << lsutmp1.ins << ",addr=" << LSUaddr[i] << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << std::endl;
             }
 
             lsufifo.push(lsutmp2);
@@ -188,7 +188,7 @@ void BASE::LSU_CALC()
             std::cout << "@ ";
             for (int i = m_hw_warps[lsutmp1.warp_id]->CSR_reg[0x802] - 1; i >= 0; i--)
                 std::cout << LSUaddr[i] << " ";
-            std::cout << std::setw(0) << std::setfill(' ') << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+            std::cout << std::setw(0) << std::setfill(' ') << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << std::endl;
 #endif
         }
         ev_lsufifo_pushed.notify();

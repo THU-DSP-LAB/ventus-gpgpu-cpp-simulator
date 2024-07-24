@@ -8,7 +8,7 @@ void BASE::DECODE(int warp_id)
     int ext1, ext2, ext3, extd, extimm;
     while (true)
     {
-        // std::cout << "SM" << sm_id << " warp" << warp_id << " DECODE: finish at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+        // std::cout << "SM" << sm_id << " warp" << warp_id << " DECODE: finish at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << std::endl;
         wait(m_hw_warps[warp_id]->ev_decode);
             
         if (m_hw_warps[warp_id]->jump == 1 ||
@@ -19,16 +19,16 @@ void BASE::DECODE(int warp_id)
             WILLregext = false;
         }
         else
-        { // std::cout << "SM" << sm_id << " warp" << warp_id << " DECODE: start at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+        { // std::cout << "SM" << sm_id << " warp" << warp_id << " DECODE: start at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << std::endl;
             tmpins = I_TYPE(m_hw_warps[warp_id]->fetch_ins, m_hw_warps[warp_id]->pc.read());
             // if (sm_id == 0 && warp_id == 0)
-            //     std::cout << "SM" << sm_id << " warp" << warp_id << " DECODE ins.bit=" << std::hex << tmpins.origin32bit << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+            //     std::cout << "SM" << sm_id << " warp" << warp_id << " DECODE ins.bit=" << std::hex << tmpins.origin32bit << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << std::endl;
 
             bool foundBitIns = 0;
             for (const auto &instable_item : instable_vec)
             {
                 std::bitset<32> masked_ins = std::bitset<32>(tmpins.origin32bit) & instable_item.mask;
-                // std::cout << "warp" << warp_id << " DECODE: mask=" << instable_item.mask << ", masked_ins=" << masked_ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                // std::cout << "warp" << warp_id << " DECODE: mask=" << instable_item.mask << ", masked_ins=" << masked_ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << std::endl;
                 auto it = instable_item.itable.find(masked_ins);
                 if (it != instable_item.itable.end())
                 {
@@ -40,11 +40,11 @@ void BASE::DECODE(int warp_id)
             if (!foundBitIns)
             {
                 tmpins.op = INVALID_;
-                std::cout << "warp" << warp_id << " DECODE error: invalid bit ins " << tmpins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                std::cout << "warp" << warp_id << " DECODE error: invalid bit ins " << tmpins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << std::endl;
             }
             else
             {
-                // std::cout << "warp" << warp_id << " DECODE: match ins bit=" << std::bitset<32>(tmpins.origin32bit) << " with " << magic_enum::enum_name((OP_TYPE)tmpins.op) << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                // std::cout << "warp" << warp_id << " DECODE: match ins bit=" << std::bitset<32>(tmpins.origin32bit) << " with " << magic_enum::enum_name((OP_TYPE)tmpins.op) << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << std::endl;
             }
 
             tmpins.ddd = decode_table[(OP_TYPE)tmpins.op];
@@ -61,7 +61,7 @@ void BASE::DECODE(int warp_id)
                 extd = extractBits32(tmpins.origin32bit, 22, 20);
 #ifdef SPIKE_OUTPUT
                 std::cout << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex << tmpins.currentpc << tmpins
-                    << " DECODE: set regext(s3,s2,s1,d)=" << ext3 << "," << ext2 << "," << ext1 << "," << extd << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                    << " DECODE: set regext(s3,s2,s1,d)=" << ext3 << "," << ext2 << "," << ext1 << "," << extd << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << std::endl;
 #endif
             }
             else if (tmpins.op == (int)REGEXTI_)
@@ -76,7 +76,7 @@ void BASE::DECODE(int warp_id)
                 extd = extractBits32(tmpins.origin32bit, 22, 20);
 #ifdef SPIKE_OUTPUT
                 std::cout << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex << tmpins.currentpc << tmpins
-                    << " DECODE: set regexti(s3,s2,s1,d)=" << ext3 << "," << ext2 << "," << ext1 << "," << extd << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                    << " DECODE: set regexti(s3,s2,s1,d)=" << ext3 << "," << ext2 << "," << ext1 << "," << extd << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << std::endl;
 #endif
             }
             else
@@ -124,7 +124,7 @@ void BASE::DECODE(int warp_id)
                 std::cout << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex << tmpins.currentpc << tmpins
                     << " DECODE: regext(s3,s2,s1,d)=" << ext3 << "," << ext2 << "," << ext1 << "," << extd
                     << " is used to set s3,s2,s1,d=" << tmpins.s3 << "," << tmpins.s2 << "," << tmpins.s1 << "," << tmpins.d
-                    << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                    << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << std::endl;
 #endif
                 }
                 scinsbit = tmpins.origin32bit;
