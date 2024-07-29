@@ -57,9 +57,16 @@ int sc_main(int argc, char *argv[])
         } else if (strcmp(argv[argid], "--numcycle") == 0) {
             numcycle = argv[++argid];
             std::cout << "--numcycle argument: " << numcycle << std::endl;
+        } else if (strcmp(argv[argid], "--help") == 0) {
+            cmdarg_help();
         } else {
-            cmdarg_error(0, nullptr);
+            cmdarg_error(1, argv + argid);
         }
+    }
+    if(numcycle.empty()) {
+        std::cout << "cmd arg error: --numcycle not provided\n";
+        cmdarg_help();
+        return 1;
     }
     log_debug("Finish reading runtime args");
 
@@ -222,7 +229,20 @@ int sc_main(int argc, char *argv[])
 }
 
 int cmdarg_help() {
-    std::cout << "Help text" << std::endl;
+    std::cout
+        << "ventus-sim [--arg subarg1=val1,subarg2=val2,...] --numcycle $YOUR_SIM_TIME\n"
+        << "\n"
+        << "--task     create a new GPGPU task, supported subargs:\n"
+        << "           name     string    // 任取\n"
+        << "\n"
+        << "--kernel   create a new GPGPU kernel, supported subargs:\n"
+        << "           name     string    // 任取\n"
+        << "           metafile string    // kernel的.metadata文件路径\n"
+        << "           datafile string    // kernel的.data文件路径\n"
+        << "           taskid   uint      // 可选，若无则为不归属任何task的独立kernel。必须指向之前已经申明的task\n"
+        << "\n"
+        << "-numcycle           uint      // 仿真时长，单位：纳秒"
+        << std::endl;
     return 0;
 }
 
