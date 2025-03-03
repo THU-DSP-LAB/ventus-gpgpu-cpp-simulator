@@ -32,8 +32,6 @@ int CTA_Scheduler::charToHex(char c) {
 void CTA_Scheduler::do_reset() {
     for (int i = 0; i < NUM_SM; i++) {
         auto& sm = m_sm[i];
-        sm->m_current_kernel_completed = false;
-        sm->m_current_kernel_running = false;
         sm.rsrc.num_warp = 0;
         sm.rsrc.lds.clear();
         for (auto& block_slot : sm.rsrc.blk_slots) {

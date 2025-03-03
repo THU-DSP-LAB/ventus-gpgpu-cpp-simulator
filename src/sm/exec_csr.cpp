@@ -150,6 +150,7 @@ void BASE::CSR_CALC()
                 break;
             default:
                 std::cout << "CSR_CALC warning: switch to unrecognized ins" << csrtmp1.ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                assert(0);
                 break;
             }
             csrfifo.push(csrtmp2);

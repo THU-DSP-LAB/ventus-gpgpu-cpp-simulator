@@ -42,6 +42,7 @@ void BASE::DECODE(int warp_id)
             {
                 tmpins.op = INVALID_;
                 std::cout << "warp" << warp_id << " DECODE error: invalid bit ins " << tmpins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << std::endl;
+                assert(0);
             }
             else
             {

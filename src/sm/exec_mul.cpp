@@ -116,6 +116,7 @@ void BASE::MUL_CALC()
 
             default:
                 std::cout << "MUL_CALC warning: switch to unrecognized ins" << multmp1.ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                assert(0);
                 break;
             }
             mulfifo.push(multmp2);

@@ -122,8 +122,7 @@ void BASE::VALU_CALC()
         {
             valutmp2.ins = valutmp1.ins;
             valutmp2.warp_id = valutmp1.warp_id;
-            switch (valutmp1.ins.ddd.alu_fn)
-            {
+            switch (valutmp1.ins.ddd.alu_fn) {
 
             case DecodeParams::alu_fn_t::FN_ADD:
                 // VADD12.VI, VADD.VI, VADD.VV, VADD.VX
@@ -188,9 +187,21 @@ void BASE::VALU_CALC()
                 for (int i = 0; i < hwarp->CSR_reg[0x802]; i++)
                     valutmp2.rdv1_data[i] = valutmp1.rsv1_data[0];
                 break;
-
+            case DecodeParams::alu_fn_t::FN_SLT: // VMSLT.VV, VMSLT.VX
+                for (int i = 0; i < hwarp->CSR_reg[0x802]; i++) {
+                    if (valutmp2.ins.mask[i] == 1)
+                        valutmp2.rdv1_data[i] = valutmp1.rsv2_data[i] < valutmp1.rsv1_data[i];
+                }
+                break;
+            case DecodeParams::alu_fn_t::FN_XOR: // VMXOR.MM, VXOR.VI, VXOR.VV, VXOR.VX
+                for (int i = 0; i < hwarp->CSR_reg[0x802]; i++) {
+                    if (valutmp2.ins.mask[i] == 1)
+                        valutmp2.rdv1_data[i] = valutmp1.rsv2_data[i] ^ valutmp1.rsv1_data[i];
+                }
+                break;
             default:
                 std::cout << "VALU_CALC warning: switch to unrecognized ins" << valutmp1.ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << std::endl;
+                assert(0);
                 break;
             }
             valufifo.push(valutmp2);
@@ -365,6 +376,7 @@ void BASE::VALU_CALC()
 
             default:
                 std::cout << "VALU_CALC warning: switch to unrecognized ins" << valutmp1.ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << std::endl;
+                assert(0);
                 break;
             }
         }

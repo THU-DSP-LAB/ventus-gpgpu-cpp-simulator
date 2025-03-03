@@ -99,7 +99,7 @@ void BASE::OPC_FIFO()
                 }
                 else if (_readdata4.ddd.sel_alu2 == DecodeParams::sel_alu2_t::A2_SIZE)
                 {
-                    newopcdat.data[1].fill(4);
+                    newopcdat.data[1].fill(4); // 指令本身的字节数
                 }
 
                 if (_readdata4.ddd.sel_alu3 == DecodeParams::sel_alu3_t::A3_FRS3)
@@ -211,8 +211,9 @@ void BASE::OPC_EMIT()
         for (int i = last_emit_entryid; i < last_emit_entryid + OPCFIFO_SIZE; i++)
         {
             int entryidx = i % OPCFIFO_SIZE;
-            if (findemit)
+            if (findemit) {
                 break;
+            }
             if (opcfifo.tag_valid(entryidx) && opcfifo[entryidx].all_ready())
             {
                 emit_ins = opcfifo[entryidx].ins;
@@ -292,9 +293,7 @@ void BASE::OPC_EMIT()
                         findemit = 1;
                         doemit = true;
                         emito_lsu = true;
-
-                        for (int j = 0; j < hw_num_thread; j++)
-                        {
+                        for (int j = 0; j < hw_num_thread; j++) {
                             tolsu_data1[j] = opcfifo[entryidx].data[0][j];
                             tolsu_data2[j] = opcfifo[entryidx].data[1][j];
                             tolsu_data3[j] = opcfifo[entryidx].data[2][j];

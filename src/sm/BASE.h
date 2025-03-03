@@ -1,6 +1,7 @@
 #ifndef BASE_H_
 #define BASE_H_
 
+#include <bitset>
 #define SC_INCLUDE_DYNAMIC_PROCESSES
 #include <systemc.h>
 #include "../parameters.h"
@@ -12,6 +13,7 @@ class CTA_Scheduler;
 class BASE : public sc_core::sc_module
 {
 public:
+    const int sm_id;
     sc_in_clk clk{"clk"};
     sc_in<bool> rst_n{"rst_n"};
 
@@ -26,13 +28,8 @@ public:
     void debug_display1();
     void debug_display2();
     void debug_display3();
-    void INIT_INSMEM();
-    uint32_t getBufferData(const std::vector<std::vector<uint8_t>> &buffers, unsigned int virtualAddress, int num_buffer, uint64_t *buffer_base, uint64_t *buffer_size, bool &addrOutofRangeException, I_TYPE ins);
-    uint32_t readInsBuffer(unsigned int virtualAddress, bool &addrOutofRangeException);
-    void writeBufferData(int writevalue, std::vector<std::vector<uint8_t>> &buffers, unsigned int virtualAddress, int num_buffer, uint64_t *buffer_base, uint64_t *buffer_size, I_TYPE ins);
 
     // fetch
-    void INIT_INS();
     void INIT_DECODETABLE();
     void INIT_INSTABLE();
     void PROGRAM_COUNTER(int warp_id);
@@ -57,7 +54,6 @@ public:
     warpaddr_t bank_undecode(int bank_id, int addr);
 
     // regfile
-    void INIT_REG(int warp_id);
     std::pair<int, int> reg_arbiter(const std::array<std::array<bank_t, 3>, OPCFIFO_SIZE> &addr_arr, // opc_srcaddr
                                     const std::array<std::array<bool, 3>, OPCFIFO_SIZE> &valid_arr,  // opc_valid
                                     std::array<std::array<bool, 3>, OPCFIFO_SIZE> &ready_arr,        // opc_ready
@@ -117,7 +113,17 @@ public:
     SafeArray<WARP_BONE *, hw_num_warp> m_hw_warps;
     // std::array<WARP_BONE *, hw_num_warp> m_hw_warps;
     // std::unordered_map<int, WARP_BONE*> m_hw_warps;
-
+    typedef struct {  // hardware block slot in SM, records block(CTA) information
+        bool valid;   // a block is running on this slot
+        int num_warp; // number of warps that are currently running on this SM (reduntant, can be inferred from
+                      // hw_warp_running)
+        std::array<bool, hw_num_warp>
+            hw_warp_running; // warps of this block are running on these hardware-warps (hw_warp_idx)
+        std::array<bool, hw_num_warp>
+            warp_reach_barrier; // these warps have reached barrier (software_warp_idx in block)
+        uint32_t barrier_addr;  // barrier pc, for debug assert
+    } block_slot_t;
+    std::array<block_slot_t, MAX_CTA_PER_CORE> m_block_slots;
 
     std::array<std::array<sc_core::sc_process_handle *, hw_num_warp>, 9> warp_threads_group;
     // std::array<sc_core::sc_process_handle *, hw_num_warp> threads_PROGRAM_COUNTER;
@@ -329,35 +335,13 @@ public:
 
     // 外部存储，暂时在BASE中实现
     std::array<I_TYPE, ireg_size> ireg;
-    // std::vector<std::vector<uint8_t>> *buffer_data;
 
     std::array<int, 32> testCSR;
     meta_data_t mtd;
 
-    // 命令行参数
-    std::string metafile;
-    std::string datafile;
-
-    int m_num_warp_activated = 0;
-    int sm_id;
-
-    // CTA Scheduling
-    int m_num_active_cta;
-    //CTA_Scheduler *m_cta_scheduler;
-    void issue_block2core(std::shared_ptr<kernel_info_t> kernel);
+    // CTA Scheduler interface
     void receive_warp(uint32_t block_idx, uint32_t warp_idx, std::shared_ptr<kernel_info_t> kernel, uint32_t block_slot, uint32_t lds_baseaddr);
     std::function<void(int sm_id, int blk_slot_idx, int warp_idx_in_blk)> m_warp_finish_callback; // warp执行完毕后回调通知CTA Scheduler
-    void set_kernel(std::shared_ptr<kernel_info_t> kernel);
-    bool can_issue_1block(std::shared_ptr<kernel_info_t> kernel);
-    std::shared_ptr<kernel_info_t> m_kernel;
-    std::shared_ptr<kernel_info_t> get_current_kernel() { return m_kernel; }
-    sc_signal<bool, SC_MANY_WRITERS> m_current_kernel_running{"m_current_kernel_running"};     // 是否应用signal待定
-    sc_signal<bool, SC_MANY_WRITERS> m_current_kernel_completed{"m_current_kernel_completed"}; // 是否应用signal待定
-    bool is_current_kernel_completed() { return m_current_kernel_completed.read(); }
-    std::array<sc_signal<bool>, hw_num_warp> m_issue_block2warp;
-
-    unsigned max_cta_num(std::shared_ptr<kernel_info_t> kernel);
-    int m_cta_status[MAX_CTA_PER_CORE];
 };
 
 #endif

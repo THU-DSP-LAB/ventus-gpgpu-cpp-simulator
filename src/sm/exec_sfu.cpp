@@ -83,95 +83,111 @@ void BASE::SFU_CALC()
         sfutmp1 = sfu_dq.front();
         sfu_dq.pop();
         auto& hwarp = m_hw_warps[sfutmp1.warp_id];
+        union i32_u32_f32_t { int32_t i32; uint32_t u32; float f32; };
+        std::array<i32_u32_f32_t, hw_num_thread> src1, src2, dst;
+        for(int i = 0; i < hwarp->CSR_reg[0x802]; i++) {
+            src1[i].i32 = sfutmp1.rsv1_data[i];
+            src2[i].i32 = sfutmp1.rsv2_data[i];
+        }
         if (sfutmp1.ins.ddd.wxd | sfutmp1.ins.ddd.wvd)
         {
             sfutmp2.ins = sfutmp1.ins;
             sfutmp2.warp_id = sfutmp1.warp_id;
-            switch (sfutmp1.ins.ddd.alu_fn)
-            {
 
+            // helper function for instruction execution
+            auto calc_helper = [isvec = sfutmp1.ins.ddd.isvec, reverse = sfutmp1.ins.ddd.reverse,
+                                &mask = sfutmp1.ins.mask, num_thread = hwarp->CSR_reg[0x802], src1_type = sfutmp1.ins.ddd.sel_alu1 ,&src1, &src2,
+                                &dst](std::function<i32_u32_f32_t(i32_u32_f32_t op1, i32_u32_f32_t op2)> calc) {
+                // for other sel_alu_1, do not use this helper function
+                assert(src1_type == DecodeParams::sel_alu1_t::A1_RS1 || src1_type == DecodeParams::sel_alu1_t::A1_VRS1);
+                if (isvec) {
+                    for (int i = 0; i < num_thread; i++) {
+                        if (mask[i] == 1) {
+                            i32_u32_f32_t src1_, src2_;
+                            src1_ = src1[src1_type == DecodeParams::sel_alu1_t::A1_VRS1 ? i : 0];
+                            src2_ = src2[i];
+                            if (reverse) {
+                                dst[i] = calc(src2_, src1_);
+                            } else {
+                                dst[i] = calc(src1_, src2_);
+                            }
+                        }
+                    }
+                } else {
+                    assert(reverse == false);
+                    dst[0] = calc(src1[0], src2[0]);
+                }
+            };
+
+            switch (sfutmp1.ins.ddd.alu_fn) {
             case DecodeParams::alu_fn_t::FN_REMU:
-                // VREMU.VV, VREMU.VX
-                if (sfutmp1.ins.ddd.isvec)
-                {
-                    if (sfutmp1.ins.ddd.reverse)
-                    {
-                        if (sfutmp1.ins.ddd.sel_alu1 == DecodeParams::A1_RS1)
-                        { // VREMU.VX
-                            for (int i = 0; i < hwarp->CSR_reg[0x802]; i++)
-                            {
-                                if (sfutmp2.ins.mask[i] == 1)
-                                    sfutmp2.rdv1_data[i] = (unsigned)sfutmp1.rsv2_data[i] % sfutmp1.rsv1_data[0];
-                            }
-                        }
-                        else
-                        {
-                            for (int i = 0; i < hwarp->CSR_reg[0x802]; i++)
-                            {
-                                if (sfutmp2.ins.mask[i] == 1)
-                                {
-                                    if ((unsigned)sfutmp1.rsv1_data[i] != 0)
-                                        sfutmp2.rdv1_data[i] = (unsigned)sfutmp1.rsv2_data[i] % sfutmp1.rsv1_data[i];
-                                    else
-                                        std::cout << "SFU_CALC error: warp " << sfutmp1.warp_id << " ins pc=0x" << std::hex << sfutmp1.ins.currentpc << sfutmp1.ins
-                                             << ", ins.s1=" << sfutmp1.ins.s1 << ", rsv1_data[" << i << "]=0 at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-                                }
-                            }
-                        }
-                    }
-                    else
-                    {
-                        for (int i = 0; i < hwarp->CSR_reg[0x802]; i++)
-                        {
-                            if (sfutmp2.ins.mask[i] == 1)
-                                sfutmp2.rdv1_data[i] = (unsigned)sfutmp1.rsv1_data[i] % sfutmp1.rsv2_data[i];
-                        }
-                    }
-                }
-                else
-                    sfutmp2.rdv1_data[0] = (unsigned)sfutmp1.rsv1_data[0] % sfutmp1.rsv2_data[0];
+                calc_helper([](i32_u32_f32_t op1, i32_u32_f32_t op2) { // VREMU.VV, VREMU.VX, REMU
+                    i32_u32_f32_t result;
+                    result.u32 = (op2.u32 == 0) ? op2.u32 : op1.u32 % op2.u32;
+                    return result;
+                });
                 break;
-
             case DecodeParams::alu_fn_t::FN_DIVU:
-                // VDIVU.VV, VDIVU.VX
-                if (sfutmp1.ins.ddd.isvec)
-                {
-                    if (sfutmp1.ins.ddd.reverse)
-                        for (int i = 0; i < hwarp->CSR_reg[0x802]; i++)
-                        {
-                            if (sfutmp2.ins.mask[i] == 1)
-                            {
-                                if ((unsigned)sfutmp1.rsv1_data[i] != 0)
-                                    sfutmp2.rdv1_data[i] = (unsigned)sfutmp1.rsv2_data[i] / (unsigned)sfutmp1.rsv1_data[i];
-                                else
-                                    std::cout << "SFU_CALC error: warp " << sfutmp1.warp_id << " ins pc=0x" << std::hex << sfutmp1.ins.currentpc << sfutmp1.ins
-                                         << ", ins.s1=" << sfutmp1.ins.s1 << ", rsv1_data[" << i << "]=0 at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-                            }
-                        }
-                    else
-                        for (int i = 0; i < hwarp->CSR_reg[0x802]; i++)
-                        {
-                            if (sfutmp2.ins.mask[i] == 1)
-                                sfutmp2.rdv1_data[i] = (unsigned)sfutmp1.rsv1_data[i] / (unsigned)sfutmp1.rsv2_data[i];
-                        }
-                }
-                else
-                    sfutmp2.rdv1_data[0] = (unsigned)sfutmp1.rsv1_data[0] / (unsigned)sfutmp1.rsv2_data[0];
+                calc_helper([](i32_u32_f32_t op1, i32_u32_f32_t op2) {
+                    i32_u32_f32_t result;
+                    result.u32 = (op2.u32 == 0) ? (uint32_t)(-1) : op1.u32 / op2.u32;
+                    return result;
+                });
                 break;
-
+            case DecodeParams::alu_fn_t::FN_REM: // VREM.VV, VREM.VX, REM
+                calc_helper([](i32_u32_f32_t op1, i32_u32_f32_t op2) {
+                    i32_u32_f32_t result;
+                    result.i32 = (op2.i32 == 0) ? op2.i32 : op1.i32 % op2.i32;
+                    return result;
+                });
+                break;
+            case DecodeParams::alu_fn_t::FN_DIV: // VDIV.VV, VDIV.VX, DIV
+                calc_helper([](i32_u32_f32_t op1, i32_u32_f32_t op2) {
+                    i32_u32_f32_t result;
+                    result.i32 = (op2.i32 == 0) ? (-1) : op1.i32 / op2.i32;
+                    return result;
+                });
+                break;
+            case DecodeParams::alu_fn_t::FN_FDIV: // VFDIV.VV, VFDIV.VF, VFRDIV.VF, FDIV
+                calc_helper([](i32_u32_f32_t op1, i32_u32_f32_t op2) {
+                    i32_u32_f32_t result;
+                    result.f32 = op1.f32 / op2.f32;
+                    return result;
+                });
+                break;
+            case DecodeParams::alu_fn_t::FN_EXP: // VFEXP.V
+                for(int i = 0; i < hwarp->CSR_reg[0x802]; i++) {
+                    if (sfutmp1.ins.mask[i] == 1) {
+                        dst[i].f32 = expf(src2[i].f32);
+                    }
+                }
+                break;
+            case DecodeParams::alu_fn_t::FN_FSQRT: // VFSQRT.V, FSQRT.S
+                if(sfutmp1.ins.ddd.isvec) { // VFSQRT.V
+                    assert(sfutmp1.ins.ddd.reverse);
+                    for(int i = 0; i < hwarp->CSR_reg[0x802]; i++) {
+                        if (sfutmp1.ins.mask[i] == 1) {
+                            dst[i].f32 = sqrtf(src2[i].f32);
+                        }
+                    }
+                } else { // FSQRT.S
+                    dst[0].f32 = sqrtf(src1[0].f32);
+                }
             default:
                 std::cout << "SFU_CALC warning: switch to unrecognized ins" << sfutmp1.ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                assert(0);
                 break;
             }
-            sfufifo.push(sfutmp2);
-        }
-        else
-        {
-            switch (sfutmp1.ins.op)
-            {
 
+            for(int i = 0; i < hwarp->CSR_reg[0x802]; i++) {
+                sfutmp2.rdv1_data[i] = dst[i].i32;
+            }
+            sfufifo.push(sfutmp2);
+        } else {
+            switch (sfutmp1.ins.op) {
             default:
                 std::cout << "SFU_CALC warning: switch to unrecognized ins" << sfutmp1.ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                assert(0);
                 break;
             }
         }

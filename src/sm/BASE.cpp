@@ -8,6 +8,12 @@ BASE::BASE(sc_core::sc_module_name name, int _sm_id, Memory* mem)
         WARP_BONE* new_warp_bone_ = new WARP_BONE(warp_id);
         m_hw_warps[warp_id] = new_warp_bone_;
     }
+    for (int blk_slot_idx = 0; blk_slot_idx < MAX_CTA_PER_CORE; blk_slot_idx++) {
+        m_block_slots[blk_slot_idx].valid = false;
+        m_block_slots[blk_slot_idx].num_warp = 0;
+        m_block_slots[blk_slot_idx].warp_reach_barrier.fill(false);
+        m_block_slots[blk_slot_idx].hw_warp_running.fill(false);
+    }
     SC_HAS_PROCESS(BASE);
 
     SC_THREAD(debug_sti);
@@ -332,6 +338,7 @@ void BASE::cycle_UPDATE_SCORE(int warp_id, I_TYPE& tmpins, std::set<SCORE_TYPE>:
         if (it == hwarp->score.end()) {
             std::cout << "warp" << warp_id << "_wb_ena error: scoreboard can't find rd in score set, wb_ins=" << wb_ins
                       << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << std::endl;
+            assert(0);
         } else {
             hwarp->score.erase(it);
         }
@@ -493,58 +500,6 @@ void BASE::BEFORE_DISPATCH(int warp_id) {
     }
 }
 
-void BASE::set_kernel(std::shared_ptr<kernel_info_t> kernel) {
-    assert(kernel);
-    m_kernel = kernel;
-    std::cout << "SM " << sm_id << " bind to kernel " << m_kernel->get_kid() << " \"" << m_kernel->get_kname()
-              << "\" at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << std::endl;
-}
-
-bool BASE::can_issue_1block(std::shared_ptr<kernel_info_t> kernel) {
-    if (max_cta_num(kernel) < 1)
-        return false;
-    else {
-        // 若找到core中空闲的一组warp，则可以分派线程块
-        bool found_idle_cta_slot;
-        for (int idx = 0; idx < MAX_CTA_PER_CORE; idx++) {
-            found_idle_cta_slot = true;
-            for (int i = 0; i < kernel->get_num_warp_per_cta(); i++) {
-                uint32_t wid = idx * kernel->get_num_warp_per_cta() + i;
-                if (wid >= hw_num_warp) {
-                    return false;
-                } else {
-                    found_idle_cta_slot = !m_hw_warps[wid]->is_warp_activated;
-                    if (!found_idle_cta_slot)
-                        break;
-                }
-            }
-            if (found_idle_cta_slot) {
-                return true;
-            }
-        }
-        return false;
-    }
-}
-
-unsigned BASE::max_cta_num(std::shared_ptr<kernel_info_t> kernel) {
-    unsigned kernel_num_thread_per_warp = kernel->get_num_thread_per_warp();
-    unsigned kernel_num_warp_per_cta = kernel->get_num_warp_per_cta();
-    if (kernel_num_thread_per_warp > hw_num_thread)
-        return 0;
-
-    // limited by warps
-    unsigned result_warp;
-    result_warp = (hw_num_warp - m_num_warp_activated) / kernel_num_warp_per_cta;
-
-    // limited by local memory size
-    unsigned kernel_ldsSize_per_cta = kernel->get_ldsSize_per_cta();
-    unsigned result_localmem;
-    result_localmem = hw_lds_size / kernel_ldsSize_per_cta - m_num_active_cta;
-    // TODO: Bug? Where is m_num_active_cta initialized?
-
-    return result_warp < result_localmem ? result_warp : result_localmem;
-}
-
 // SM receive new block
 void BASE::receive_warp(uint32_t block_idx, uint32_t warp_idx, std::shared_ptr<kernel_info_t> kernel,
                         uint32_t block_slot, uint32_t lds_baseaddr) {
@@ -567,6 +522,7 @@ void BASE::receive_warp(uint32_t block_idx, uint32_t warp_idx, std::shared_ptr<k
     assert(hwarp != nullptr); // should always find a idle warp, as CTA scheduler has checked warp_slot before
     hwarp->will_warp_activate = true;
 
+    // 将软件warp(线程束)派发到硬件warp
     hwarp->m_ctaid_in_core = block_slot;
     hwarp->CSR_reg[0x800] = warp_idx * kernel->get_num_thread_per_warp();
     hwarp->CSR_reg[0x801] = kernel->get_num_warp_per_cta();
@@ -596,98 +552,22 @@ void BASE::receive_warp(uint32_t block_idx, uint32_t warp_idx, std::shared_ptr<k
     }
     hwarp->current_mask.write(_validmask);
 
-    m_num_warp_activated++;
+    // 将线程块信息写入block slot（仅对于此块的首个线程束）
+    auto& hblkslot = m_block_slots[block_slot];
+    if(hblkslot.valid == false) {
+        hblkslot.valid = true;
+        hblkslot.num_warp = 0;
+        hblkslot.warp_reach_barrier.fill(false);
+        hblkslot.hw_warp_running.fill(false);
+    }
+    hblkslot.hw_warp_running[hw_warp_idx] = true;
+    hblkslot.num_warp++;
+    wait_barrier[hw_warp_idx] = false;
+
     kernel->m_warp_status[block_idx][warp_idx] = kernel_info_t::WARP_STATUS_RUNNING;
     std::cout << std::dec << "SM " << sm_id << " warp " << hw_warp_idx << " is activated at " << sc_time_stamp() << ","
               << sc_delta_count_at_current_time() << " (kernel " << kernel->get_kname() << " block " << block_idx
               << " warp " << warp_idx << ")" << std::endl;
-}
-
-void BASE::issue_block2core(std::shared_ptr<kernel_info_t> kernel) {
-
-    unsigned kernel_num_thread_per_warp = kernel->get_num_thread_per_warp();
-    unsigned kernel_num_warp_per_cta = kernel->get_num_warp_per_cta();
-
-    unsigned free_ctaid_in_core; // 为cta分配的core内ctaid. 对于给定kernel，存在ctaid和warp之间的确定映射
-    unsigned hw_start_warpid = (unsigned)-1;
-
-    assert(can_issue_1block(kernel));
-    // 找到core中空闲的一组warp和相应的ctaid
-    for (int idx = 0; idx < MAX_CTA_PER_CORE; idx++) {
-        free_ctaid_in_core = idx;
-        for (int i = 0; i < kernel->get_num_warp_per_cta(); i++) {
-            uint32_t wid = idx * kernel->get_num_warp_per_cta() + i;
-            if (wid >= hw_num_warp) {
-                assert(0);
-            } else if (m_hw_warps[wid]->is_warp_activated) {
-                free_ctaid_in_core = -1;
-                break;
-            }
-        }
-        if (free_ctaid_in_core == idx) {
-            hw_start_warpid = idx * kernel->get_num_warp_per_cta();
-            break;
-        }
-    }
-    assert(free_ctaid_in_core != (unsigned)-1);
-
-    dim3 ctaid_kernel = kernel->get_next_cta_id();
-    unsigned ctaid_kernel_single = kernel->get_next_cta_id_single();
-    assert(kernel->m_block_status[ctaid_kernel_single] == kernel_info_t::BLOCK_STATUS_WAIT);
-    kernel->m_block_status[ctaid_kernel_single] = kernel_info_t::BLOCK_STATUS_RUNNING;
-
-    // 遍历并激活每个warp
-    for (unsigned widINcta = 0; widINcta < kernel_num_warp_per_cta; widINcta++) {
-        unsigned hw_wid = widINcta + hw_start_warpid;
-        m_hw_warps[hw_wid]->m_ctaid_in_core = free_ctaid_in_core;
-        m_hw_warps[hw_wid]->CSR_reg[0x800] = widINcta * kernel_num_thread_per_warp;
-        m_hw_warps[hw_wid]->CSR_reg[0x801] = kernel_num_warp_per_cta;
-        m_hw_warps[hw_wid]->CSR_reg[0x802] = kernel_num_thread_per_warp;
-        m_hw_warps[hw_wid]->CSR_reg[0x803] = kernel->get_metadata_baseaddr();
-        m_hw_warps[hw_wid]->CSR_reg[0x804] = free_ctaid_in_core;
-        m_hw_warps[hw_wid]->CSR_reg[0x805] = widINcta;
-        m_hw_warps[hw_wid]->CSR_reg[0x806] = ldsBaseAddr_core + free_ctaid_in_core * kernel->get_ldsSize_per_cta();
-        m_hw_warps[hw_wid]->CSR_reg[0x807] = kernel->get_pdsBaseAddr()
-            + (ctaid_kernel_single * kernel_num_warp_per_cta + widINcta) * kernel_num_thread_per_warp
-                * kernel->get_pdsSize_per_thread();
-        m_hw_warps[hw_wid]->CSR_reg[0x808] = ctaid_kernel.x;
-        m_hw_warps[hw_wid]->CSR_reg[0x809] = ctaid_kernel.y;
-        m_hw_warps[hw_wid]->CSR_reg[0x80a] = ctaid_kernel.z;
-
-        m_hw_warps[hw_wid]->CSR_reg[0x300] = 0x00001800; // WHY? mstatus CSR default value
-
-        m_hw_warps[hw_wid]->is_warp_activated.write(true);
-        std::cout << std::dec << "SM " << sm_id << " warp " << hw_wid << " is activated at " << sc_time_stamp() << ","
-                  << sc_delta_count_at_current_time() << " (kernel " << kernel->get_kname() << " CTA "
-                  << ctaid_kernel_single << ")" << std::endl;
-        m_hw_warps[hw_wid]->pc.write(kernel->get_startaddr());
-        m_hw_warps[hw_wid]->pagetable = kernel->get_pagetable();
-        m_hw_warps[hw_wid]->num_thread = kernel->get_num_thread_per_warp();
-        // m_hw_warps[hw_wid]->fetch_valid = true;
-
-        // warp finish callback to CTA Scheduler
-        m_hw_warps[hw_wid]->finish_callback = [kernel, ctaid_kernel_single, widINcta](int sm_id, int hw_wid) {
-            assert(kernel->m_status == kernel_info_t::KERNEL_STATUS_RUNNING);
-            assert(kernel->m_block_status[ctaid_kernel_single] == kernel_info_t::BLOCK_STATUS_RUNNING);
-            assert(kernel->m_warp_status[ctaid_kernel_single][widINcta] == kernel_info_t::WARP_STATUS_RUNNING);
-            assert(kernel->m_block_sm_id[ctaid_kernel_single] == sm_id);
-            kernel->m_warp_status[ctaid_kernel_single][widINcta] = kernel_info_t::WARP_STATUS_FINISHED;
-        };
-
-        sc_bv<hw_num_thread> _validmask = 0;
-        for (int i = 0; i < kernel_num_thread_per_warp; i++) {
-            _validmask[i] = 1;
-        }
-        m_hw_warps[hw_wid]->current_mask.write(_validmask);
-        m_issue_block2warp[hw_wid] = true;
-        kernel->m_warp_status[ctaid_kernel_single][hw_wid] = kernel_info_t::WARP_STATUS_RUNNING;
-    }
-    m_num_warp_activated += kernel_num_warp_per_cta;
-    m_current_kernel_running.write(true);
-    m_current_kernel_completed.write(false);
-    kernel->increment_cta_id();
-    std::cout << "SM " << sm_id << " issue 1 block of kernel \"" << kernel->get_kname() << "\" at " << sc_time_stamp()
-              << "," << sc_delta_count_at_current_time() << std::endl;
 }
 
 void increment_x_then_y_then_z(dim3& i, const dim3& bound) {

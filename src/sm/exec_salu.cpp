@@ -250,6 +250,7 @@ void BASE::SALU_CALC()
 
             default:
                 std::cout << "SALU_CALC warning: switch to unrecognized ins" << salutmp1.ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << std::endl;
+                assert(0);
                 break;
             }
             salufifo.push(salutmp2);

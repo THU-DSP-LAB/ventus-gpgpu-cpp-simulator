@@ -133,6 +133,7 @@ void BASE::TC_CALC()
                 break;
             default:
                 std::cout << "TC_CALC warning: switch to unrecognized ins" << tctmp1.ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                assert(0);
                 break;
             }
             tcfifo.push(tctmp2);

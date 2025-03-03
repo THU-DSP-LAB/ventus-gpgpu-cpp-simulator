@@ -747,7 +747,7 @@ namespace DecodeParams
         A2_RS2,
         A2_IMM,
         A2_VRS2,
-        A2_SIZE,
+        A2_SIZE,    // 指令字节数(=4)(in rvc it's 2)
     };
     enum sel_alu1_t
     {
@@ -889,7 +889,7 @@ public:
     bool simtSTK;
     bool simtop;
     DecodeParams::csr_t csr;
-    bool reverse;
+    bool reverse; // swap src1,src2, such as vdiv|div
     DecodeParams::sel_alu3_t sel_alu3;
     DecodeParams::sel_alu2_t sel_alu2;
     DecodeParams::sel_alu1_t sel_alu1;
@@ -950,7 +950,8 @@ public:
     I_TYPE(I_TYPE _ins, int _currentpc) : origin32bit(_ins.origin32bit), op(_ins.op), d(_ins.d), s1(_ins.s1), s2(_ins.s2), s3(_ins.s3), currentpc(_currentpc){};
     bool operator==(const I_TYPE &rhs) const
     {
-        return rhs.origin32bit == origin32bit && rhs.op == op && rhs.s1 == s1 && rhs.s2 == s2 && rhs.s3 == s3 && rhs.d == d && rhs.currentpc == currentpc;
+        // return rhs.origin32bit == origin32bit && rhs.op == op && rhs.s1 == s1 && rhs.s2 == s2 && rhs.s3 == s3 && rhs.d == d && rhs.currentpc == currentpc && rhs.mask == mask;
+        return rhs.origin32bit == origin32bit && rhs.currentpc == currentpc && rhs.mask == mask;
     }
     I_TYPE &operator=(const I_TYPE &rhs)
     {
@@ -1546,7 +1547,6 @@ struct sfu_in_t
     I_TYPE ins;
     int warp_id;
     std::array<reg_t, hw_num_thread> rsv1_data, rsv2_data;
-    reg_t rss1_data;
 };
 struct sfu_out_t
 {

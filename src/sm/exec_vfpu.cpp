@@ -1,4 +1,5 @@
 #include "BASE.h"
+#include <algorithm>
 
 void BASE::VFPU_IN()
 {
@@ -76,6 +77,15 @@ void BASE::VFPU_CALC()
         vfputmp1 = vfpu_dq.front();
         vfpu_dq.pop();
         auto& hwarp= m_hw_warps[vfputmp1.warp_id];
+        std::array<float, hw_num_thread> src1, src2, src3, dst;
+        for(int i = 0; i < hwarp->CSR_reg[0x802]; i++) {
+            src1[i] = std::bit_cast<float>(vfputmp1.vfpuSdata1[i]);
+            src2[i] = std::bit_cast<float>(vfputmp1.vfpuSdata2[i]);
+            src3[i] = std::bit_cast<float>(vfputmp1.vfpuSdata3[i]);
+        }
+        auto array_all_same_elem = [](const auto& arr) {
+            return std::all_of(arr.begin(), arr.end(), [val = arr[0]](int x) { return x == val; });
+        };
         if (vfputmp1.ins.ddd.wxd | vfputmp1.ins.ddd.wvd)
         {
             vfputmp2.ins = vfputmp1.ins;
@@ -84,18 +94,24 @@ void BASE::VFPU_CALC()
             {
             case DecodeParams::alu_fn_t::FN_FADD:
                 // VFADD.VF, VFADD.VV
-                for (int i = 0; i < hwarp->CSR_reg[0x802]; i++)
-                    vfputmp2.rdf1_data[i] = std::bit_cast<int>(std::bit_cast<float>(vfputmp1.vfpuSdata1[i]) + std::bit_cast<float>(vfputmp1.vfpuSdata2[i]));
+                dst.fill(src1[0] + src2[0]);
                 break;
             case DecodeParams::alu_fn_t::FN_FMUL:
-                for (int i = 0; i < hwarp->CSR_reg[0x802]; i++)
-                    vfputmp2.rdf1_data[i] = std::bit_cast<int>(std::bit_cast<float>(vfputmp1.vfpuSdata1[i]) * std::bit_cast<float>(vfputmp1.vfpuSdata2[i]));
+                dst.fill(src1[0] * src2[0]);
                 break;
-            case DecodeParams::alu_fn_t::FN_FMADD:
-                for (int i = 0; i < hwarp->CSR_reg[0x802]; i++)
-                    vfputmp2.rdf1_data[i] = std::bit_cast<int>(std::bit_cast<float>(vfputmp1.vfpuSdata1[i]) * std::bit_cast<float>(vfputmp1.vfpuSdata2[i]) + std::bit_cast<float>(vfputmp1.vfpuSdata3[i]));
+            case DecodeParams::alu_fn_t::FN_FMADD: // FMADD.S
+                dst.fill(src1[0] * src2[0] + src3[0]);
                 break;
-
+            case DecodeParams::alu_fn_t::FN_VFMADD:
+                if(vfputmp1.ins.ddd.sel_alu1 == DecodeParams::sel_alu1_t::A1_RS1) { // VFMADD.VF
+                    for (int i = 0; i < hwarp->CSR_reg[0x802]; i++)
+                        dst[i] = src1[0] * src2[i] + src3[i];
+                } else { // VFMADD.VV
+                    assert(vfputmp1.ins.ddd.sel_alu1 == DecodeParams::sel_alu1_t::A1_VRS1);
+                    for (int i = 0; i < hwarp->CSR_reg[0x802]; i++)
+                        dst[i] = src1[i] * src2[i] + src3[i];
+                }
+                break;
             case FSQRT_S_:
                 vfputmp2.rdf1_data[0] = std::bit_cast<int>(sqrtf32(std::bit_cast<float>(vfputmp1.vfpuSdata1[0])));
                 break;
@@ -253,7 +269,11 @@ void BASE::VFPU_CALC()
                 break;
             default:
                 std::cout << "VFPU_CALC warning: switch to unrecognized ins" << vfputmp1.ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                assert(0);
                 break;
+            }
+            for (int i = 0; i < hwarp->CSR_reg[0x802]; i++) {
+                vfputmp2.rdf1_data[i] = std::bit_cast<int>(dst[i]);
             }
             vfpufifo.push(vfputmp2);
         }
