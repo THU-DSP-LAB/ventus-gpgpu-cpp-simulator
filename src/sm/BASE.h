@@ -1,6 +1,7 @@
 #ifndef BASE_H_
 #define BASE_H_
 
+#include <array>
 #include <bitset>
 #define SC_INCLUDE_DYNAMIC_PROCESSES
 #include <systemc.h>
@@ -91,7 +92,12 @@ public:
     // writeback
     void WRITE_BACK();
 
-    //void set_CTA_Scheduler(CTA_Scheduler *_cta_scheduler_ptr) { m_cta_scheduler = _cta_scheduler_ptr; }
+    static void exec_calc_helper(const I_TYPE& ins, int num_thread_active,
+                          const std::array<i32_u32_f32_t, hw_num_thread>& src1,
+                          const std::array<i32_u32_f32_t, hw_num_thread>& src2,
+                          const std::array<i32_u32_f32_t, hw_num_thread>& src3,
+                          std::array<i32_u32_f32_t, hw_num_thread>& dst,
+                          std::function<i32_u32_f32_t(i32_u32_f32_t op1, i32_u32_f32_t op2, i32_u32_f32_t op3)> calc);
 
     // initialize
     void start_of_simulation()

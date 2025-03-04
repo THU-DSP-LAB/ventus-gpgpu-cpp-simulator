@@ -17,6 +17,7 @@ int cmdarg_error(int argc, char *argv[]);
 int cmdarg_task(Host *host, Memory *mem, char *arg);
 int cmdarg_kernel(Host *host, Memory *mem, char *arg);
 
+__attribute__((visibility("default"))) 
 int sc_main(int argc, char *argv[])
 {
     std::ios::sync_with_stdio(true);
@@ -256,6 +257,7 @@ int cmdarg_error(int argc, char* argv[]) {
         std::cout << "  " << argv[i] << "\n";
     }
     cmdarg_help();
+    exit(0);
     return 0;
 }
 

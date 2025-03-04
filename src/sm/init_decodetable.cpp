@@ -274,6 +274,7 @@ decode_table = {
 {BARRIERSUB_, {0, 0, 1, DecodeParams::B_N, 0, 0, DecodeParams::CSR_N, 0, DecodeParams::A3_X, DecodeParams::A2_X, DecodeParams::A1_IMM, DecodeParams::IMM_Z, DecodeParams::MEM_X, DecodeParams::FN_ADD, 0, DecodeParams::M_X, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}}, 
 {ENDPRG_, {0, 0, 1, DecodeParams::B_N, 0, 1, DecodeParams::CSR_N, 0, DecodeParams::A3_X, DecodeParams::A2_X, DecodeParams::A1_X, DecodeParams::IMM_X, DecodeParams::MEM_X, DecodeParams::FN_ADD, 0, DecodeParams::M_X, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}}, 
 {VADD12_VI_, {1, 0, 0, DecodeParams::B_N, 0, 0, DecodeParams::CSR_N, 1, DecodeParams::A3_X, DecodeParams::A2_IMM, DecodeParams::A1_VRS1, DecodeParams::IMM_I, DecodeParams::MEM_X, DecodeParams::FN_ADD, 0, DecodeParams::M_X, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0}}, 
+{VSUB12_VI_, {1, 0, 0, DecodeParams::B_N, 0, 0, DecodeParams::CSR_N, 0, DecodeParams::A3_X, DecodeParams::A2_IMM, DecodeParams::A1_VRS1, DecodeParams::IMM_I, DecodeParams::MEM_X, DecodeParams::FN_SUB, 0, DecodeParams::M_X, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0}}, 
 {VFTTA_VV_, {1, 1, 0, DecodeParams::B_N, 0, 0, DecodeParams::CSR_N, 0, DecodeParams::A3_VRS3, DecodeParams::A2_VRS2, DecodeParams::A1_VRS1, DecodeParams::IMM_X, DecodeParams::MEM_X, DecodeParams::FN_TTF, 0, DecodeParams::M_X, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0}}, 
 {VFEXP_V_, {1, 1, 0, DecodeParams::B_N, 0, 0, DecodeParams::CSR_N, 0, DecodeParams::A3_X, DecodeParams::A2_VRS2, DecodeParams::A1_X, DecodeParams::IMM_X, DecodeParams::MEM_X, DecodeParams::FN_EXP, 0, DecodeParams::M_X, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0}}, 
 };

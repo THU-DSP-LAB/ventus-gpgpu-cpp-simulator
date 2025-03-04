@@ -84,8 +84,7 @@ public:
         }
         do_reset();
         SC_HAS_PROCESS(CTA_Scheduler);
-        SC_THREAD(schedule_kernel2core);
-        SC_THREAD(collect_finished_blocks);
+        SC_THREAD(step);
     }
 
 public:
@@ -102,6 +101,8 @@ private:
     void do_reset();
 
     // SC threads
+    void step();
+    // worker functions
     void schedule_kernel2core();    // block dispatch to SM
     void collect_finished_blocks(); // finished warps/blocks return from SM
 

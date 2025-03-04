@@ -61,7 +61,7 @@ void BASE::VFPU_CALC()
     vfpufifo_elem_num = 0;
     vfpufifo_empty = true;
     vfpueqa_triggered = false;
-    vfpu_in_t vfputmp1;
+    // vfpu_in_t vfputmp1;
     vfpu_out_t vfputmp2;
     bool succeed;
     float source_f1, source_f2, source_f3;
@@ -74,43 +74,54 @@ void BASE::VFPU_CALC()
             wait(SC_ZERO_TIME);
             vfpueqa_triggered = false;
         }
-        vfputmp1 = vfpu_dq.front();
+        const vfpu_in_t vfputmp1 = vfpu_dq.front();
         vfpu_dq.pop();
         auto& hwarp= m_hw_warps[vfputmp1.warp_id];
-        std::array<float, hw_num_thread> src1, src2, src3, dst;
+        std::array<i32_u32_f32_t, hw_num_thread> src1, src2, src3, dst;
         for(int i = 0; i < hwarp->CSR_reg[0x802]; i++) {
-            src1[i] = std::bit_cast<float>(vfputmp1.vfpuSdata1[i]);
-            src2[i] = std::bit_cast<float>(vfputmp1.vfpuSdata2[i]);
-            src3[i] = std::bit_cast<float>(vfputmp1.vfpuSdata3[i]);
+            src1[i].i32 = std::bit_cast<float>(vfputmp1.vfpuSdata1[i]);
+            src2[i].i32 = std::bit_cast<float>(vfputmp1.vfpuSdata2[i]);
+            src3[i].i32 = std::bit_cast<float>(vfputmp1.vfpuSdata3[i]);
         }
         auto array_all_same_elem = [](const auto& arr) {
             return std::all_of(arr.begin(), arr.end(), [val = arr[0]](int x) { return x == val; });
         };
+        auto calc_helper
+            = [&vfputmp1, num_thread = hwarp->CSR_reg[0x802], &src1, &src2, &src3,
+               &dst](std::function<i32_u32_f32_t(i32_u32_f32_t op1, i32_u32_f32_t op2, i32_u32_f32_t op3)> calc) {
+                  exec_calc_helper(vfputmp1.ins, num_thread, src1, src2, src3, dst, calc);
+              };
+
         if (vfputmp1.ins.ddd.wxd | vfputmp1.ins.ddd.wvd)
         {
             vfputmp2.ins = vfputmp1.ins;
             vfputmp2.warp_id = vfputmp1.warp_id;
             switch (vfputmp1.ins.ddd.alu_fn)
             {
-            case DecodeParams::alu_fn_t::FN_FADD:
-                // VFADD.VF, VFADD.VV
-                dst.fill(src1[0] + src2[0]);
+            case DecodeParams::alu_fn_t::FN_FADD: // VFADD.VF, VFADD.VV, FADD.S
+                calc_helper([](i32_u32_f32_t op1, i32_u32_f32_t op2, i32_u32_f32_t op3) {
+                    return i32_u32_f32_t{ .f32 = op1.f32 + op2.f32 };
+                });
                 break;
-            case DecodeParams::alu_fn_t::FN_FMUL:
-                dst.fill(src1[0] * src2[0]);
+            case DecodeParams::alu_fn_t::FN_FMUL: // VFMUL.VF, VFMUL.VV, FMUL.S
+                calc_helper([](i32_u32_f32_t op1, i32_u32_f32_t op2, i32_u32_f32_t op3) {
+                    return i32_u32_f32_t{ .f32 = op1.f32 * op2.f32 };
+                });
                 break;
-            case DecodeParams::alu_fn_t::FN_FMADD: // FMADD.S
-                dst.fill(src1[0] * src2[0] + src3[0]);
+            case DecodeParams::alu_fn_t::FN_FMADD: // VFMACC.VF, VFMACC.VV, FMADD.S
+                calc_helper([](i32_u32_f32_t op1, i32_u32_f32_t op2, i32_u32_f32_t op3) {
+                    return i32_u32_f32_t{ .f32 = +(op1.f32 * op2.f32) + op3.f32 };
+                });
                 break;
-            case DecodeParams::alu_fn_t::FN_VFMADD:
-                if(vfputmp1.ins.ddd.sel_alu1 == DecodeParams::sel_alu1_t::A1_RS1) { // VFMADD.VF
-                    for (int i = 0; i < hwarp->CSR_reg[0x802]; i++)
-                        dst[i] = src1[0] * src2[i] + src3[i];
-                } else { // VFMADD.VV
-                    assert(vfputmp1.ins.ddd.sel_alu1 == DecodeParams::sel_alu1_t::A1_VRS1);
-                    for (int i = 0; i < hwarp->CSR_reg[0x802]; i++)
-                        dst[i] = src1[i] * src2[i] + src3[i];
-                }
+            case DecodeParams::alu_fn_t::FN_VFMADD: // VFMADD.VF, VFMADD.VV
+                calc_helper([](i32_u32_f32_t op1, i32_u32_f32_t op2, i32_u32_f32_t op3) {
+                    return i32_u32_f32_t{ .f32 = +(op1.f32 * op3.f32) + op2.f32 };
+                });
+                break;
+            case DecodeParams::alu_fn_t::FN_FLT: // VMFGT.VF, VMFLT.VF, VMFLT.VV , FLT.S
+                calc_helper([](i32_u32_f32_t op1, i32_u32_f32_t op2, i32_u32_f32_t op3) {
+                    return i32_u32_f32_t{ .i32 = (op1.f32 < op2.f32) };
+                });
                 break;
             case FSQRT_S_:
                 vfputmp2.rdf1_data[0] = std::bit_cast<int>(sqrtf32(std::bit_cast<float>(vfputmp1.vfpuSdata1[0])));

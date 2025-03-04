@@ -83,7 +83,6 @@ void BASE::SFU_CALC()
         sfutmp1 = sfu_dq.front();
         sfu_dq.pop();
         auto& hwarp = m_hw_warps[sfutmp1.warp_id];
-        union i32_u32_f32_t { int32_t i32; uint32_t u32; float f32; };
         std::array<i32_u32_f32_t, hw_num_thread> src1, src2, dst;
         for(int i = 0; i < hwarp->CSR_reg[0x802]; i++) {
             src1[i].i32 = sfutmp1.rsv1_data[i];

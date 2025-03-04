@@ -133,13 +133,10 @@ void BASE::WARP_SCHEDULER() {
                     dispatch_valid = true;
                     _newissueins = m_hw_warps[i % hw_num_warp]->ififo.front();
                     _newissueins.mask = m_hw_warps[i % hw_num_warp]->current_mask;
-                    std::cout << "SM" << sm_id << " warp" << i % hw_num_warp << " 0x" << std::hex
-                              << _newissueins.currentpc << std::dec << _newissueins
-                              << "let issue_ins mask=" << _newissueins.mask << " at " << sc_time_stamp() << ","
-                              << sc_delta_count_at_current_time() << std::endl;
-                    if(sm_id == 0 && i % hw_num_warp == 3 && _newissueins.currentpc == 0x80000260) {
-                        std::cout << "↑ ATTENTION! SM0 warp3 0x80000260" << std::endl;
-                    }
+                    // std::cout << "SM" << sm_id << " warp" << i % hw_num_warp << " 0x" << std::hex
+                    //           << _newissueins.currentpc << std::dec << _newissueins
+                    //           << " issue_ins mask=" << _newissueins.mask << " at " << sc_time_stamp() << ","
+                    //           << sc_delta_count_at_current_time() << std::endl;
                     issue_ins = _newissueins;
                     issueins_warpid = i % hw_num_warp;
                     find_dispatchwarp = true;

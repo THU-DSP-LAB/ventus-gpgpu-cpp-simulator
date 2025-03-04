@@ -62,6 +62,11 @@ $(BINARY): $(OBJS)
 	@mkdir -p $(dir $@)
 	@$(LD) -o $@ $(OBJS) $(LDFLAGS)
 
+RUNFLAGS = --task name=MNIST \
+	   --kernel taskid=0,name=MNIST_0,metafile=testcase/mnist/conv_0.metadata,datafile=testcase/mnist/conv_0.data \
+	   --kernel taskid=0,name=MNIST_1,metafile=testcase/mnist/conv_1.metadata,datafile=testcase/mnist/conv_1.data \
+	   --kernel taskid=0,name=MNIST_2,metafile=testcase/mnist/conv_2.metadata,datafile=testcase/mnist/conv_2.data \
+	   --numcycle 30000000
 RUNFLAGS = --task name=BFS \
 	   --kernel taskid=0,name=BFS_1_0,metafile=testcase/gpu-rodinia/bfs/BFS_1_0.metadata,datafile=testcase/gpu-rodinia/bfs/BFS_1_0.data \
 	   --kernel taskid=0,name=BFS_2_0,metafile=testcase/gpu-rodinia/bfs/BFS_2_0.metadata,datafile=testcase/gpu-rodinia/bfs/BFS_2_0.data \

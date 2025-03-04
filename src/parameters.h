@@ -56,6 +56,7 @@ constexpr int log2Ceil(int n)
 }
 inline constexpr int depth_thread = log2Ceil(hw_num_thread);
 
+union i32_u32_f32_t { int32_t i32; uint32_t u32; float f32; };
 using reg_t = sc_int<32>;
 using v_regfile_t = std::array<reg_t, hw_num_thread>;
 struct vector_t : std::array<reg_t, hw_num_thread>
