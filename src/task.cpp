@@ -43,6 +43,7 @@ void task_t::exec_nextstep(Memory* mem, CTA_Scheduler* cta) {
         m_step_is_running = true;
     } else {
         log_fatal("TODO: other type of task step not implemented yet");
+        assert(0);
     }
 }
 

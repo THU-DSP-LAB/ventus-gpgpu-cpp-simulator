@@ -57,19 +57,32 @@ void BASE::WARP_SCHEDULER() {
             assert(hblkslot.valid);
             switch (new_ins.op) {
             case OP_TYPE::BARRIER_:
-                if (std::any_of(hblkslot.warp_reach_barrier.begin(), hblkslot.warp_reach_barrier.end(),
-                                [](bool i) { return i == true; })) {
+                if (std::all_of(hblkslot.warp_reach_barrier.begin(), hblkslot.warp_reach_barrier.begin() + hblkslot.num_warp, [](bool i) {
+                        return i == false;
+                    })) {
                     // this is the first warp of this block that reaches barrier
                     hblkslot.warp_reach_barrier[hwarp->warp_idx_in_blk] = true;
                     wait_barrier[new_ins_warpid] = true;
                     hblkslot.barrier_addr = new_ins.currentpc;
+                    std::cout << "SM" << sm_id << " warp " << new_ins_warpid << " 0x" << std::hex << new_ins.currentpc
+                              << " " << new_ins << " barrier"
+                              << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << std::endl;
+
                 } else {
                     // this is not the first warp of this block that reaches barrier
+                    if (hblkslot.barrier_addr != new_ins.currentpc) {
+                        std::cout << "SM" << sm_id << " warp" << new_ins_warpid
+                                  << " warp scheduler: barrier address mismatch, block slot expect 0x" << std::hex
+                                  << hblkslot.barrier_addr << " but pc=0x" << new_ins.currentpc << std::dec << " at "
+                                  << sc_time_stamp() << "," << sc_delta_count_at_current_time() << std::endl;
+                    }
                     assert(new_ins.currentpc == hblkslot.barrier_addr);
                     hblkslot.warp_reach_barrier[hwarp->warp_idx_in_blk] = true;
                     wait_barrier[new_ins_warpid] = true;
-                    if (std::all_of(hblkslot.warp_reach_barrier.begin(), hblkslot.warp_reach_barrier.end(),
-                                    [](bool i) { return i == true; })) {
+                    if (std::all_of(
+                            hblkslot.warp_reach_barrier.begin(),
+                            hblkslot.warp_reach_barrier.begin() + hblkslot.num_warp, [](bool i) { return i == true; }
+                        )) {
                         // all warps of this block reach barrier
                         std::cout << "SM" << sm_id << " warp scheduler: all warps reach barrier pc=0x" << std::hex
                                   << new_ins.currentpc << " " << new_ins << std::dec << " at " << sc_time_stamp() << ","
@@ -99,21 +112,24 @@ void BASE::WARP_SCHEDULER() {
                 hblkslot.num_warp--;
                 hblkslot.hw_warp_running[new_ins_warpid] = false;
                 if (hblkslot.num_warp == 0) { // the last running warp of this block returns, reset its block_slot
-                    assert(std::all_of(hblkslot.hw_warp_running.begin(), hblkslot.hw_warp_running.end(),
-                                       [](bool i) { return i == false; }));
+                    assert(std::all_of(hblkslot.hw_warp_running.begin(), hblkslot.hw_warp_running.end(), [](bool i) {
+                        return i == false;
+                    }));
                     hblkslot.valid = false;
                     hblkslot.warp_reach_barrier.fill(false);
                 }
 
                 hwarp->initwarp();
                 reset_endprg_flush_pipe[new_ins_warpid] = true;
+#ifdef SPIKE_OUTPUT
                 std::cout << "SM" << sm_id << " warp " << new_ins_warpid << " 0x" << std::hex << new_ins.currentpc
                           << " " << new_ins << " endprg"
                           << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << std::endl;
+#endif
                 break;
-
             default:
                 std::cout << "warp scheduler warning, receive unrecognized instruction\n";
+                assert(0);
                 break;
             }
         }

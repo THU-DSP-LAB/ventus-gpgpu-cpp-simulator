@@ -174,6 +174,7 @@ void kernel_info_t::readTextFile(Memory* mem) {
     std::ifstream file(m_data_filename);
     if (!file.is_open()) {
         log_fatal("Failed to open file: %s", m_data_filename.c_str());
+        exit(-1);
         return;
     }
 

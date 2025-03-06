@@ -1,0 +1,8 @@
+# ventus-sim cmd argument file
+# put this file into the same directory of corresponding testcase
+# you can `ln -s thisfile to/anothor/path/and/name` as you wish
+
+# characters following '#' on each line are ignored
+
+--kernel name=matadd_big,metafile=./matadd_32b8w8t.metadata,datafile=./matadd_32b8w8t.data
+

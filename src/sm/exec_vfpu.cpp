@@ -103,6 +103,11 @@ void BASE::VFPU_CALC()
                     return i32_u32_f32_t{ .f32 = op1.f32 + op2.f32 };
                 });
                 break;
+            case DecodeParams::alu_fn_t::FN_FSUB: // VFRSUB.VF, VFSUB.VF, VFSUB.VV, FADD.S
+                calc_helper([](i32_u32_f32_t op1, i32_u32_f32_t op2, i32_u32_f32_t op3) {
+                    return i32_u32_f32_t{ .f32 = op1.f32 - op2.f32 };
+                });
+                break;
             case DecodeParams::alu_fn_t::FN_FMUL: // VFMUL.VF, VFMUL.VV, FMUL.S
                 calc_helper([](i32_u32_f32_t op1, i32_u32_f32_t op2, i32_u32_f32_t op3) {
                     return i32_u32_f32_t{ .f32 = op1.f32 * op2.f32 };

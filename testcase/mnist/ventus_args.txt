@@ -1,0 +1,12 @@
+# ventus-sim cmd argument file
+# put this file into the same directory of corresponding testcase
+# you can `ln -s thisfile to/anothor/path/and/name` as you wish
+
+# characters following '#' on each line are ignored
+
+--task   name=MNIST
+--kernel task,name=MNIST0,metafile=conv_0.metadata,datafile=conv_0.data
+--kernel task,name=MNIST1,metafile=conv_1.metadata,datafile=conv_1.data
+--kernel task,name=MNIST2,metafile=conv_2.metadata,datafile=conv_2.data
+--sim-time 30000000
+

@@ -3,6 +3,8 @@
 #include "context_model.hpp"
 #include "membox_sv39/memory.h"
 #include "task.hpp"
+#include "utils/log.h"
+#include <algorithm>
 #include <memory>
 
 Host::Host(sc_core::sc_module_name name, Memory* mem, CTA_Scheduler* cta)
@@ -60,6 +62,16 @@ void Host::mainThread() {
             } else if (!task->is_finished()) {
                 task->exec(m_mem, m_cta);
             }
+        }
+
+        if (std::all_of(
+                m_kernels.begin(), m_kernels.end(), [](std::shared_ptr<kernel_info_t> k) { return k->is_finished(); }
+            )
+            && std::all_of(m_tasks.begin(), m_tasks.end(), [](std::shared_ptr<task_t> t) {
+                   return t->is_finished();
+               })) {
+            log_info("All given tasks and kernels finished, simulation will stop normally");
+            sc_stop();
         }
     }
 }

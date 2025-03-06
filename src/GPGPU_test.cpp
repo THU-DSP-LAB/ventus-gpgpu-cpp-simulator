@@ -1,102 +1,62 @@
+#include "CTA_Scheduler.hpp"
 #include "context_model.hpp"
+#include "host.hpp"
+#include "membox_sv39/memory.h"
 #include "parameters.h"
 #include "sm/BASE.h"
 #include "sm/BASE_sti.h"
-#include "CTA_Scheduler.hpp"
+#include "task.hpp"
+#include "utils/log.h"
 #include <chrono>
+#include <cstdio>
 #include <cstring>
 #include <memory>
 #include <string>
-#include "membox_sv39/memory.h"
-#include "task.hpp"
-#include "utils/log.h"
-#include "host.hpp"
 
-int cmdarg_help();
-int cmdarg_error(int argc, char *argv[]);
-int cmdarg_task(Host *host, Memory *mem, char *arg);
-int cmdarg_kernel(Host *host, Memory *mem, char *arg);
+// #define TRACE_VCD
 
-__attribute__((visibility("default"))) 
-int sc_main(int argc, char *argv[])
-{
+int parse_arg(
+    std::vector<std::string> args, int& numcycle,
+    std::function<int(std::string name, std::string metafile, std::string datafile, bool add_to_task)> new_kernel,
+    std::function<int(std::string name)> new_task
+);
+int cmdarg_callback_new_task(Host* host, Memory* mem, std::string name);
+int cmdarg_callback_new_kernel(
+    Host* host, Memory* mem, std::string name, std::string metafile, std::string datafile, bool add_to_task
+);
+
+__attribute__((visibility("default"))) int sc_main(int argc, char* argv[]) {
     std::ios::sync_with_stdio(true);
     // 虚拟内存与页表
     Memory mem(1ull << 32ull);
 
-    std::cout << "----------Initializing SM data-structures----------\n";
-    BASE **BASE_impl;
-    BASE_impl = new BASE *[NUM_SM];
-    for (int i = 0; i < NUM_SM; i++)
-    {
+    // 硬件实例化
+    BASE** BASE_impl;
+    BASE_impl = new BASE*[NUM_SM];
+    for (int i = 0; i < NUM_SM; i++) {
         BASE_impl[i] = new BASE(("SM" + std::to_string(i)).c_str(), i, &mem);
     }
     BASE_sti BASE_sti_impl("BASE_STI");
-
-    std::cout << "----------Initializing CTAs----------\n";
-    CTA_Scheduler cta_impl("CTA_Scheduler", BASE_impl);
-    for(int i = 0; i < NUM_SM; i++)
-    {
-        BASE_impl[i]->m_warp_finish_callback = [&cta_impl](int sm_id, int blk_slot_idx, int warp_idx_in_blk) {
-            cta_impl.warp_finished(sm_id, blk_slot_idx, warp_idx_in_blk);
-        };
-    }
-    // cta_impl.CTA_INIT();
-    
-    Host host_impl("Host_GPGPU_Driver", &mem, &cta_impl);
-
-    // 处理命令行参数
-    std::string metafile, datafile, numcycle, kernelName;
-    int numkernel = 0;
-    std::vector<std::shared_ptr<kernel_info_t>> m_running_kernels;
-
-    for (int argid = 1; argid < argc; argid++) {
-        if (strcmp(argv[argid], "--task") == 0) {
-            if (cmdarg_task(&host_impl, &mem, argv[++argid])) {
-                cmdarg_error(2, argv + argid - 1);
-            }
-        } else if (strcmp(argv[argid], "--kernel") == 0) {
-            if (cmdarg_kernel(&host_impl, &mem, argv[++argid])) {
-                cmdarg_error(2, argv + argid - 1);
-            }
-        } else if (strcmp(argv[argid], "--numcycle") == 0) {
-            numcycle = argv[++argid];
-            std::cout << "--numcycle argument: " << numcycle << std::endl;
-        } else if (strcmp(argv[argid], "--help") == 0) {
-            cmdarg_help();
-        } else {
-            cmdarg_error(1, argv + argid);
-        }
-    }
-    if(numcycle.empty()) {
-        std::cout << "cmd arg error: --numcycle not provided\n";
-        cmdarg_help();
-        return 1;
-    }
-    log_debug("Finish reading runtime args");
-
-
-//    for (int i = 0; i < NUM_SM; i++)
-//    {
-//        BASE_impl[i]->set_CTA_Scheduler(&cta_impl);
-//    }
-
-    for (int i = 0; i < NUM_SM; i++)
-    {
-        for (auto &warp_ : BASE_impl[i]->m_hw_warps)
-        {
-            if (warp_ != nullptr)
-            {
+    for (int i = 0; i < NUM_SM; i++) {
+        for (auto& warp_ : BASE_impl[i]->m_hw_warps) {
+            if (warp_ != nullptr) {
                 BASE_impl[i]->ev_warp_dispatch_list &= warp_->ev_warp_dispatch;
             }
         }
     }
 
+    CTA_Scheduler cta_impl("CTA_Scheduler", BASE_impl);
+    for (int i = 0; i < NUM_SM; i++) {
+        BASE_impl[i]->m_warp_finish_callback = [&cta_impl](int sm_id, int blk_slot_idx, int warp_idx_in_blk) {
+            cta_impl.warp_finished(sm_id, blk_slot_idx, warp_idx_in_blk);
+        };
+    }
+    Host host_impl("Host_GPGPU_Driver", &mem, &cta_impl);
+
+    // clock & reset signal connect
     sc_clock clk("clk", PERIOD, SC_NS, 0.5, 0, SC_NS, false);
     sc_signal<bool> rst_n("rst_n");
-
-    for (int i = 0; i < NUM_SM; i++)
-    {
+    for (int i = 0; i < NUM_SM; i++) {
         (*BASE_impl[i]).clk(clk);
         (*BASE_impl[i]).rst_n(rst_n);
     }
@@ -106,17 +66,34 @@ int sc_main(int argc, char *argv[])
     host_impl.clk(clk);
     host_impl.rst_n(rst_n);
 
-    sc_trace_file *tf[hw_num_warp];
-    BASE *recordwave_SM = BASE_impl[1];
-    for (int i = 0; i < hw_num_warp; i++)
-    {
-        if (recordwave_SM->m_hw_warps[i] != nullptr)
-        {
+    // parse cmdline arguments
+    std::vector<std::string> args;
+    if (argc == 1) { // Default arguments
+        puts("[Info] using default cmdline arguments: -f ventus_args.txt");
+        args.push_back("-f");
+        args.push_back("ventus_args.txt");
+    } else {
+        for (int i = 1; i < argc; i++) {
+            args.push_back(argv[i]);
+        }
+    }
+    int sim_time = 8000000;
+    auto f_new_kernel = [&host_impl, &mem](std::string name, std::string metafile, std::string datafile, bool add_to_task) {
+        return cmdarg_callback_new_kernel(&host_impl, &mem, name, metafile, datafile, add_to_task);
+    };
+    auto f_new_task = [&host_impl, &mem](std::string name) { return cmdarg_callback_new_task(&host_impl, &mem, name); };
+    parse_arg(args, sim_time, f_new_kernel, f_new_task);
+    log_debug("Finish reading runtime args");
+
+#ifdef TRACE_VCD
+    sc_trace_file* tf[hw_num_warp];
+    BASE* recordwave_SM = BASE_impl[1];
+    for (int i = 0; i < hw_num_warp; i++) {
+        if (recordwave_SM->m_hw_warps[i] != nullptr) {
 
             tf[i] = sc_create_vcd_trace_file(("output/wave_warp" + std::to_string(i)).c_str());
             tf[i]->set_time_unit(1, SC_NS);
-            for (int j = 0; j < 32; j++)
-            {
+            for (int j = 0; j < 32; j++) {
                 sc_trace(tf[i], recordwave_SM->m_hw_warps[i]->CSR_reg[j], "CSR.data(" + std::to_string(j) + ")");
             }
             sc_trace(tf[i], clk, "Clk");
@@ -199,9 +176,10 @@ int sc_main(int argc, char *argv[])
             sc_trace(tf[i], recordwave_SM->wb_ena, "wb_ena");
             sc_trace(tf[i], recordwave_SM->wb_ins, "wb_ins");
             sc_trace(tf[i], recordwave_SM->wb_warpid, "wb_warpid");
-            for (int j = 0; j < 32; j++)
-            {
-                sc_trace(tf[i], recordwave_SM->m_hw_warps[i]->s_regfile[j], "s_regfile.data(" + std::to_string(j) + ")");
+            for (int j = 0; j < 32; j++) {
+                sc_trace(
+                    tf[i], recordwave_SM->m_hw_warps[i]->s_regfile[j], "s_regfile.data(" + std::to_string(j) + ")"
+                );
             }
 
             sc_trace(tf[i], recordwave_SM->m_hw_warps[i]->v_regfile[0][0], "v_regfile(0)(0)");
@@ -215,15 +193,18 @@ int sc_main(int argc, char *argv[])
             // sc_trace(tf[i], BASE_impl., "");
         }
     }
+#endif // define TRACE_VCD
 
     std::cout << "----------Simulation start----------\n";
     auto start = std::chrono::high_resolution_clock::now();
-    sc_core::sc_start(std::stoi(numcycle), SC_NS);
+    sc_core::sc_start(sim_time, SC_NS);
 
     std::cout << "----------Simulation end------------ @ " << sc_core::sc_time_stamp() << std::endl;
 
+#ifdef TRACE_VCD
     for (auto tf_ : tf)
         sc_close_vcd_trace_file(tf_);
+#endif
 
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
@@ -233,142 +214,32 @@ int sc_main(int argc, char *argv[])
     return 0;
 }
 
-int cmdarg_help() {
-    std::cout
-        << "ventus-sim [--arg subarg1=val1,subarg2=val2,...] --numcycle $YOUR_SIM_TIME\n"
-        << "\n"
-        << "--task     create a new GPGPU task, supported subargs:\n"
-        << "           name     string    // 任取\n"
-        << "\n"
-        << "--kernel   create a new GPGPU kernel, supported subargs:\n"
-        << "           name     string    // 任取\n"
-        << "           metafile string    // kernel的.metadata文件路径\n"
-        << "           datafile string    // kernel的.data文件路径\n"
-        << "           taskid   uint      // 可选，若无则为不归属任何task的独立kernel。必须指向之前已经申明的task\n"
-        << "\n"
-        << "-numcycle           uint      // 仿真时长，单位：纳秒"
-        << std::endl;
+int cmdarg_callback_new_task(Host* host, Memory* mem, std::string name) {
+    std::shared_ptr<task_t> task = std::make_shared<task_t>(host->get_num_task(), name, mem->createRootPageTable());
+    assert(task);
+    host->add_task(task);
     return 0;
 }
-
-int cmdarg_error(int argc, char* argv[]) {
-    std::cout << "Incorrect argument: \n";
-    for(int i = 0; i < argc; i++) {
-        std::cout << "  " << argv[i] << "\n";
-    }
-    cmdarg_help();
-    exit(0);
-    return 0;
-}
-
-int cmdarg_task(Host* host, Memory *mem, char* argraw) {
-    assert(argraw);
-    int len = strlen(argraw);
-    char* arg = new char[len + 1];
-    strcpy(arg, argraw);
-
-    char *name = nullptr;
-
-    //std::cout << "--task argument: \n";
-    char* ptr1 = NULL;
-    char* subarg = strtok_r(arg, ",", &ptr1);
-    while (subarg) {
-        if (strlen(subarg) > 0) {
-            char* ptr2 = NULL;
-            char* var = strtok_r(subarg, "=", &ptr2);
-            char* val = strtok_r(NULL, "=", &ptr2);
-            assert(var && val);
-
-            if(strcmp(var, "name") == 0) {
-                name = val;
-            } else {
-                goto RET_ERR;
-            }
+int cmdarg_callback_new_kernel(
+    Host* host, Memory* mem, std::string name, std::string metafile, std::string datafile, bool add_to_task
+) {
+    if (add_to_task) {
+        int taskid = host->get_num_task() - 1;
+        if(taskid == -1) {
+            std::cerr << "Error: no exist task to contain kernel \"" << name << "\" yet" << std::endl;
+            return -1;
         }
-        subarg = strtok_r(NULL, ",", &ptr1);
-    }
-
-    if(!(name)) {
-        goto RET_ERR;
-    } else {
-        std::shared_ptr<task_t> task = std::make_shared<task_t>(host->get_num_task(), name, mem->createRootPageTable());
-        host->add_task(task);
-        //std::cout << "Task created: ID = " << task->m_id << ", name = " << task->m_name << std::endl;
-    }
-
-
-    return 0;
-
-RET_ERR:
-    delete[] arg;
-    return -1;
-}
-
-int cmdarg_kernel(Host* host, Memory *mem, char* argraw) {
-    assert(argraw);
-    int len = strlen(argraw);
-    char* arg = new char[len + 1];
-    strcpy(arg, argraw);
-
-    int taskid = -1;
-    char* name = nullptr;
-    char* metafile = nullptr;
-    char* datafile = nullptr;
-
-    //std::cout << "--kernel argument: \n";
-    char* ptr1 = NULL;
-    char* subarg = strtok_r(arg, ",", &ptr1);
-    while (subarg) {
-        if (strlen(subarg) > 0) {
-            char* ptr2 = NULL;
-            char* var = strtok_r(subarg, "=", &ptr2);
-            char* val = strtok_r(NULL, "=", &ptr2);
-            assert(var && val);
-
-            if (strcmp(var, "taskid") == 0) {
-                int num = std::stoi(val);
-                assert(num < host->get_num_task());
-                assert(num >= 0);
-                taskid = num;
-            } else if (strcmp(var, "name") == 0) {
-                name = val;
-            } else if (strcmp(var, "metafile") == 0) {
-                metafile = val;
-            } else if (strcmp(var, "datafile") == 0) {
-                datafile = val;
-            } else {
-                goto RET_ERR;
-            }
-        }
-        subarg = strtok_r(NULL, ",", &ptr1);
-    }
-
-    if(!(name && metafile && datafile)) {
-        goto RET_ERR;
-    }
-
-    if(taskid != -1) {
         std::shared_ptr<kernel_info_t> kernel = std::make_shared<kernel_info_t>(
-            host->get_num_kernel_total(), name, metafile, datafile, host->get_task(taskid)->m_pagetable);
+            host->get_num_kernel_total(), name, metafile, datafile, host->get_task(taskid)->m_pagetable
+        );
+        assert(kernel);
         host->task_add_kernel(taskid, kernel);
-        //std::cout << "Kernel created: ID = " << kernel->get_kid() << ", name = " << kernel->get_kname() 
-        //    << "\n  belone to task ID = " << taskid
-        //    << "\n  metafile = " << metafile 
-        //    << "\n  datafile = " << datafile
-        //    << std::endl;
     } else {
         std::shared_ptr<kernel_info_t> kernel = std::make_shared<kernel_info_t>(
-            host->get_num_kernel_total(), name, metafile, datafile, mem->createRootPageTable());
+            host->get_num_kernel_total(), name, metafile, datafile, mem->createRootPageTable()
+        );
+        assert(kernel);
         host->add_kernel(kernel);
-        //std::cout << "Kernel created: ID = " << kernel->get_kid() << ", name = " << kernel->get_kname() 
-        //    << "\n  metafile = " << metafile 
-        //    << "\n  datafile = " << datafile
-        //    << std::endl;
     }
-
     return 0;
-RET_ERR:
-    delete[] arg;
-    return -1;
 }
-
