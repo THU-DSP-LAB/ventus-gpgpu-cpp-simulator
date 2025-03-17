@@ -153,7 +153,7 @@ public:
     }
 
     // 用虚拟地址写数据
-    int writeDataVirtual(uint64_t root, uint64_t v_addr, uint64_t size, void *in){
+    int writeDataVirtual(uint64_t root, uint64_t v_addr, uint64_t size, const void *in){
         uint64_t vpn = 0ull; uint64_t len = 0ull;
         uint64_t p_addr = addrConvert(root, v_addr);
         for(uint64_t it = 0ull; it < size; it++){

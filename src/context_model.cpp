@@ -3,32 +3,62 @@
 #include "task.hpp"
 #include "utils/log.h"
 #include <algorithm>
+#include <functional>
 
-kernel_info_t::kernel_info_t(uint32_t kernel_id, const std::string& kernel_name, const std::string& metadata_file,
-                             const std::string& data_file, uint64_t pagetable)
+kernel_info_t::kernel_info_t(
+    const meta_data_t& metadata, std::function<void(const meta_data_t*)> load_data_callback,
+    std::function<void(const meta_data_t*)> finish_callback
+)
+    : m_kernel_id(metadata.kernel_id)
+    , m_kernel_name(metadata.name)
+    , m_pagetable(metadata.pagetable)
+    , m_metadata(metadata) {
+    m_grid_dim.x = metadata.kernel_size[0];
+    m_grid_dim.y = metadata.kernel_size[1];
+    m_grid_dim.z = metadata.kernel_size[2];
+    m_finish_callback = finish_callback ? std::bind(finish_callback, &m_metadata) : std::function<void()>();
+    m_load_data_callback = load_data_callback ? std::bind(load_data_callback, &m_metadata) : std::function<void()>();
+    m_status = kernel_info_t::KERNEL_STATUS_WAIT;
+    // m_num_sm_running_this = 0;
+    m_block_status.resize(get_num_block(), BLOCK_STATUS_WAIT);
+    m_block_sm_id.resize(get_num_block(), -1);
+    log_info(
+        "kernel %s initialized, set grid_dim = %d,%d,%d", m_kernel_name.c_str(), m_grid_dim.x,
+        m_grid_dim.y, m_grid_dim.z
+    );
+}
+
+kernel_info_t::kernel_info_t(
+    uint32_t kernel_id, const std::string& kernel_name, const std::string& metadata_file,
+    const std::string& data_file, uint64_t pagetable
+)
     : m_kernel_id(kernel_id)
     , m_pagetable(pagetable)
     , m_kernel_name(kernel_name)
     , m_data_filename(data_file)
-    // , m_is_running(false)
-    // , m_is_finished(false)
-    , m_finish_callback(nullptr) {
+    , m_finish_callback(nullptr)
+    , m_load_data_callback(nullptr) {
+    m_metadata.pagetable = pagetable;
+    m_metadata.name = m_kernel_name.c_str();
+    m_metadata.kernel_id = m_kernel_id;
 
     initMetaData(metadata_file);
     assert(get_num_warp_per_cta() <= hw_num_warp);
 
     m_status = kernel_info_t::KERNEL_STATUS_WAIT;
-    m_num_sm_running_this = 0;
+    // m_num_sm_running_this = 0;
     m_block_status.resize(get_num_block());
-    m_warp_status.resize(get_num_block());
-    for(int i = 0; i < get_num_block(); i++) {
+    // m_warp_status.resize(get_num_block());
+    for (int i = 0; i < get_num_block(); i++) {
         m_block_status[i] = BLOCK_STATUS_WAIT;
-        m_warp_status[i].fill(WARP_STATUS_WAIT);
+        // m_warp_status[i].fill(WARP_STATUS_WAIT);
     }
     m_block_sm_id.resize(get_num_block());
 
-    log_info("kernel %s initialized, set grid_dim = %d,%d,%d", kernel_name.c_str(), m_grid_dim.x, m_grid_dim.y,
-             m_grid_dim.z);
+    log_info(
+        "kernel %s initialized, set grid_dim = %d,%d,%d", kernel_name.c_str(), m_grid_dim.x,
+        m_grid_dim.y, m_grid_dim.z
+    );
 }
 
 void kernel_info_t::finish() {
@@ -43,7 +73,9 @@ void kernel_info_t::finish() {
 }
 
 bool kernel_info_t::no_more_ctas_to_run() const {
-    return (m_next_cta.x >= m_grid_dim.x || m_next_cta.y >= m_grid_dim.y || m_next_cta.z >= m_grid_dim.z);
+    return (
+        m_next_cta.x >= m_grid_dim.x || m_next_cta.y >= m_grid_dim.y || m_next_cta.z >= m_grid_dim.z
+    );
 }
 
 unsigned kernel_info_t::get_next_cta_id_single() const {
@@ -72,7 +104,9 @@ void kernel_info_t::initMetaData(const std::string& filename) {
 }
 
 // convert (.metadata) hex file into raw metadata buffer
-void kernel_info_t::readHexFile(const std::string& filename, int itemSize, std::vector<uint64_t>& items) {
+void kernel_info_t::readHexFile(
+    const std::string& filename, int itemSize, std::vector<uint64_t>& items
+) {
     // itemSize为每个数据的比特数，这里为64
     ifstream file(filename);
 
@@ -150,8 +184,8 @@ void kernel_info_t::assignMetadata(const std::vector<uint64_t>& metadata, meta_d
 
     for (int i = 0; i < mtd.num_buffer - 1; i++) {
         mtd.buffer_base[i] = metadata[index++];
-        if (mtd.buffer_base[i] == mtd.startaddr)
-            mtd.insBufferIndex = i;
+        // if (mtd.buffer_base[i] == mtd.startaddr)
+        //     mtd.insBufferIndex = i;
     }
     mtd.buffer_base[mtd.num_buffer - 1] = ldsBaseAddr_core; // localmem base addr
 
@@ -183,7 +217,9 @@ void kernel_info_t::readTextFile(Memory* mem) {
     std::vector<uint8_t> buffer;
     for (int bufferIndex = 0; bufferIndex < mtd.num_buffer; bufferIndex++) {
         buffer.reserve(mtd.buffer_allocsize[bufferIndex]); // 提前分配空间
-        mem->allocateMemory(get_pagetable(), mtd.buffer_base[bufferIndex], mtd.buffer_allocsize[bufferIndex]);
+        mem->allocateMemory(
+            get_pagetable(), mtd.buffer_base[bufferIndex], mtd.buffer_allocsize[bufferIndex]
+        );
         int readbytes = 0;
         while (readbytes < mtd.buffer_size[bufferIndex]) {
             std::getline(file, line);
@@ -195,8 +231,10 @@ void kernel_info_t::readTextFile(Memory* mem) {
             readbytes += 4;
         }
         buffer.resize(mtd.buffer_allocsize[bufferIndex]);
-        mem->writeDataVirtual(get_pagetable(), mtd.buffer_base[bufferIndex], mtd.buffer_size[bufferIndex],
-                              buffer.data());
+        mem->writeDataVirtual(
+            get_pagetable(), mtd.buffer_base[bufferIndex], mtd.buffer_size[bufferIndex],
+            buffer.data()
+        );
         buffer.clear();
     }
     // buffers[mtd.num_buffer-1] is localmem(LDS)
@@ -206,6 +244,13 @@ void kernel_info_t::readTextFile(Memory* mem) {
 }
 
 // 激活Kernel，载入初始数据，随时开始运行
+void kernel_info_t::activate() {
+    assert(m_status == KERNEL_STATUS_WAIT);
+    if (m_load_data_callback)
+        m_load_data_callback();
+    m_status = KERNEL_STATUS_RUNNING;
+    log_info("Kernel%d %s load init data (callback)", m_kernel_id, m_kernel_name.c_str());
+}
 void kernel_info_t::activate(Memory* mem, std::function<void()> finish_callback) {
     readTextFile(mem);
     m_finish_callback = finish_callback;

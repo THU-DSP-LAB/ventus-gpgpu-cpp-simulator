@@ -556,7 +556,7 @@ void BASE::receive_warp(uint32_t block_idx, uint32_t warp_idx, std::shared_ptr<k
     hblkslot.num_warp++;
     wait_barrier[hw_warp_idx] = false;
 
-    kernel->m_warp_status[block_idx][warp_idx] = kernel_info_t::WARP_STATUS_RUNNING;
+    // kernel->m_warp_status[block_idx][warp_idx] = kernel_info_t::WARP_STATUS_RUNNING;
     std::cout << std::dec << "SM " << sm_id << " warp " << hw_warp_idx << " is activated at " << sc_time_stamp() << ","
               << sc_delta_count_at_current_time() << " (kernel " << kernel->get_kname() << " block " << block_idx
               << " warp " << warp_idx << ")" << std::endl;

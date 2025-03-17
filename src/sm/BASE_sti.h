@@ -9,7 +9,7 @@ SC_MODULE(BASE_sti)
     void gen_sti()
     {
         rst_n = 0;
-        wait(10, SC_NS);
+        wait(PERIOD, SC_NS);
         rst_n = 1;
     }
     SC_CTOR(BASE_sti)

@@ -77,7 +77,7 @@ public:
     sc_in<bool> rst_n { "rst_n" };
 
 public:
-    CTA_Scheduler(sc_core::sc_module_name name, BASE** sm_group_)
+    CTA_Scheduler(sc_core::sc_module_name name, BASE* sm_group_[])
         : sc_module(name) {
         for (int sm_idx = 0; sm_idx < NUM_SM; sm_idx++) {
             m_sm[sm_idx].set_sm_ptr(sm_group_[sm_idx]);
@@ -93,6 +93,7 @@ public:
 
     // Interface between this and driver
     bool kernel_add(std::shared_ptr<kernel_info_t> kernel);
+    bool is_idle() const { return m_waiting_kernels.empty() && m_running_kernels.empty(); };
 
 private:
     // Helpers
