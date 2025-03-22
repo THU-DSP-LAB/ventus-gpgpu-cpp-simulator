@@ -17,12 +17,15 @@
 
 int parse_arg(
     std::vector<std::string> args, int& numcycle,
-    std::function<int(std::string name, std::string metafile, std::string datafile, bool add_to_task)> new_kernel,
+    std::function<
+        int(std::string name, std::string metafile, std::string datafile, bool add_to_task)>
+        new_kernel,
     std::function<int(std::string name)> new_task
 );
 int cmdarg_callback_new_task(Host* host, Memory* mem, std::string name);
 int cmdarg_callback_new_kernel(
-    Host* host, Memory* mem, std::string name, std::string metafile, std::string datafile, bool add_to_task
+    Host* host, Memory* mem, std::string name, std::string metafile, std::string datafile,
+    bool add_to_task
 );
 
 __attribute__((visibility("default"))) int sc_main(int argc, char* argv[]) {
@@ -47,9 +50,10 @@ __attribute__((visibility("default"))) int sc_main(int argc, char* argv[]) {
 
     CTA_Scheduler cta_impl("CTA_Scheduler", BASE_impl);
     for (int i = 0; i < NUM_SM; i++) {
-        BASE_impl[i]->m_warp_finish_callback = [&cta_impl](int sm_id, int blk_slot_idx, int warp_idx_in_blk) {
-            cta_impl.warp_finished(sm_id, blk_slot_idx, warp_idx_in_blk);
-        };
+        BASE_impl[i]->m_warp_finish_callback
+            = [&cta_impl](int sm_id, int blk_slot_idx, int warp_idx_in_blk) {
+                  cta_impl.warp_finished(sm_id, blk_slot_idx, warp_idx_in_blk);
+              };
     }
     Host host_impl("Host_GPGPU_Driver", &mem, &cta_impl);
 
@@ -78,10 +82,15 @@ __attribute__((visibility("default"))) int sc_main(int argc, char* argv[]) {
         }
     }
     int sim_time = 8000000;
-    auto f_new_kernel = [&host_impl, &mem](std::string name, std::string metafile, std::string datafile, bool add_to_task) {
+    auto f_new_kernel = [&host_impl, &mem](
+                            std::string name, std::string metafile, std::string datafile,
+                            bool add_to_task
+                        ) {
         return cmdarg_callback_new_kernel(&host_impl, &mem, name, metafile, datafile, add_to_task);
     };
-    auto f_new_task = [&host_impl, &mem](std::string name) { return cmdarg_callback_new_task(&host_impl, &mem, name); };
+    auto f_new_task = [&host_impl, &mem](std::string name) {
+        return cmdarg_callback_new_task(&host_impl, &mem, name);
+    };
     parse_arg(args, sim_time, f_new_kernel, f_new_task);
     log_debug("Finish reading runtime args");
 
@@ -94,7 +103,10 @@ __attribute__((visibility("default"))) int sc_main(int argc, char* argv[]) {
             tf[i] = sc_create_vcd_trace_file(("output/wave_warp" + std::to_string(i)).c_str());
             tf[i]->set_time_unit(1, SC_NS);
             for (int j = 0; j < 32; j++) {
-                sc_trace(tf[i], recordwave_SM->m_hw_warps[i]->CSR_reg[j], "CSR.data(" + std::to_string(j) + ")");
+                sc_trace(
+                    tf[i], recordwave_SM->m_hw_warps[i]->CSR_reg[j],
+                    "CSR.data(" + std::to_string(j) + ")"
+                );
             }
             sc_trace(tf[i], clk, "Clk");
             sc_trace(tf[i], rst_n, "Rst_n");
@@ -106,7 +118,9 @@ __attribute__((visibility("default"))) int sc_main(int argc, char* argv[]) {
             sc_trace(tf[i], recordwave_SM->m_hw_warps[i]->pc, "pc");
             sc_trace(tf[i], recordwave_SM->m_hw_warps[i]->fetch_ins, "fetch_ins");
             sc_trace(tf[i], recordwave_SM->m_hw_warps[i]->decode_ins, "decode_ins");
-            sc_trace(tf[i], recordwave_SM->m_hw_warps[i]->dispatch_warp_valid, "dispatch_warp_valid");
+            sc_trace(
+                tf[i], recordwave_SM->m_hw_warps[i]->dispatch_warp_valid, "dispatch_warp_valid"
+            );
             sc_trace(tf[i], recordwave_SM->m_hw_warps[i]->ibuf_empty, "ibuf_empty");
             sc_trace(tf[i], recordwave_SM->m_hw_warps[i]->ibuf_swallow, "ibuf_swallow");
             sc_trace(tf[i], recordwave_SM->m_hw_warps[i]->ibuftop_ins, "ibuftop_ins");
@@ -178,7 +192,8 @@ __attribute__((visibility("default"))) int sc_main(int argc, char* argv[]) {
             sc_trace(tf[i], recordwave_SM->wb_warpid, "wb_warpid");
             for (int j = 0; j < 32; j++) {
                 sc_trace(
-                    tf[i], recordwave_SM->m_hw_warps[i]->s_regfile[j], "s_regfile.data(" + std::to_string(j) + ")"
+                    tf[i], recordwave_SM->m_hw_warps[i]->s_regfile[j],
+                    "s_regfile.data(" + std::to_string(j) + ")"
                 );
             }
 
@@ -208,29 +223,34 @@ __attribute__((visibility("default"))) int sc_main(int argc, char* argv[]) {
 
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-    std::cout << "Time taken: " << std::dec << duration.count() / 1000 << " milliseconds" << std::endl;
+    std::cout << "Time taken: " << std::dec << duration.count() / 1000 << " milliseconds"
+              << std::endl;
 
     delete[] BASE_impl;
     return 0;
 }
 
 int cmdarg_callback_new_task(Host* host, Memory* mem, std::string name) {
-    std::shared_ptr<task_t> task = std::make_shared<task_t>(host->get_num_task(), name, mem->createRootPageTable());
+    std::shared_ptr<task_t> task
+        = std::make_shared<task_t>(host->get_num_task(), name, mem->createRootPageTable());
     assert(task);
     host->add_task(task);
     return 0;
 }
 int cmdarg_callback_new_kernel(
-    Host* host, Memory* mem, std::string name, std::string metafile, std::string datafile, bool add_to_task
+    Host* host, Memory* mem, std::string name, std::string metafile, std::string datafile,
+    bool add_to_task
 ) {
     if (add_to_task) {
         int taskid = host->get_num_task() - 1;
-        if(taskid == -1) {
-            std::cerr << "Error: no exist task to contain kernel \"" << name << "\" yet" << std::endl;
+        if (taskid == -1) {
+            std::cerr << "Error: no exist task to contain kernel \"" << name << "\" yet"
+                      << std::endl;
             return -1;
         }
         std::shared_ptr<kernel_info_t> kernel = std::make_shared<kernel_info_t>(
-            host->get_num_kernel_total(), name, metafile, datafile, host->get_task(taskid)->m_pagetable
+            host->get_num_kernel_total(), name, metafile, datafile,
+            host->get_task(taskid)->m_pagetable
         );
         assert(kernel);
         host->task_add_kernel(taskid, kernel);

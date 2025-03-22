@@ -1,5 +1,3 @@
-#include "ventus_cyclesim.h"
-#include "top_gpgpu.hpp"
 #include "ventus_cyclesim_impl.hpp"
 
 ventus_cyclesim_t* ventus_cyclesim_init(const ventus_cyclesim_config_t* config) {
@@ -41,12 +39,14 @@ void ventus_cyclesim_add_kernel__temp(
 int ventus_cyclesim_pmem_page_alloc(ventus_cyclesim_t* sim, paddr_t base) { return 0; }
 int ventus_cyclesim_pmem_page_free(ventus_cyclesim_t* sim, paddr_t base) { return 0; }
 
-int ventus_cyclesim_pmemcpy_d2h(ventus_cyclesim_t *sim, void *dst, paddr_t src, uint64_t size) {
+int ventus_cyclesim_pmemcpy_d2h(ventus_cyclesim_t* sim, void* dst, paddr_t src, uint64_t size) {
     sim->m_dut->pmemcpy_d2h(dst, src, size);
     return 0;
 }
 
-int ventus_cyclesim_pmemcpy_h2d(ventus_cyclesim_t *sim, paddr_t dst, const void *src, uint64_t size) {
+int ventus_cyclesim_pmemcpy_h2d(
+    ventus_cyclesim_t* sim, paddr_t dst, const void* src, uint64_t size
+) {
     sim->m_dut->pmemcpy_h2d(dst, src, size);
     return 0;
 }
@@ -55,15 +55,23 @@ paddr_t ventus_cyclesim_vmem_create(ventus_cyclesim_t* sim) { return sim->m_dut-
 void ventus_cyclesim_vmem_destroy(ventus_cyclesim_t* sim, paddr_t pagetable_root) {
     sim->m_dut->vmem_destroy(pagetable_root);
 }
-void ventus_cyclesim_vmemcpy_h2d(ventus_cyclesim_t* sim, paddr_t pagetable_root, uint64_t dst, const void* src, uint64_t size) {
+void ventus_cyclesim_vmemcpy_h2d(
+    ventus_cyclesim_t* sim, paddr_t pagetable_root, uint64_t dst, const void* src, uint64_t size
+) {
     sim->m_dut->vmemcpy_h2d(pagetable_root, dst, src, size);
 }
-void ventus_cyclesim_vmemcpy_d2h(ventus_cyclesim_t* sim, paddr_t pagetable_root, void* dst, uint64_t src, uint64_t size) {
+void ventus_cyclesim_vmemcpy_d2h(
+    ventus_cyclesim_t* sim, paddr_t pagetable_root, void* dst, uint64_t src, uint64_t size
+) {
     sim->m_dut->vmemcpy_d2h(pagetable_root, dst, src, size);
 }
-uint64_t ventus_cyclesim_vmem_alloc(ventus_cyclesim_t* sim, paddr_t pagetable_root, uint64_t vaddr, uint64_t size) {
+uint64_t ventus_cyclesim_vmem_alloc(
+    ventus_cyclesim_t* sim, paddr_t pagetable_root, uint64_t vaddr, uint64_t size
+) {
     return sim->m_dut->vmem_alloc(pagetable_root, vaddr, size);
 }
-void ventus_cyclesim_vmem_free(ventus_cyclesim_t* sim, paddr_t pagetable_root, uint64_t vaddr, uint64_t size) {
+void ventus_cyclesim_vmem_free(
+    ventus_cyclesim_t* sim, paddr_t pagetable_root, uint64_t vaddr, uint64_t size
+) {
     // todo
 }

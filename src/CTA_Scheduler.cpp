@@ -106,9 +106,12 @@ void CTA_Scheduler::schedule_kernel2core() {
             sm.rsrc.num_warp += kernel->get_num_warp_per_cta();
             sm.rsrc.blk_slots[block_slot_idx].valid = true;
             if (kernel->get_ldsSize_per_cta() > 0) {
-                sm.rsrc.lds.alloc(block_slot_idx, lds_baseaddr, kernel->get_ldsSize_per_cta(), block_idx);
+                sm.rsrc.lds.alloc(
+                    block_slot_idx, lds_baseaddr, kernel->get_ldsSize_per_cta(), block_idx
+                );
             }
-            // block info recorded to block_slot in CTA scheduler, for resource dealloc after block finished
+            // block info recorded to block_slot in CTA scheduler, for resource dealloc after block
+            // finished
             sm.rsrc.blk_slots[block_slot_idx].kernel = kernel;
             sm.rsrc.blk_slots[block_slot_idx].block_idx = block_idx;
             sm.rsrc.blk_slots[block_slot_idx].warp_finished.fill(false);
@@ -145,9 +148,12 @@ void CTA_Scheduler::collect_finished_blocks() {
             int blk_idx = sm.rsrc.blk_slots[blk_slot_idx].block_idx;
             assert(kernel && kernel->m_status == kernel_info_t::KERNEL_STATUS_RUNNING);
             assert(kernel->m_block_status[blk_idx] == kernel_info_t::BLOCK_STATUS_RUNNING);
-            if (std::all_of(sm.rsrc.blk_slots[blk_slot_idx].warp_finished.begin(),
-                            sm.rsrc.blk_slots[blk_slot_idx].warp_finished.begin() + kernel->get_num_warp_per_cta(),
-                            [](bool finished) { return finished; })) {
+            if (std::all_of(
+                    sm.rsrc.blk_slots[blk_slot_idx].warp_finished.begin(),
+                    sm.rsrc.blk_slots[blk_slot_idx].warp_finished.begin()
+                        + kernel->get_num_warp_per_cta(),
+                    [](bool finished) { return finished; }
+                )) {
                 // block finished, dealloc resource
                 sm.rsrc.blk_slots[blk_slot_idx].valid = false;
                 sm.rsrc.num_warp -= kernel->get_num_warp_per_cta();
@@ -158,12 +164,16 @@ void CTA_Scheduler::collect_finished_blocks() {
                 kernel->m_block_status[blk_idx] = kernel_info_t::BLOCK_STATUS_FINISHED;
 
                 // if all blocks of this kernel finished, release this kernel
-                if (std::all_of(kernel->m_block_status.begin(), kernel->m_block_status.end(),
-                                [](int status) { return status == kernel_info_t::BLOCK_STATUS_FINISHED; })) {
+                if (std::all_of(
+                        kernel->m_block_status.begin(), kernel->m_block_status.end(),
+                        [](int status) { return status == kernel_info_t::BLOCK_STATUS_FINISHED; }
+                    )) {
                     kernel->finish();
                     m_finished_kernels.push_back(kernel);
-                    m_running_kernels.erase(std::remove(m_running_kernels.begin(), m_running_kernels.end(), kernel),
-                                            m_running_kernels.end());
+                    m_running_kernels.erase(
+                        std::remove(m_running_kernels.begin(), m_running_kernels.end(), kernel),
+                        m_running_kernels.end()
+                    );
                 }
             }
         }

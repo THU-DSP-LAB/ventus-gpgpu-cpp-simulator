@@ -10,17 +10,19 @@
 #include <string>
 #include <vector>
 
-int cmdarg_kernel(
-    std::string arg,
-    std::function<int(std::string name, std::string metafile, std::string datafile, bool add_to_task)> new_kernel
-);
+using f_new_kernel_t = std::function<
+    int(std::string name, std::string metafile, std::string datafile, bool add_to_task)>;
+
+int cmdarg_kernel(std::string arg, f_new_kernel_t new_kernel);
 int cmdarg_task(std::string arg, std::function<int(std::string name)> new_task);
 int cmdarg_error(std::vector<std::string> args);
 int cmdarg_help(int exit_id);
 
 int parse_arg(
     std::vector<std::string> args, int& numcycle,
-    std::function<int(std::string name, std::string metafile, std::string datafile, bool add_to_task)> new_kernel,
+    std::function<
+        int(std::string name, std::string metafile, std::string datafile, bool add_to_task)>
+        new_kernel,
     std::function<int(std::string name)> new_task
 ) {
     for (int argid = 0; argid < args.size(); argid++) {
@@ -32,7 +34,8 @@ int parse_arg(
                 try {
                     filename = std::filesystem::canonical(args[argid]);
                 } catch (const std::filesystem::filesystem_error& e) {
-                    std::cout << "Error: file not found: -f " << args[argid] << "\n" << e.what() << std::endl;
+                    std::cout << "Error: file not found: -f " << args[argid] << "\n"
+                              << e.what() << std::endl;
                     exit(1);
                 }
                 path_to_file = filename.parent_path();
@@ -66,7 +69,9 @@ int parse_arg(
                 cmdarg_error(std::vector<std::string>(args.begin() + argid - 1, args.end()));
             } else { // TODO
                 if (cmdarg_task(args[argid], new_task)) {
-                    cmdarg_error(std::vector<std::string>(args.begin() + argid - 1, args.begin() + argid + 1));
+                    cmdarg_error(
+                        std::vector<std::string>(args.begin() + argid - 1, args.begin() + argid + 1)
+                    );
                 }
             }
         } else if (args[argid] == "--kernel") {
@@ -74,7 +79,9 @@ int parse_arg(
                 cmdarg_error(std::vector<std::string>(args.begin() + argid - 1, args.end()));
             } else if (new_kernel) {
                 if (cmdarg_kernel(args[argid], new_kernel)) {
-                    cmdarg_error(std::vector<std::string>(args.begin() + argid - 1, args.begin() + argid + 1));
+                    cmdarg_error(
+                        std::vector<std::string>(args.begin() + argid - 1, args.begin() + argid + 1)
+                    );
                 }
             }
         } else if (args[argid] == "--help") {
@@ -137,10 +144,7 @@ RET_ERR:
     return -1;
 }
 
-int cmdarg_kernel(
-    std::string arg_raw,
-    std::function<int(std::string name, std::string metafile, std::string datafile, bool add_to_task)> new_kernel
-) {
+int cmdarg_kernel(std::string arg_raw, f_new_kernel_t new_kernel) {
     int len = arg_raw.size();
     char* arg = new char[len + 1];
     strcpy(arg, arg_raw.c_str());
@@ -210,23 +214,26 @@ int cmdarg_error(std::vector<std::string> args) {
 }
 
 int cmdarg_help(int exit_id) {
-    std::cout << "ventus-sim [--arg subarg1=val1,subarg2=val2,...]\n"
-              << "\n"
-              << "Supported cmdline arguments: \n"
-              << "-f         FILE     string  // load cmd args from file\n"
-              << "                            // if no cmd args is given, -f ventus_cmdargs.txt is applied\n"
-              << "\n"
-              << "--task                      // create a new GPGPU task\n"
-              << "  subarg:  name     string  // 任取\n"
-              //<< "           id       uint    // 任取\n"
-              << "\n"
-              << "--kernel                    // create a new GPGPU kernel\n"
-              << "  subarg:  name     string  // 任取\n"
-              << "           metafile string  // kernel的.metadata文件路径\n"
-              << "           datafile string  // kernel的.data文件路径\n"
-              << "           task             // 若有则归属上一个声明的task，若无则为不归属任何task的独立kernel\n"
-              << "\n"
-              //<< "--snapshot INTERVAL uint    // 每隔多少仿真时间生成一个快照，若为0则关闭快照功能\n"
-              << "--sim-time NUM      uint    // number of simulation cycles" << std::endl;
+    std::cout
+        << "ventus-sim [--arg subarg1=val1,subarg2=val2,...]\n"
+        << "\n"
+        << "Supported cmdline arguments: \n"
+        << "-f         FILE     string  // load cmd args from file\n"
+        << "                            // if no cmd args is given, -f ventus_cmdargs.txt is "
+           "applied\n"
+        << "\n"
+        << "--task                      // create a new GPGPU task\n"
+        << "  subarg:  name     string  // 任取\n"
+        //<< "           id       uint    // 任取\n"
+        << "\n"
+        << "--kernel                    // create a new GPGPU kernel\n"
+        << "  subarg:  name     string  // 任取\n"
+        << "           metafile string  // kernel的.metadata文件路径\n"
+        << "           datafile string  // kernel的.data文件路径\n"
+        << "           task             // "
+           "若有则归属上一个声明的task，若无则为不归属任何task的独立kernel\n"
+        << "\n"
+        //<< "--snapshot INTERVAL uint    // 每隔多少仿真时间生成一个快照，若为0则关闭快照功能\n"
+        << "--sim-time NUM      uint    // number of simulation cycles" << std::endl;
     exit(exit_id);
 }

@@ -26,11 +26,11 @@ typedef ventus_kernel_metadata_t meta_data_t;
 //     uint64_t pdsSize;          ///> 每个thread用到的private memory大小
 //     uint64_t sgprUsage;        ///> 每个workgroup使用的标量寄存器数目
 //     uint64_t vgprUsage;        ///> 每个thread使用的向量寄存器数目
-//     uint64_t pdsBaseAddr; ///> private memory的基址，要转成每个workgroup的基地址， wf_size*wg_size*pdsSize
-//     uint64_t num_buffer;  ///> buffer的数目，包括pc
-//     uint64_t* buffer_base;      ///> 各buffer的基址
-//     uint64_t* buffer_size;      ///> 各buffer的size，以Bytes为单位。实际使用的大小，用于初始化.data
-//     uint64_t* buffer_allocsize; ///> 各buffer的size，以Bytes为单位。分配的大小
+//     uint64_t pdsBaseAddr; ///> private memory的基址，要转成每个workgroup的基地址，
+//     wf_size*wg_size*pdsSize uint64_t num_buffer;  ///> buffer的数目，包括pc uint64_t*
+//     buffer_base;      ///> 各buffer的基址 uint64_t* buffer_size;      ///>
+//     各buffer的size，以Bytes为单位。实际使用的大小，用于初始化.data uint64_t* buffer_allocsize;
+//     ///> 各buffer的size，以Bytes为单位。分配的大小
 
 //     // int insBufferIndex; // 指令在哪一个buffer
 // };
@@ -44,7 +44,7 @@ public:
         const std::string& data_file, uint64_t pagetable
     );
     kernel_info_t(
-        const meta_data_t &metadata, std::function<void(const meta_data_t*)> load_data_callback,
+        const meta_data_t& metadata, std::function<void(const meta_data_t*)> load_data_callback,
         std::function<void(const meta_data_t*)> finish_callback
     );
 
@@ -108,7 +108,7 @@ private:
     dim3 m_grid_dim;      // grid size 3D (number of blocks)
     uint64_t m_pagetable; // pagetable root (address space ID), see membox_sv39/memory.h
     const uint32_t m_kernel_id;
-    std::function<void()> m_finish_callback; // callback this when kernel finished
+    std::function<void()> m_finish_callback;    // callback this when kernel finished
     std::function<void()> m_load_data_callback; // callback this when kernel finished
 
     // Helpers

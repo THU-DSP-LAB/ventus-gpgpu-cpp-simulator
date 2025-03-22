@@ -11,4 +11,3 @@ extern "C" struct ventus_cyclesim_t {
     void destructor();
     const ventus_cyclesim_step_result_t* step();
 };
-

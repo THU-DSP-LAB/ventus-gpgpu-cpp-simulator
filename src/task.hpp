@@ -29,7 +29,13 @@ public:
     bool is_finished() const { return m_is_finished; }
 
 private:
-    enum { STEPTYPE_NONE, STEPTYPE_KERNEL, STEPTYPE_MEMCPY_D2D, STEPTYPE_MEMCPY_H2D, STEPTYPE_MEMCPY_D2H };
+    enum {
+        STEPTYPE_NONE,
+        STEPTYPE_KERNEL,
+        STEPTYPE_MEMCPY_D2D,
+        STEPTYPE_MEMCPY_H2D,
+        STEPTYPE_MEMCPY_D2H
+    };
 
     std::vector<std::any> m_steps;
     int m_step_id_running; // Init value: -1

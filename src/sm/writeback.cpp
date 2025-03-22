@@ -1,21 +1,21 @@
 #include "BASE.h"
 
-void BASE::WRITE_BACK()
-{
+void BASE::WRITE_BACK() {
     // FloatAndInt newFI;
 
-    while (true)
-    {
-        wait(ev_salufifo_pushed & ev_valufifo_pushed & ev_vfpufifo_pushed &
-             ev_lsufifo_pushed & ev_csrfifo_pushed & ev_mulfifo_pushed & ev_sfufifo_pushed &
-             ev_tcfifo_pushed);
+    while (true) {
+        wait(
+            ev_salufifo_pushed & ev_valufifo_pushed & ev_vfpufifo_pushed & ev_lsufifo_pushed
+            & ev_csrfifo_pushed & ev_mulfifo_pushed & ev_sfufifo_pushed & ev_tcfifo_pushed
+        );
         // if (sm_id == 1)
-        //     std::cout << "SM" << sm_id << " WRITEBACK: start at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-        if (execpop_salu)
-        {
+        //     std::cout << "SM" << sm_id << " WRITEBACK: start at " << sc_time_stamp() << "," <<
+        //     sc_delta_count_at_current_time() << "\n";
+        if (execpop_salu) {
             salufifo.pop();
             // if (sm_id == 0)
-            //     std::cout << "SM" << sm_id << " WB pop salufifo at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+            //     std::cout << "SM" << sm_id << " WB pop salufifo at " << sc_time_stamp() << "," <<
+            //     sc_delta_count_at_current_time() << "\n";
         }
         if (execpop_valu)
             valufifo.pop();
@@ -74,10 +74,11 @@ void BASE::WRITE_BACK()
         execpop_sfu = false;
         execpop_tc = false;
 
-        if (salufifo_empty == false)
-        {
+        if (salufifo_empty == false) {
             // if (sm_id == 0)
-            //     std::cout << "SM" << sm_id << " WB judge popsalu, write_s=true, salutop.ins=" << salutop_dat.ins << ",pc=" << std::hex << salutop_dat.ins.currentpc << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+            //     std::cout << "SM" << sm_id << " WB judge popsalu, write_s=true, salutop.ins=" <<
+            //     salutop_dat.ins << ",pc=" << std::hex << salutop_dat.ins.currentpc << std::dec <<
+            //     " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
             write_s = true;
             write_v = false;
             wb_ena = true;
@@ -86,11 +87,10 @@ void BASE::WRITE_BACK()
             rdv1_addr = salutop_dat.ins.d;
             rdv1_data[0] = salutop_dat.data;
             wb_warpid = salutop_dat.warp_id;
-        }
-        else if (valufifo_empty == false)
-        {
+        } else if (valufifo_empty == false) {
             // if (sm_id == 0)
-            //     std::cout << "SM" << sm_id << " WB judge popvalu, write_v=true at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+            //     std::cout << "SM" << sm_id << " WB judge popvalu, write_v=true at " <<
+            //     sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
             write_s = false;
             write_v = true;
             wb_ena = true;
@@ -100,47 +100,43 @@ void BASE::WRITE_BACK()
             for (int i = 0; i < hw_num_thread; i++)
                 rdv1_data[i] = valutop_dat.rdv1_data[i];
             wb_warpid = valutop_dat.warp_id;
-        }
-        else if (vfpufifo_empty == false)
-        {
+        } else if (vfpufifo_empty == false) {
             wb_ena = true;
             execpop_vfpu = true;
             wb_ins = vfputop_dat.ins;
             if (vfputop_dat.ins.ddd.wxd) // FEQ_S_等指令
             {
                 // if (sm_id == 0)
-                //     std::cout << "SM" << sm_id << " WB judge popvfpu, write_s=true at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                //     std::cout << "SM" << sm_id << " WB judge popvfpu, write_s=true at " <<
+                //     sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 write_s = true;
                 write_v = false;
                 rdv1_addr = vfputop_dat.ins.d;
                 rdv1_data[0] = vfputop_dat.rds1_data;
-            }
-            else
-            {
+            } else {
                 // if (sm_id == 0)
-                //     std::cout << "SM" << sm_id << " WB judge popvfpu, write_v=true at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                //     std::cout << "SM" << sm_id << " WB judge popvfpu, write_v=true at " <<
+                //     sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 write_s = false;
                 write_v = true;
                 rdv1_addr = vfputop_dat.ins.d;
-                // std::cout << "WB: let wb_ins=" << vfputop_dat.ins << "warp" << vfputop_dat.warp_id << ", rdf1_data={";
+                // std::cout << "WB: let wb_ins=" << vfputop_dat.ins << "warp" <<
+                // vfputop_dat.warp_id << ", rdf1_data={";
                 for (int i = 0; i < hw_num_thread; i++)
                     rdv1_data[i].write(vfputop_dat.rdf1_data[i]);
             }
             wb_warpid = vfputop_dat.warp_id;
-            // std::cout << "} at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-        }
-        else if (lsufifo_empty == false)
-        {
+            // std::cout << "} at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() <<
+            // "\n";
+        } else if (lsufifo_empty == false) {
             // if (sm_id == 0)
-            //     std::cout << "SM" << sm_id << " WB judge poplsu, at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+            //     std::cout << "SM" << sm_id << " WB judge poplsu, at " << sc_time_stamp() << ","
+            //     << sc_delta_count_at_current_time() << "\n";
             execpop_lsu = true;
-            if (lsutop_dat.ins.ddd.wxd)
-            {
+            if (lsutop_dat.ins.ddd.wxd) {
                 write_s = true;
                 write_v = false;
-            }
-            else if (lsutop_dat.ins.ddd.wvd)
-            {
+            } else if (lsutop_dat.ins.ddd.wvd) {
                 write_s = false;
                 write_v = true;
             }
@@ -153,11 +149,11 @@ void BASE::WRITE_BACK()
                 rdv1_data[i] = lsutop_dat.rdv1_data[i];
 
             wb_warpid = lsutop_dat.warp_id;
-        }
-        else if (csrfifo_empty == false)
-        {
+        } else if (csrfifo_empty == false) {
             // if (sm_id == 0)
-            //     std::cout << "SM" << sm_id << " WB judge popcsr, write_s=true, csrtop.ins=" << csrtop_dat.ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+            //     std::cout << "SM" << sm_id << " WB judge popcsr, write_s=true, csrtop.ins=" <<
+            //     csrtop_dat.ins << " at " << sc_time_stamp() << "," <<
+            //     sc_delta_count_at_current_time() << "\n";
             write_s = true;
             write_v = false;
             wb_ena = true;
@@ -166,57 +162,47 @@ void BASE::WRITE_BACK()
             rdv1_addr = csrtop_dat.ins.d;
             rdv1_data[0] = csrtop_dat.data;
             wb_warpid = csrtop_dat.warp_id;
-        }
-        else if (mulfifo_empty == false)
-        {
+        } else if (mulfifo_empty == false) {
             // if (sm_id == 0)
-            //     std::cout << "SM" << sm_id << " WB judge popmul, at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+            //     std::cout << "SM" << sm_id << " WB judge popmul, at " << sc_time_stamp() << ","
+            //     << sc_delta_count_at_current_time() << "\n";
             wb_ena = true;
             execpop_mul = true;
             wb_ins = multop_dat.ins;
             wb_warpid = multop_dat.warp_id;
-            if (multop_dat.ins.ddd.wxd)
-            {
+            if (multop_dat.ins.ddd.wxd) {
                 write_s = true;
                 write_v = false;
                 rdv1_addr = multop_dat.ins.d;
                 rdv1_data[0] = multop_dat.rdv1_data[0];
-            }
-            else if (multop_dat.ins.ddd.wvd)
-            {
+            } else if (multop_dat.ins.ddd.wvd) {
                 write_s = false;
                 write_v = true;
                 rdv1_addr = multop_dat.ins.d;
                 for (int i = 0; i < hw_num_thread; i++)
                     rdv1_data[i] = multop_dat.rdv1_data[i];
             }
-        }
-        else if (sfufifo_empty == false)
-        {
+        } else if (sfufifo_empty == false) {
             // if (sm_id == 0)
-            //     std::cout << "SM" << sm_id << " WB judge popsfu, at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+            //     std::cout << "SM" << sm_id << " WB judge popsfu, at " << sc_time_stamp() << ","
+            //     << sc_delta_count_at_current_time() << "\n";
             wb_ena = true;
             execpop_sfu = true;
             wb_ins = sfutop_dat.ins;
             wb_warpid = sfutop_dat.warp_id;
-            if (sfutop_dat.ins.ddd.wxd)
-            {
+            if (sfutop_dat.ins.ddd.wxd) {
                 write_s = true;
                 write_v = false;
                 rdv1_addr = sfutop_dat.ins.d;
                 rdv1_data[0] = sfutop_dat.rdv1_data[0];
-            }
-            else if (sfutop_dat.ins.ddd.wvd)
-            {
+            } else if (sfutop_dat.ins.ddd.wvd) {
                 write_s = false;
                 write_v = true;
                 rdv1_addr = sfutop_dat.ins.d;
                 for (int i = 0; i < hw_num_thread; i++)
                     rdv1_data[i] = sfutop_dat.rdv1_data[i];
             }
-        }
-        else if (tcfifo_empty == false)
-        {
+        } else if (tcfifo_empty == false) {
             write_s = false;
             write_v = true;
             wb_ena = true;
@@ -226,11 +212,10 @@ void BASE::WRITE_BACK()
             for (int i = 0; i < hw_num_thread; i++)
                 rdv1_data[i] = tctop_dat.rdv1_data[i];
             wb_warpid = tctop_dat.warp_id;
-        }
-        else
-        {
+        } else {
             // if (sm_id == 0)
-            //     std::cout << "SM" << sm_id << " WB judge not writeback, at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+            //     std::cout << "SM" << sm_id << " WB judge not writeback, at " << sc_time_stamp()
+            //     << "," << sc_delta_count_at_current_time() << "\n";
             write_s = false;
             write_v = false;
             wb_ena = false;

@@ -1,7 +1,8 @@
 #include "BASE.h"
 #include <iostream>
 
-bool BASE::mem_read_word(uint32_t* data, uint32_t vaddr, const I_TYPE& ins, uint64_t pagetable) const {
+bool BASE::mem_read_word(uint32_t* data, uint32_t vaddr, const I_TYPE& ins, uint64_t pagetable)
+    const {
     uint8_t* data_bytes = reinterpret_cast<uint8_t*>(data);
     int bytesToRead;
     bool addrOutofRangeError = false;
@@ -78,8 +79,8 @@ void BASE::LSU_IN() {
         wait();
         if (emito_lsu) {
             if (lsu_ready_old == false) {
-                std::cout << "lsu error: not ready at " << sc_time_stamp() << "," << sc_delta_count_at_current_time()
-                          << std::endl;
+                std::cout << "lsu error: not ready at " << sc_time_stamp() << ","
+                          << sc_delta_count_at_current_time() << std::endl;
             }
             lsu_unready.notify();
 
@@ -108,22 +109,26 @@ void BASE::LSU_IN() {
                 ev_lsuready_updated.notify();
             }
 #ifdef SPIKE_OUTPUT
-            std::cout << "SM" << sm_id << " warp " << emitins_warpid << " 0x" << std::hex << emit_ins.read().currentpc
-                      << " " << emit_ins << " LSU addr=" << std::hex << std::setw(8) << std::setfill('0');
+            std::cout << "SM" << sm_id << " warp " << emitins_warpid << " 0x" << std::hex
+                      << emit_ins.read().currentpc << " " << emit_ins << " LSU addr=" << std::hex
+                      << std::setw(8) << std::setfill('0');
 
             switch (emit_ins.read().op) {
             case LW_:
-                std::cout << new_data.rsv1_data[0] << std::setw(0) << "+" << std::setw(8) << new_data.rsv2_data[0]
-                          << "=" << (new_data.rsv1_data[0] + new_data.rsv2_data[0]);
+                std::cout << new_data.rsv1_data[0] << std::setw(0) << "+" << std::setw(8)
+                          << new_data.rsv2_data[0] << "="
+                          << (new_data.rsv1_data[0] + new_data.rsv2_data[0]);
                 break;
             case SW_:
-                std::cout << new_data.rsv1_data[0] << std::setw(0) << "+" << std::setw(8) << new_data.rsv2_data[0]
-                          << "=" << (new_data.rsv1_data[0] + new_data.rsv2_data[0]);
+                std::cout << new_data.rsv1_data[0] << std::setw(0) << "+" << std::setw(8)
+                          << new_data.rsv2_data[0] << "="
+                          << (new_data.rsv1_data[0] + new_data.rsv2_data[0]);
                 if (sm_id == 0 && emitins_warpid == 2) {
                     std::cout << "\nthis inst rs1_addr=" << std::dec << new_data.ins.s1
-                              << ", rs2_addr=" << new_data.ins.s2 << std::hex
-                              << ", s_regfile[rs1]=" << m_hw_warps[emitins_warpid]->s_regfile[new_data.ins.s1]
-                              << ", s_regfile[rs2]=" << m_hw_warps[emitins_warpid]->s_regfile[new_data.ins.s2]
+                              << ", rs2_addr=" << new_data.ins.s2 << std::hex << ", s_regfile[rs1]="
+                              << m_hw_warps[emitins_warpid]->s_regfile[new_data.ins.s1]
+                              << ", s_regfile[rs2]="
+                              << m_hw_warps[emitins_warpid]->s_regfile[new_data.ins.s2]
                               << std::endl;
                 }
                 break;
@@ -168,16 +173,19 @@ void BASE::LSU_CALC() {
 
         // 为warp中的每个线程计算访存地址
         for (int i = 0; i < hwarp->CSR_reg[0x802]; i++) {
-            LSUaddr[i] = (lsutmp1.ins.ddd.isvec & lsutmp1.ins.ddd.disable_mask) ? lsutmp1.ins.ddd.is_vls12()
+            LSUaddr[i] = (lsutmp1.ins.ddd.isvec & lsutmp1.ins.ddd.disable_mask)
+                ? lsutmp1.ins.ddd.is_vls12()
                     ? (lsutmp1.rsv1_data[i] + lsutmp1.rsv2_data[i])
                     : ((lsutmp1.rsv1_data[i] + lsutmp1.rsv2_data[i]) * hw_num_thread + (i << 2)
                        + hwarp->CSR_reg[0x807])
                 : lsutmp1.ins.ddd.isvec
-                ? (lsutmp1.rsv1_data[i] + (lsutmp1.ins.ddd.mop == 0 ? i << 2 : i * lsutmp1.rsv2_data[i]))
+                ? (lsutmp1.rsv1_data[i]
+                   + (lsutmp1.ins.ddd.mop == 0 ? i << 2 : i * lsutmp1.rsv2_data[i]))
                 : (lsutmp1.rsv1_data[0] + lsutmp1.rsv2_data[0]);
         }
 
-        if (lsutmp1.ins.ddd.wvd || lsutmp1.ins.ddd.wxd) { // 读global/local mem，稍后要写回寄存器(write reg)
+        if (lsutmp1.ins.ddd.wvd
+            || lsutmp1.ins.ddd.wxd) { // 读global/local mem，稍后要写回寄存器(write reg)
             lsutmp2.ins = lsutmp1.ins;
             lsutmp2.warp_id = lsutmp1.warp_id;
             if (lsutmp1.ins.ddd.isvec) { // vec instruction lw: check branch masks of each thread
@@ -189,73 +197,86 @@ void BASE::LSU_CALC() {
                             = mem_read_word(&data, LSUaddr[i], lsutmp2.ins, hwarp->pagetable);
                         lsutmp2.rdv1_data[i] = data;
                     } else {
-                        lsutmp2.rdv1_data[i] = 0;   // don't care
+                        lsutmp2.rdv1_data[i] = 0; // don't care
                     }
                     if (addrOutofRangeException)
-                        std::cout << "SM" << sm_id << " LSU read addrOutofRange error, ins=" << lsutmp1.ins
+                        std::cout << "SM" << sm_id
+                                  << " LSU read addrOutofRange error, ins=" << lsutmp1.ins
                                   << ",addr=" << LSUaddr[i] << " at " << sc_time_stamp() << ","
                                   << sc_delta_count_at_current_time() << std::endl;
                     // if(lsutmp1.ins.currentpc == 0x800000f8) {
-                    //     std::cout << "SM" << sm_id << " warp " << lsutmp1.warp_id << " 0x" << std::hex << lsutmp1.ins.currentpc
-                    //             << " " << lsutmp1.ins << std::hex << " addr=0x" << LSUaddr[0] << " data=0x" << lsutmp2.rdv1_data[0] << std::dec
-                    //             << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << std::endl;
+                    //     std::cout << "SM" << sm_id << " warp " << lsutmp1.warp_id << " 0x" <<
+                    //     std::hex << lsutmp1.ins.currentpc
+                    //             << " " << lsutmp1.ins << std::hex << " addr=0x" << LSUaddr[0] <<
+                    //             " data=0x" << lsutmp2.rdv1_data[0] << std::dec
+                    //             << " at " << sc_time_stamp() << "," <<
+                    //             sc_delta_count_at_current_time() << std::endl;
                     // }
                 }
-            } else {    // scalar instruction lw
+            } else { // scalar instruction lw
                 uint32_t data;
                 addrOutofRangeException
                     = mem_read_word(&data, LSUaddr[0], lsutmp2.ins, hwarp->pagetable);
                 lsutmp2.rdv1_data[0] = data;
                 if (addrOutofRangeException)
-                    std::cout << "SM" << sm_id << " LSU read addrOutofRange error, ins=" << lsutmp1.ins
-                                << ",addr=" << LSUaddr[0] << " at " << sc_time_stamp() << ","
-                                << sc_delta_count_at_current_time() << std::endl;
+                    std::cout << "SM" << sm_id
+                              << " LSU read addrOutofRange error, ins=" << lsutmp1.ins
+                              << ",addr=" << LSUaddr[0] << " at " << sc_time_stamp() << ","
+                              << sc_delta_count_at_current_time() << std::endl;
             }
             lsufifo.push(lsutmp2);
-                
-        } else { // 写global/local mem
-            if(lsutmp1.ins.ddd.isvec) {     // vec instruction sw: check branch masks of each thread
+
+        } else {                         // 写global/local mem
+            if (lsutmp1.ins.ddd.isvec) { // vec instruction sw: check branch masks of each thread
                 bool addrOutofRangeException_flag = false;
                 for (int i = 0; i < hwarp->CSR_reg[0x802]; i++) {
                     addrOutofRangeException = false;
                     if (lsutmp1.ins.mask[i]) {
-                        addrOutofRangeException = mem_write_word(lsutmp1.rsv3_data[i], LSUaddr[i], lsutmp1.ins,
-                                                                 hwarp->pagetable);
+                        addrOutofRangeException = mem_write_word(
+                            lsutmp1.rsv3_data[i], LSUaddr[i], lsutmp1.ins, hwarp->pagetable
+                        );
                     }
                     if (addrOutofRangeException) {
                         std::cout << "SM" << sm_id << " warp" << lsutmp1.warp_id << " thread" << i
-                                  << " LSU write addrOutofRange error, ins=" << lsutmp1.ins << ",addr=0x" << std::hex
-                                  << LSUaddr[i] << std::dec << " at " << sc_time_stamp() << ","
-                                  << sc_delta_count_at_current_time() << std::endl;
+                                  << " LSU write addrOutofRange error, ins=" << lsutmp1.ins
+                                  << ",addr=0x" << std::hex << LSUaddr[i] << std::dec << " at "
+                                  << sc_time_stamp() << "," << sc_delta_count_at_current_time()
+                                  << std::endl;
                         addrOutofRangeException_flag = true;
                     }
                 }
 #ifdef SPIKE_OUTPUT
                 if (addrOutofRangeException_flag) {
                     std::cout << "↑SM" << sm_id << " warp " << lsutmp1.warp_id << " 0x" << std::hex
-                              << lsutmp1.ins.currentpc << " " << lsutmp1.ins << std::hex << " data=" << std::setw(8)
-                              << std::setfill('0');
+                              << lsutmp1.ins.currentpc << " " << lsutmp1.ins << std::hex
+                              << " data=" << std::setw(8) << std::setfill('0');
                     for (int i = hwarp->CSR_reg[0x802] - 1; i >= 0; i--)
                         std::cout << lsutmp1.rsv3_data[i] << " ";
                     std::cout << "@ ";
                     for (int i = hwarp->CSR_reg[0x802] - 1; i >= 0; i--)
                         std::cout << LSUaddr[i] << " ";
-                    std::cout << std::setw(0) << std::setfill(' ') << " mask=" << lsutmp1.ins.mask <<
-                     " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << std::endl;
+                    std::cout << std::setw(0) << std::setfill(' ') << " mask=" << lsutmp1.ins.mask
+                              << " at " << sc_time_stamp() << ","
+                              << sc_delta_count_at_current_time() << std::endl;
                 }
 #endif
             } else { // scalar instruction sw
-                addrOutofRangeException = mem_write_word(lsutmp1.rsv3_data[0], LSUaddr[0], lsutmp1.ins,
-                                                         hwarp->pagetable);
+                addrOutofRangeException = mem_write_word(
+                    lsutmp1.rsv3_data[0], LSUaddr[0], lsutmp1.ins, hwarp->pagetable
+                );
                 if (addrOutofRangeException)
-                    std::cout << "SM" << sm_id << " LSU write addrOutofRange error, ins=" << lsutmp1.ins
-                              << ",addr=0x" << std::hex << LSUaddr[0] << std::dec << " at " << sc_time_stamp() << ","
-                              << sc_delta_count_at_current_time() << std::endl;
+                    std::cout << "SM" << sm_id
+                              << " LSU write addrOutofRange error, ins=" << lsutmp1.ins
+                              << ",addr=0x" << std::hex << LSUaddr[0] << std::dec << " at "
+                              << sc_time_stamp() << "," << sc_delta_count_at_current_time()
+                              << std::endl;
 #ifdef SPIKE_OUTPUT
-                std::cout << "SM" << sm_id << " warp " << lsutmp1.warp_id << " 0x" << std::hex << lsutmp1.ins.currentpc
-                          << " " << lsutmp1.ins << std::hex << " data=" << std::setw(8) << std::setfill('0')
-                          << lsutmp1.rsv3_data[0] << std::dec << std::setfill(' ') << " @ " << std::hex << LSUaddr[0]
-                          << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << std::endl;
+                std::cout << "SM" << sm_id << " warp " << lsutmp1.warp_id << " 0x" << std::hex
+                          << lsutmp1.ins.currentpc << " " << lsutmp1.ins << std::hex
+                          << " data=" << std::setw(8) << std::setfill('0') << lsutmp1.rsv3_data[0]
+                          << std::dec << std::setfill(' ') << " @ " << std::hex << LSUaddr[0]
+                          << std::dec << " at " << sc_time_stamp() << ","
+                          << sc_delta_count_at_current_time() << std::endl;
 #endif
             }
         }

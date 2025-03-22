@@ -37,7 +37,8 @@ void BASE::WARP_SCHEDULER() {
         //     {
         //         m_current_kernel_running.write(false);
         //         m_current_kernel_completed.write(true);
-        //         std::cout << "SM" << sm_id << " Warp Scheduler: finish current kernel at " << sc_time_stamp() << ","
+        //         std::cout << "SM" << sm_id << " Warp Scheduler: finish current kernel at " <<
+        //         sc_time_stamp() << ","
         //         << sc_delta_count_at_current_time() << std::endl;
         //     }
         // }
@@ -47,8 +48,9 @@ void BASE::WARP_SCHEDULER() {
         // barrier from opc
 
         if (emito_warpscheduler) {
-            // std::cout << "SM" << sm_id << " WARP SCHEDULER receive emit ins" << emit_ins << ", warpid=" <<
-            // emitins_warpid << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << std::endl;
+            // std::cout << "SM" << sm_id << " WARP SCHEDULER receive emit ins" << emit_ins << ",
+            // warpid=" << emitins_warpid << " at " << sc_time_stamp() << "," <<
+            // sc_delta_count_at_current_time() << std::endl;
             new_ins = emit_ins;
             new_ins_warpid = emitins_warpid;
             auto& hwarp = m_hw_warps[new_ins_warpid];
@@ -57,36 +59,44 @@ void BASE::WARP_SCHEDULER() {
             assert(hblkslot.valid);
             switch (new_ins.op) {
             case OP_TYPE::BARRIER_:
-                if (std::all_of(hblkslot.warp_reach_barrier.begin(), hblkslot.warp_reach_barrier.begin() + hblkslot.num_warp, [](bool i) {
-                        return i == false;
-                    })) {
+                if (std::all_of(
+                        hblkslot.warp_reach_barrier.begin(),
+                        hblkslot.warp_reach_barrier.begin() + hblkslot.num_warp,
+                        [](bool i) { return i == false; }
+                    )) {
                     // this is the first warp of this block that reaches barrier
                     hblkslot.warp_reach_barrier[hwarp->warp_idx_in_blk] = true;
                     wait_barrier[new_ins_warpid] = true;
                     hblkslot.barrier_addr = new_ins.currentpc;
-                    std::cout << "SM" << sm_id << " warp " << new_ins_warpid << " 0x" << std::hex << new_ins.currentpc
-                              << " " << new_ins << " barrier"
-                              << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << std::endl;
+                    std::cout << "SM" << sm_id << " warp " << new_ins_warpid << " 0x" << std::hex
+                              << new_ins.currentpc << " " << new_ins << " barrier" << " at "
+                              << sc_time_stamp() << "," << sc_delta_count_at_current_time()
+                              << std::endl;
 
                 } else {
                     // this is not the first warp of this block that reaches barrier
                     if (hblkslot.barrier_addr != new_ins.currentpc) {
-                        std::cout << "SM" << sm_id << " warp" << new_ins_warpid
-                                  << " warp scheduler: barrier address mismatch, block slot expect 0x" << std::hex
-                                  << hblkslot.barrier_addr << " but pc=0x" << new_ins.currentpc << std::dec << " at "
-                                  << sc_time_stamp() << "," << sc_delta_count_at_current_time() << std::endl;
+                        std::cout
+                            << "SM" << sm_id << " warp" << new_ins_warpid
+                            << " warp scheduler: barrier address mismatch, block slot expect 0x"
+                            << std::hex << hblkslot.barrier_addr << " but pc=0x"
+                            << new_ins.currentpc << std::dec << " at " << sc_time_stamp() << ","
+                            << sc_delta_count_at_current_time() << std::endl;
                     }
                     assert(new_ins.currentpc == hblkslot.barrier_addr);
                     hblkslot.warp_reach_barrier[hwarp->warp_idx_in_blk] = true;
                     wait_barrier[new_ins_warpid] = true;
                     if (std::all_of(
                             hblkslot.warp_reach_barrier.begin(),
-                            hblkslot.warp_reach_barrier.begin() + hblkslot.num_warp, [](bool i) { return i == true; }
+                            hblkslot.warp_reach_barrier.begin() + hblkslot.num_warp,
+                            [](bool i) { return i == true; }
                         )) {
                         // all warps of this block reach barrier
-                        std::cout << "SM" << sm_id << " warp scheduler: all warps reach barrier pc=0x" << std::hex
-                                  << new_ins.currentpc << " " << new_ins << std::dec << " at " << sc_time_stamp() << ","
-                                  << sc_delta_count_at_current_time() << std::endl;
+                        std::cout << "SM" << sm_id
+                                  << " warp scheduler: all warps reach barrier pc=0x" << std::hex
+                                  << new_ins.currentpc << " " << new_ins << std::dec << " at "
+                                  << sc_time_stamp() << "," << sc_delta_count_at_current_time()
+                                  << std::endl;
                         // reset barrier
                         hblkslot.warp_reach_barrier.fill(false);
                         for (int hw_warp_idx = 0; hw_warp_idx < hblkslot.num_warp; hw_warp_idx++) {
@@ -111,10 +121,12 @@ void BASE::WARP_SCHEDULER() {
                 assert(hblkslot.hw_warp_running[new_ins_warpid]);
                 hblkslot.num_warp--;
                 hblkslot.hw_warp_running[new_ins_warpid] = false;
-                if (hblkslot.num_warp == 0) { // the last running warp of this block returns, reset its block_slot
-                    assert(std::all_of(hblkslot.hw_warp_running.begin(), hblkslot.hw_warp_running.end(), [](bool i) {
-                        return i == false;
-                    }));
+                if (hblkslot.num_warp
+                    == 0) { // the last running warp of this block returns, reset its block_slot
+                    assert(std::all_of(
+                        hblkslot.hw_warp_running.begin(), hblkslot.hw_warp_running.end(),
+                        [](bool i) { return i == false; }
+                    ));
                     hblkslot.valid = false;
                     hblkslot.warp_reach_barrier.fill(false);
                 }
@@ -122,9 +134,10 @@ void BASE::WARP_SCHEDULER() {
                 hwarp->initwarp();
                 reset_endprg_flush_pipe[new_ins_warpid] = true;
 #ifdef SPIKE_OUTPUT
-                std::cout << "SM" << sm_id << " warp " << new_ins_warpid << " 0x" << std::hex << new_ins.currentpc
-                          << " " << new_ins << " endprg"
-                          << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << std::endl;
+                std::cout << "SM" << sm_id << " warp " << new_ins_warpid << " 0x" << std::hex
+                          << new_ins.currentpc << " " << new_ins << " endprg" << " at "
+                          << sc_time_stamp() << "," << sc_delta_count_at_current_time()
+                          << std::endl;
 #endif
                 break;
             default:
@@ -136,14 +149,15 @@ void BASE::WARP_SCHEDULER() {
 
         // wait for all warps dispatch
         wait(ev_warp_dispatch_list);
-        // std::cout << "SM" << sm_id << " WARP SCHEDULER receive issue_list " << sc_time_stamp() << "," <<
-        // sc_delta_count_at_current_time() << std::endl;
+        // std::cout << "SM" << sm_id << " WARP SCHEDULER receive issue_list " << sc_time_stamp() <<
+        // "," << sc_delta_count_at_current_time() << std::endl;
 
         if (!opc_full | doemit) // 这是dispatch_ready，来自opc (ready-valid机制)
         {
             find_dispatchwarp = false; // 是否已经确定要dispatch的warp
             for (int i = last_dispatch_warpid; i < last_dispatch_warpid + hw_num_warp; i++) {
-                if (!find_dispatchwarp && m_hw_warps[i % hw_num_warp]->can_dispatch && !wait_barrier[i % hw_num_warp]
+                if (!find_dispatchwarp && m_hw_warps[i % hw_num_warp]->can_dispatch
+                    && !wait_barrier[i % hw_num_warp]
                     && m_hw_warps[i % hw_num_warp]->is_warp_activated) {
                     m_hw_warps[i % hw_num_warp]->dispatch_warp_valid = true;
                     dispatch_valid = true;
@@ -151,7 +165,8 @@ void BASE::WARP_SCHEDULER() {
                     _newissueins.mask = m_hw_warps[i % hw_num_warp]->current_mask;
                     // std::cout << "SM" << sm_id << " warp" << i % hw_num_warp << " 0x" << std::hex
                     //           << _newissueins.currentpc << std::dec << _newissueins
-                    //           << " issue_ins mask=" << _newissueins.mask << " at " << sc_time_stamp() << ","
+                    //           << " issue_ins mask=" << _newissueins.mask << " at " <<
+                    //           sc_time_stamp() << ","
                     //           << sc_delta_count_at_current_time() << std::endl;
                     issue_ins = _newissueins;
                     issueins_warpid = i % hw_num_warp;
@@ -159,8 +174,9 @@ void BASE::WARP_SCHEDULER() {
                     last_dispatch_warpid = i % hw_num_warp + 1;
                 } else {
                     m_hw_warps[i % hw_num_warp]->dispatch_warp_valid = false;
-                    // std::cout << "ISSUE: let warp" << i % hw_num_warp << " dispatch_warp_valid=false at " <<
-                    // sc_time_stamp() << "," << sc_delta_count_at_current_time() << std::endl;
+                    // std::cout << "ISSUE: let warp" << i % hw_num_warp << "
+                    // dispatch_warp_valid=false at " << sc_time_stamp() << "," <<
+                    // sc_delta_count_at_current_time() << std::endl;
                 }
             }
             if (!find_dispatchwarp)

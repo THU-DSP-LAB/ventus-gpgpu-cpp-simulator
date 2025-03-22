@@ -37,7 +37,8 @@ public:
     void dealloc(uint32_t block_slot, uint32_t block_id = 0xFFFFFFFF);
 
 private:
-    resource_usage_t m_slot[MAX_CTA_PER_CORE]; // resource alloc record for each block running on corresponding SM
+    resource_usage_t m_slot[MAX_CTA_PER_CORE]; // resource alloc record for each block running on
+                                               // corresponding SM
     uint32_t m_head_idx, m_tail_idx;           // index of head and tail node of linked-list
     uint32_t m_cnt;                            // how many valid nodes in linked-list
 };
@@ -52,9 +53,11 @@ public:
         std::array<bool, MAX_WARP_PER_BLOCK> warp_finished;
     } sm_block_slot_t;
     typedef struct sm_resource_t {
-        uint32_t num_warp; // number of warps running on corresponding SM, limited by number of warp-slot
-        std::array<sm_block_slot_t, MAX_CTA_PER_CORE> blk_slots; // block is running on corresponding SM.block_slot
-        ResourceUsage lds { hw_lds_size };                       // local data share (local memory)
+        uint32_t
+            num_warp; // number of warps running on corresponding SM, limited by number of warp-slot
+        std::array<sm_block_slot_t, MAX_CTA_PER_CORE>
+            blk_slots;                     // block is running on corresponding SM.block_slot
+        ResourceUsage lds { hw_lds_size }; // local data share (local memory)
     } sm_resource_t;
 
     CTA_Scheduler_SM_management(BASE* sm_ptr = nullptr)
@@ -108,9 +111,11 @@ private:
     void collect_finished_blocks(); // finished warps/blocks return from SM
 
     // Kernel management (split kernel into blocks)
-    std::vector<std::shared_ptr<kernel_info_t>> m_waiting_kernels;  // Data not yet loaded to memory
-    std::vector<std::shared_ptr<kernel_info_t>> m_running_kernels;  // Data loaded to memory, some blocks may be running
-    std::vector<std::shared_ptr<kernel_info_t>> m_finished_kernels; // All blocks finished, memory released
+    std::vector<std::shared_ptr<kernel_info_t>> m_waiting_kernels; // Data not yet loaded to memory
+    std::vector<std::shared_ptr<kernel_info_t>>
+        m_running_kernels; // Data loaded to memory, some blocks may be running
+    std::vector<std::shared_ptr<kernel_info_t>>
+        m_finished_kernels; // All blocks finished, memory released
 
     // all SMs, and its resource management data
     std::array<CTA_Scheduler_SM_management, NUM_SM> m_sm;

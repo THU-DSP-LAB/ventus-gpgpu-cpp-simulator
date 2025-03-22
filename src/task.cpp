@@ -17,7 +17,9 @@ task_t::task_t(uint32_t id, const std::string name, uint64_t pagetable)
     , m_is_running(false)
     , m_is_finished(false) { }
 
-void task_t::add_kernel(std::shared_ptr<kernel_info_t> kernel) { m_steps.push_back(std::any(kernel)); }
+void task_t::add_kernel(std::shared_ptr<kernel_info_t> kernel) {
+    m_steps.push_back(std::any(kernel));
+}
 
 void task_t::exec(Memory* mem, CTA_Scheduler* cta) {
     assert(mem && cta);
@@ -35,7 +37,8 @@ void task_t::exec_nextstep(Memory* mem, CTA_Scheduler* cta) {
 
     std::any thisstep = m_steps[m_step_id_running];
     if (thisstep.type() == typeid(std::shared_ptr<kernel_info_t>)) {
-        std::shared_ptr<kernel_info_t> kernel = std::any_cast<std::shared_ptr<kernel_info_t>>(thisstep);
+        std::shared_ptr<kernel_info_t> kernel
+            = std::any_cast<std::shared_ptr<kernel_info_t>>(thisstep);
         assert(kernel);
         std::function<void()> cb_func = std::bind(&task_t::callback_kernel_finish, this, kernel);
         kernel->activate(mem, cb_func);

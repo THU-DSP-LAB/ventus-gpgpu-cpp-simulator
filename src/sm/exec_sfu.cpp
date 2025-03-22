@@ -7,8 +7,8 @@ void BASE::SFU_IN() {
         wait();
         if (emito_sfu) {
             if (sfu_ready_old == false)
-                std::cout << "sfu error: not ready at " << sc_time_stamp() << "," << sc_delta_count_at_current_time()
-                          << "\n";
+                std::cout << "sfu error: not ready at " << sc_time_stamp() << ","
+                          << sc_delta_count_at_current_time() << "\n";
             sfu_unready.notify();
             switch (emit_ins.read().op) {
 
@@ -22,8 +22,8 @@ void BASE::SFU_IN() {
                 sfu_dq.push(new_data);
                 a_delay = 3;
                 b_delay = 1;
-                // std::cout << "sfu: receive VADD_VV_, will notify eq, at " << sc_time_stamp() <<","<<
-                // sc_delta_count_at_current_time() << "\n";
+                // std::cout << "sfu: receive VADD_VV_, will notify eq, at " << sc_time_stamp()
+                // <<","<< sc_delta_count_at_current_time() << "\n";
                 if (a_delay == 0)
                     sfu_eva.notify();
                 else if (sfueqa_triggered)
@@ -41,8 +41,8 @@ void BASE::SFU_IN() {
                 break;
 
                 // default:
-                //     std::cout << "sfu error: receive wrong ins " << emit_ins << " at " << sc_time_stamp() << "," <<
-                //     sc_delta_count_at_current_time() << "\n";
+                //     std::cout << "sfu error: receive wrong ins " << emit_ins << " at " <<
+                //     sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 // break;
             }
         } else {
@@ -74,7 +74,7 @@ void BASE::SFU_CALC() {
         sfutmp1 = sfu_dq.front();
         sfu_dq.pop();
         auto& hwarp = m_hw_warps[sfutmp1.warp_id];
-        std::array<i32_u32_f32_t, hw_num_thread> src1, src2, dst;
+        std::array<iuf32_t, hw_num_thread> src1, src2, dst;
         for (int i = 0; i < hwarp->CSR_reg[0x802]; i++) {
             src1[i].i32 = sfutmp1.rsv1_data[i];
             src2[i].i32 = sfutmp1.rsv2_data[i];
@@ -86,34 +86,34 @@ void BASE::SFU_CALC() {
             // helper function for instruction execution
             auto calc_helper
                 = [&sfutmp1, num_thread = hwarp->CSR_reg[0x802], &src1, &src2,
-                   &dst](std::function<i32_u32_f32_t(i32_u32_f32_t op1, i32_u32_f32_t op2, i32_u32_f32_t op3)> calc) {
+                   &dst](std::function<iuf32_t(iuf32_t op1, iuf32_t op2, iuf32_t op3)> calc) {
                       exec_calc_helper(sfutmp1.ins, num_thread, src1, src2, src2, dst, calc);
                   };
 
             switch (sfutmp1.ins.ddd.alu_fn) {
             case DecodeParams::alu_fn_t::FN_REMU: // VREMU.VV, VREMU.VX, REMU
-                calc_helper([](i32_u32_f32_t op1, i32_u32_f32_t op2, i32_u32_f32_t op3) {
-                    return i32_u32_f32_t { .u32 = (op2.u32 == 0) ? op1.u32 : op1.u32 % op2.u32 };
+                calc_helper([](iuf32_t op1, iuf32_t op2, iuf32_t op3) {
+                    return iuf32_t { .u32 = (op2.u32 == 0) ? op1.u32 : op1.u32 % op2.u32 };
                 });
                 break;
             case DecodeParams::alu_fn_t::FN_DIVU: // VDIVU.VV, VDIVU.VX, DIVU
-                calc_helper([](i32_u32_f32_t op1, i32_u32_f32_t op2, i32_u32_f32_t op3) {
-                    return i32_u32_f32_t { .u32 = (op2.u32 == 0) ? (uint32_t)(-1) : op1.u32 / op2.u32 };
+                calc_helper([](iuf32_t op1, iuf32_t op2, iuf32_t op3) {
+                    return iuf32_t { .u32 = (op2.u32 == 0) ? (uint32_t)(-1) : op1.u32 / op2.u32 };
                 });
                 break;
             case DecodeParams::alu_fn_t::FN_REM: // VREM.VV, VREM.VX, REM
-                calc_helper([](i32_u32_f32_t op1, i32_u32_f32_t op2, i32_u32_f32_t op3) {
-                    return i32_u32_f32_t { .i32 = (op2.i32 == 0) ? op1.i32 : op1.i32 % op2.i32 };
+                calc_helper([](iuf32_t op1, iuf32_t op2, iuf32_t op3) {
+                    return iuf32_t { .i32 = (op2.i32 == 0) ? op1.i32 : op1.i32 % op2.i32 };
                 });
                 break;
             case DecodeParams::alu_fn_t::FN_DIV: // VDIV.VV, VDIV.VX, DIV
-                calc_helper([](i32_u32_f32_t op1, i32_u32_f32_t op2, i32_u32_f32_t op3) {
-                    return i32_u32_f32_t { .i32 = (op2.i32 == 0) ? -1 : op1.i32 / op2.i32 };
+                calc_helper([](iuf32_t op1, iuf32_t op2, iuf32_t op3) {
+                    return iuf32_t { .i32 = (op2.i32 == 0) ? -1 : op1.i32 / op2.i32 };
                 });
                 break;
             case DecodeParams::alu_fn_t::FN_FDIV: // VFDIV.VV, VFDIV.VF, VFRDIV.VF, FDIV
-                calc_helper([](i32_u32_f32_t op1, i32_u32_f32_t op2, i32_u32_f32_t op3) {
-                    return i32_u32_f32_t { .f32 = op1.f32 / op2.f32 };
+                calc_helper([](iuf32_t op1, iuf32_t op2, iuf32_t op3) {
+                    return iuf32_t { .f32 = op1.f32 / op2.f32 };
                 });
                 break;
             case DecodeParams::alu_fn_t::FN_EXP: // VFEXP.V
@@ -136,8 +136,8 @@ void BASE::SFU_CALC() {
                 }
                 break;
             default:
-                std::cout << "SFU_CALC warning: switch to unrecognized ins" << sfutmp1.ins << " at " << sc_time_stamp()
-                          << "," << sc_delta_count_at_current_time() << "\n";
+                std::cout << "SFU_CALC warning: switch to unrecognized ins" << sfutmp1.ins << " at "
+                          << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 assert(0);
                 break;
             }
@@ -149,8 +149,8 @@ void BASE::SFU_CALC() {
         } else {
             switch (sfutmp1.ins.op) {
             default:
-                std::cout << "SFU_CALC warning: switch to unrecognized ins" << sfutmp1.ins << " at " << sc_time_stamp()
-                          << "," << sc_delta_count_at_current_time() << "\n";
+                std::cout << "SFU_CALC warning: switch to unrecognized ins" << sfutmp1.ins << " at "
+                          << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
                 assert(0);
                 break;
             }

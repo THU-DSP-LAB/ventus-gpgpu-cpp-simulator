@@ -16,8 +16,10 @@ kernel_info_t::kernel_info_t(
     m_grid_dim.x = metadata.kernel_size[0];
     m_grid_dim.y = metadata.kernel_size[1];
     m_grid_dim.z = metadata.kernel_size[2];
-    m_finish_callback = finish_callback ? std::bind(finish_callback, &m_metadata) : std::function<void()>();
-    m_load_data_callback = load_data_callback ? std::bind(load_data_callback, &m_metadata) : std::function<void()>();
+    m_finish_callback
+        = finish_callback ? std::bind(finish_callback, &m_metadata) : std::function<void()>();
+    m_load_data_callback
+        = load_data_callback ? std::bind(load_data_callback, &m_metadata) : std::function<void()>();
     m_status = kernel_info_t::KERNEL_STATUS_WAIT;
     // m_num_sm_running_this = 0;
     m_block_status.resize(get_num_block(), BLOCK_STATUS_WAIT);
