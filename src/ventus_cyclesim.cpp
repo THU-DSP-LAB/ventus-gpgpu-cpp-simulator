@@ -5,9 +5,23 @@ ventus_cyclesim_t* ventus_cyclesim_init(const ventus_cyclesim_config_t* config) 
     sim->constructor(config);
     return sim;
 }
+
+void ventus_cyclesim_get_default_config(ventus_cyclesim_config_t* config) {
+    config->sim_time_max = ~0ull;
+}
+
+void ventus_cyclesim_config(ventus_cyclesim_t* sim, const ventus_cyclesim_config_t* config) {
+    sim->config(config);
+}
+
+const ventus_cyclesim_config_t* ventus_cyclesim_get_config(ventus_cyclesim_t* sim) {
+    return &sim->m_config;
+}
+
 const ventus_cyclesim_step_result_t* ventus_cyclesim_step(ventus_cyclesim_t* sim) {
     return sim->step();
 }
+
 void ventus_cyclesim_finish(ventus_cyclesim_t* sim, bool snapshot_rollback_forcing) {
     sim->destructor();
 }
@@ -30,12 +44,6 @@ void ventus_cyclesim_add_kernel(
     sim->m_dut->add_kernel(*metadata, nullptr, finish_callback);
 }
 
-void ventus_cyclesim_add_kernel__temp(
-    ventus_cyclesim_t* sim, const char* name, const char* metafile, const char* datafile
-) {
-    sim->m_dut->add_kernel(name, metafile, datafile);
-}
-
 int ventus_cyclesim_pmem_page_alloc(ventus_cyclesim_t* sim, paddr_t base) { return 0; }
 int ventus_cyclesim_pmem_page_free(ventus_cyclesim_t* sim, paddr_t base) { return 0; }
 
@@ -52,26 +60,31 @@ int ventus_cyclesim_pmemcpy_h2d(
 }
 
 paddr_t ventus_cyclesim_vmem_create(ventus_cyclesim_t* sim) { return sim->m_dut->vmem_create(); }
+
 void ventus_cyclesim_vmem_destroy(ventus_cyclesim_t* sim, paddr_t pagetable_root) {
     sim->m_dut->vmem_destroy(pagetable_root);
 }
+
 void ventus_cyclesim_vmemcpy_h2d(
-    ventus_cyclesim_t* sim, paddr_t pagetable_root, uint64_t dst, const void* src, uint64_t size
+    ventus_cyclesim_t* sim, paddr_t ptroot, uint64_t dst, const void* src, uint64_t size
 ) {
-    sim->m_dut->vmemcpy_h2d(pagetable_root, dst, src, size);
+    sim->m_dut->vmemcpy_h2d(ptroot, dst, src, size);
 }
+
 void ventus_cyclesim_vmemcpy_d2h(
-    ventus_cyclesim_t* sim, paddr_t pagetable_root, void* dst, uint64_t src, uint64_t size
+    ventus_cyclesim_t* sim, paddr_t ptroot, void* dst, uint64_t src, uint64_t size
 ) {
-    sim->m_dut->vmemcpy_d2h(pagetable_root, dst, src, size);
+    sim->m_dut->vmemcpy_d2h(ptroot, dst, src, size);
 }
+
 uint64_t ventus_cyclesim_vmem_alloc(
-    ventus_cyclesim_t* sim, paddr_t pagetable_root, uint64_t vaddr, uint64_t size
+    ventus_cyclesim_t* sim, paddr_t ptroot, uint64_t vaddr, uint64_t size
 ) {
-    return sim->m_dut->vmem_alloc(pagetable_root, vaddr, size);
+    return sim->m_dut->vmem_alloc(ptroot, vaddr, size);
 }
+
 void ventus_cyclesim_vmem_free(
-    ventus_cyclesim_t* sim, paddr_t pagetable_root, uint64_t vaddr, uint64_t size
+    ventus_cyclesim_t* sim, paddr_t ptroot, uint64_t vaddr, uint64_t size
 ) {
     // todo
 }

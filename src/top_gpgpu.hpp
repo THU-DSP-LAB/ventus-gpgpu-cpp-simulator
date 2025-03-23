@@ -20,7 +20,7 @@ class Top_gpgpu {
     int m_kernel_cnt = 0;
 
 public:
-    Top_gpgpu(uint8_t num_sm);
+    Top_gpgpu();
     ~Top_gpgpu();
 
     void add_kernel(std::string name, std::string metafile, std::string datafile);

@@ -248,10 +248,11 @@ void kernel_info_t::readTextFile(Memory* mem) {
 // 激活Kernel，载入初始数据，随时开始运行
 void kernel_info_t::activate() {
     assert(m_status == KERNEL_STATUS_WAIT);
-    if (m_load_data_callback)
+    if (m_load_data_callback) {
         m_load_data_callback();
+        log_info("Kernel%d %s load init data (callback)", m_kernel_id, m_kernel_name.c_str());
+    }
     m_status = KERNEL_STATUS_RUNNING;
-    log_info("Kernel%d %s load init data (callback)", m_kernel_id, m_kernel_name.c_str());
 }
 void kernel_info_t::activate(Memory* mem, std::function<void()> finish_callback) {
     readTextFile(mem);

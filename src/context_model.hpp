@@ -2,10 +2,8 @@
 #define CONTEXT_MODEL_H_
 
 #include "membox_sv39/memory.h"
-#include "parameters.h"
 #include "ventus_cyclesim.h"
 #include <functional>
-#include <memory>
 #include <string>
 
 struct dim3 {
@@ -66,6 +64,10 @@ public:
     uint64_t get_metadata_baseaddr() const { return m_metadata.metaDataBaseAddr; }
     uint64_t get_pagetable() const { return m_pagetable; }
     meta_data_t get_metadata() const { return m_metadata; }
+    std::string get_datafile_name() const {
+        assert(!m_data_filename.empty());
+        return m_data_filename;
+    }
 
     //
     // Dynamic: changes on GPU. Maybe they should be moved to CTA_Scheduler
@@ -91,6 +93,7 @@ public:
 
     // Load initial data and get ready to run
     void activate();
+    // void activate(std::function<void()> finish_callback);
     void activate(Memory* mem, std::function<void()> finish_callback);
     bool is_running() const { return m_status == KERNEL_STATUS_RUNNING; }
 

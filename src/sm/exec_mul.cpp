@@ -93,8 +93,8 @@ void BASE::MUL_CALC() {
                 // std::cout << "EXEC_MUL: FN_MADD,{thread,s1,s2,s3}: " << std::hex;
                 for (int i = 0; i < hwarp->CSR_reg[0x802]; i++) {
                     if (multmp2.ins.mask[i] == 1) {
-                        // std::cout << "{" << i << "," << multmp1.rsv1_data[i] << "," <<
-                        // multmp1.rsv2_data[i] << "," << multmp1.rsv3_data[i] << "};";
+                        // std::cout << "{" << i << "," << multmp1.rsv1_data[i] << ","
+                        //           << multmp1.rsv2_data[i] << "," << multmp1.rsv3_data[i] << "};";
                         multmp2.rdv1_data[i]
                             = multmp1.rsv1_data[i] * multmp1.rsv3_data[i] + multmp1.rsv2_data[i];
                     }
@@ -115,6 +115,7 @@ void BASE::MUL_CALC() {
             default:
                 std::cout << "MUL_CALC warning: switch to unrecognized ins" << multmp1.ins << " at "
                           << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                assert(0);
                 break;
             }
         }

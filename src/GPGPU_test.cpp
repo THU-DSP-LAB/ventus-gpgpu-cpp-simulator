@@ -16,7 +16,7 @@
 // #define TRACE_VCD
 
 int parse_arg(
-    std::vector<std::string> args, int& numcycle,
+    std::vector<std::string> args, uint64_t& numcycle,
     std::function<
         int(std::string name, std::string metafile, std::string datafile, bool add_to_task)>
         new_kernel,
@@ -81,7 +81,7 @@ __attribute__((visibility("default"))) int sc_main(int argc, char* argv[]) {
             args.push_back(argv[i]);
         }
     }
-    int sim_time = 8000000;
+    uint64_t sim_time = 8000000;
     auto f_new_kernel = [&host_impl, &mem](
                             std::string name, std::string metafile, std::string datafile,
                             bool add_to_task
@@ -212,7 +212,7 @@ __attribute__((visibility("default"))) int sc_main(int argc, char* argv[]) {
 
     std::cout << "----------Simulation start----------\n";
     auto start = std::chrono::high_resolution_clock::now();
-    sc_core::sc_start(sim_time, SC_NS);
+    sc_core::sc_start((int)sim_time, SC_NS);
 
     std::cout << "----------Simulation end------------ @ " << sc_core::sc_time_stamp() << std::endl;
 

@@ -641,8 +641,8 @@ void BASE::exec_calc_helper(
             if (ins.mask[i]) {
                 i32_u32_f32_t src1_, src2_, src3_;
                 src1_ = src1[ins.ddd.sel_alu1 == DecodeParams::sel_alu1_t::A1_VRS1 ? i : 0];
-                src2_ = src1[ins.ddd.sel_alu2 == DecodeParams::sel_alu2_t::A2_VRS2 ? i : 0];
-                src3_ = src1[ins.ddd.sel_alu3 == DecodeParams::sel_alu3_t::A3_VRS3 ? i : 0];
+                src2_ = src2[ins.ddd.sel_alu2 == DecodeParams::sel_alu2_t::A2_VRS2 ? i : 0];
+                src3_ = src3[ins.ddd.sel_alu3 == DecodeParams::sel_alu3_t::A3_VRS3 ? i : 0];
                 if (ins.ddd.reverse) {
                     dst[i] = calc(src2_, src1_, src3_);
                 } else {

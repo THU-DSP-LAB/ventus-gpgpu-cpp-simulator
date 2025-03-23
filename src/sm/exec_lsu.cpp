@@ -135,9 +135,15 @@ void BASE::LSU_IN() {
             case VLE32_V_:
                 std::cout << new_data.rsv1_data[0];
                 break;
+            case VSW12_V_:
+                for (int i = 0; i < m_hw_warps[new_data.warp_id]->CSR_reg[0x802]; i++) {
+                    std::cout << std::hex << std::setw(8)
+                              << (new_data.rsv1_data[i] + new_data.rsv2_data[i]) << " ";
+                }
+                break;
             }
-            std::cout << std::setw(0) << std::setfill(' ') << " at " << sc_time_stamp() << ","
-                      << sc_delta_count_at_current_time() << std::endl;
+            std::cout << std::setw(0) << std::dec << std::setfill(' ') << " at " << sc_time_stamp()
+                      << "," << sc_delta_count_at_current_time() << std::endl;
 #endif
         } else {
             if (!lsueqa_triggered)

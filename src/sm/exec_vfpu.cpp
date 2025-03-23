@@ -68,9 +68,9 @@ void BASE::VFPU_CALC() {
         auto& hwarp = m_hw_warps[vfputmp1.warp_id];
         std::array<iuf32_t, hw_num_thread> src1, src2, src3, dst;
         for (int i = 0; i < hwarp->CSR_reg[0x802]; i++) {
-            src1[i].i32 = std::bit_cast<float>(vfputmp1.vfpuSdata1[i]);
-            src2[i].i32 = std::bit_cast<float>(vfputmp1.vfpuSdata2[i]);
-            src3[i].i32 = std::bit_cast<float>(vfputmp1.vfpuSdata3[i]);
+            src1[i].f32 = std::bit_cast<float>(vfputmp1.vfpuSdata1[i]);
+            src2[i].f32 = std::bit_cast<float>(vfputmp1.vfpuSdata2[i]);
+            src3[i].f32 = std::bit_cast<float>(vfputmp1.vfpuSdata3[i]);
         }
         auto calc_helper
             = [&vfputmp1, num_thread = hwarp->CSR_reg[0x802], &src1, &src2, &src3,

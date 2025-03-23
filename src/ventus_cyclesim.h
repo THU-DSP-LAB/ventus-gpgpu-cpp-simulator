@@ -110,6 +110,11 @@ DLL_PUBLIC bool ventus_cyclesim_is_idle(const ventus_cyclesim_t* sim);
 // Init the simulation.
 DLL_PUBLIC ventus_cyclesim_t* ventus_cyclesim_init(const ventus_cyclesim_config_t* config);
 
+DLL_PUBLIC void ventus_cyclesim_config(
+    ventus_cyclesim_t* sim, const ventus_cyclesim_config_t* config
+);
+DLL_PUBLIC const ventus_cyclesim_config_t* ventus_cyclesim_get_config(ventus_cyclesim_t* sim);
+
 // Finish the simulation.
 // If error occurred in the simulation, and snapshot feature enabled,
 //   it will rollback to the oldest snapshot to find out what happened.
@@ -143,10 +148,6 @@ DLL_PUBLIC void ventus_cyclesim_add_kernel(
     void (*finish_callback)(const ventus_kernel_metadata_t*)
 );
 
-void ventus_cyclesim_add_kernel__temp(
-    ventus_cyclesim_t* sim, const char* name, const char* metafile, const char* datafile
-);
-
 //
 // Physical memory interface
 //
@@ -159,11 +160,13 @@ DLL_PUBLIC int ventus_cyclesim_pmem_page_free(ventus_cyclesim_t* sim, paddr_t ba
 
 // Physical memory read & write
 // copy data from host to device
-DLL_PUBLIC int
-ventus_cyclesim_pmemcpy_h2d(ventus_cyclesim_t* sim, paddr_t dst, const void* src, uint64_t size);
+DLL_PUBLIC int ventus_cyclesim_pmemcpy_h2d(
+    ventus_cyclesim_t* sim, paddr_t dst, const void* src, uint64_t size
+);
 // copy data from device to host
-DLL_PUBLIC int
-ventus_cyclesim_pmemcpy_d2h(ventus_cyclesim_t* sim, void* dst, paddr_t src, uint64_t size);
+DLL_PUBLIC int ventus_cyclesim_pmemcpy_d2h(
+    ventus_cyclesim_t* sim, void* dst, paddr_t src, uint64_t size
+);
 
 DLL_PUBLIC paddr_t ventus_cyclesim_vmem_create(ventus_cyclesim_t* sim);
 DLL_PUBLIC void ventus_cyclesim_vmem_destroy(ventus_cyclesim_t* sim, paddr_t pagetable_root);

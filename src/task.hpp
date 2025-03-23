@@ -1,6 +1,7 @@
 #pragma once
 #include "membox_sv39/memory.h"
 #include <any>
+#include <functional>
 #include <memory>
 #include <vector>
 
@@ -20,15 +21,24 @@ public:
     int get_num_kernel() const;
 
     void exec(Memory* mem, CTA_Scheduler* cta);
-    void exec_nextstep(Memory* mem, CTA_Scheduler* cta);
+    void exec(
+        std::function<void(std::shared_ptr<kernel_info_t>, std::function<void()> finish_callback)>
+            f_kernel_add
+    );
 
-    void activate(Memory* mem);
-    bool is_running() const { return m_is_running; }
+    void activate();
+    void activate(Memory* mem) { activate(); };
+    bool is_running() const { return m_status == TASKSTATUS_RUNNING; }
 
     void finish();
-    bool is_finished() const { return m_is_finished; }
+    bool is_finished() const { return m_status == TASKSTATUS_FINISHED; }
 
 private:
+    void exec_nextstep(Memory* mem, CTA_Scheduler* cta);
+    void exec_nextstep(
+        std::function<void(std::shared_ptr<kernel_info_t>, std::function<void()> finish_callback)>
+            f_kernel_add
+    );
     enum {
         STEPTYPE_NONE,
         STEPTYPE_KERNEL,
@@ -38,9 +48,9 @@ private:
     };
 
     std::vector<std::any> m_steps;
-    int m_step_id_running; // Init value: -1
+    int m_step_id_running = -1;
 
-    bool m_step_is_running;
-    bool m_is_running;
-    bool m_is_finished;
+    bool m_step_is_running = false;
+
+    enum { TASKSTATUS_IDLE, TASKSTATUS_RUNNING, TASKSTATUS_FINISHED } m_status = TASKSTATUS_IDLE;
 };

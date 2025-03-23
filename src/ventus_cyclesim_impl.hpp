@@ -9,5 +9,6 @@ extern "C" struct ventus_cyclesim_t {
 
     void constructor(const ventus_cyclesim_config_t* config);
     void destructor();
+    void config(const ventus_cyclesim_config_t* config) { m_config = *config; };
     const ventus_cyclesim_step_result_t* step();
 };

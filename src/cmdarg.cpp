@@ -19,10 +19,7 @@ int cmdarg_error(std::vector<std::string> args);
 int cmdarg_help(int exit_id);
 
 int parse_arg(
-    std::vector<std::string> args, int& numcycle,
-    std::function<
-        int(std::string name, std::string metafile, std::string datafile, bool add_to_task)>
-        new_kernel,
+    std::vector<std::string> args, uint64_t& sim_time, f_new_kernel_t new_kernel,
     std::function<int(std::string name)> new_task
 ) {
     for (int argid = 0; argid < args.size(); argid++) {
@@ -61,7 +58,7 @@ int parse_arg(
                         arguments.push_back(arg);
                     }
                 }
-                parse_arg(arguments, numcycle, new_kernel, new_task);
+                parse_arg(arguments, sim_time, new_kernel, new_task);
                 std::filesystem::current_path(path_origin);
             }
         } else if (args[argid] == "--task") {
@@ -95,7 +92,7 @@ int parse_arg(
                     std::cout << "Error: --sim-time-max needs number > 0\n";
                     cmdarg_error(std::vector<std::string>(args.begin() + argid - 1, args.end()));
                 }
-                numcycle = simtime;
+                sim_time = simtime;
             }
         } else {
             cmdarg_error(std::vector<std::string>(args.begin() + argid, args.begin() + argid + 1));
