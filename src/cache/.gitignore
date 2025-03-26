@@ -1,0 +1,4 @@
+test
+*.csv
+*.gcda
+*.gcno
