@@ -2,7 +2,7 @@ Requirements:
 
 - GCC version >= 11  
 - enable C++20 support
-- to use the latest release of SystemC is highly recommended
+- systemC v2.3.4 (maybe you need to compile systemc with C++20)
 
 ---
 
@@ -10,7 +10,17 @@ Requirements:
 
 配置SystemC可以参考我的[博文](https://zhuanlan.zhihu.com/p/638360098)（也参考了很多别人的经验，但这篇比较适合本工程）。
 
-运行`make -j $(nproc)`编译程序。运行`make run`进行仿真测试。如果运行报错，可以先尝试`make clean`.
+`xmake` is needed as build utility. Use the following command to build and run simulation.
+```bash
+xmake config --mode=release // 选择编译模式debug/release
+xmake && xmake run
+```
+Currently, `Makefile` may not work properly
+
+This project generates two key artifacts:
+* The libVentusCycleSim.so dynamic library, providing a SystemC-based cycle-accurate model of the Ventus GPGPU through the C API specified in ventus_cyclesim.h. The Ventus Driver can utilize this library for hardware simulation.
+* A lightweight driver that interfaces with the simulation model, capable of executing test cases defined in .metadata and .data file formats.)
+
 
 ### Understanding Program Output in Our Project
 

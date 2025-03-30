@@ -2,11 +2,10 @@
 #define BASE_H_
 
 #include <array>
-#include <bitset>
 #define SC_INCLUDE_DYNAMIC_PROCESSES
 #include "../parameters.h"
+#include "../membox_sv39/memory.h"
 #include <systemc.h>
-// #include "../CTA_Scheduler.hpp"
 #include "../context_model.hpp"
 
 class CTA_Scheduler;

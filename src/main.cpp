@@ -1,4 +1,3 @@
-#include "context_model.hpp"
 #include "task.hpp"
 #include "ventus_cyclesim.h"
 #include <cstdint>
@@ -8,15 +7,18 @@
 #include <iostream>
 #include <memory>
 #include <vector>
+#include <cassert>
 
+std::shared_ptr<ventus_kernel_metadata_t> parse_metadata(const std::filesystem::path& metafile);
 void kernel_load_data(
-    ventus_cyclesim_t* sim, const ventus_kernel_metadata_t* metadata, std::filesystem::path datafile
+    ventus_cyclesim_t* sim, std::shared_ptr<const ventus_kernel_metadata_t> metadata,
+    std::filesystem::path datafile
 );
-void kernel_load_data(const ventus_kernel_metadata_t* metadata);
+// void kernel_load_data(const ventus_kernel_metadata_t* metadata);
 void kernel_finish(const ventus_kernel_metadata_t* metadata);
 typedef struct kernel_callback_t {
     std::filesystem::path datafile;
-    ventus_cyclesim_t* sim;
+    // ventus_cyclesim_t* sim;
     std::function<void()> finish_callback;
 } kernel_callback_t;
 
@@ -32,29 +34,41 @@ int main(int argc, char* argv[]) {
     config.sim_time_max = 80000;
     ventus_cyclesim_t* sim = ventus_cyclesim_init(&config);
 
-    std::vector<std::shared_ptr<kernel_info_t>> kernels;
+    std::vector<std::shared_ptr<ventus_kernel_metadata_t>> kernels;
     std::vector<std::shared_ptr<task_t>> tasks;
     uint32_t cnt_kernel = 0;
+
+    //
+    // functions used during parsing arguments
+    //
 
     auto f_new_kernel
         = [sim, &kernels, &tasks, &cnt_kernel](
               std::string name, std::string metafile, std::string datafile, bool add_to_task
           ) {
+              auto kernel = parse_metadata(metafile);
+              char* kernel_name_cstr = new char[name.size() + 1];
+              std::copy(name.begin(), name.end(), kernel_name_cstr);
+              kernel_name_cstr[name.size()] = '\0';
+              kernel->name = kernel_name_cstr;
+              kernel->kernel_id = cnt_kernel++;
+              kernel->data = new kernel_callback_t {
+                  .datafile = datafile,
+                //   .sim = sim,
+                  .finish_callback = nullptr,
+              };
               if (add_to_task) {
                   if (tasks.empty()) {
                       std::cerr << "Error: no task to add kernel to" << std::endl;
                       return -1;
                   }
                   auto task = tasks.back();
-                  task->add_kernel(std::make_shared<kernel_info_t>(
-                      cnt_kernel, name, metafile, datafile, task->m_pagetable
-                  ));
+                  kernel->pagetable = task->m_pagetable;
+                  task->add_kernel(kernel);
               } else {
-                  kernels.emplace_back(std::make_shared<kernel_info_t>(
-                      cnt_kernel, name, metafile, datafile, ventus_cyclesim_vmem_create(sim)
-                  ));
+                  kernel->pagetable = ventus_cyclesim_vmem_create(sim);
+                  kernels.push_back(kernel);
               }
-              cnt_kernel++;
               return 0;
           };
 
@@ -65,7 +79,9 @@ int main(int argc, char* argv[]) {
         return 0;
     };
 
+    //
     // parse cmdline arguments
+    //
     std::vector<std::string> args;
     if (argc == 1) { // Default arguments
         puts("[Info] using default cmdline arguments: -f ventus_args.txt");
@@ -79,16 +95,24 @@ int main(int argc, char* argv[]) {
     parse_arg(args, config.sim_time_max, f_new_kernel, f_new_task);
     ventus_cyclesim_config(sim, &config);
 
-    auto f_send_kernel_to_gpu
-        = [sim](std::shared_ptr<kernel_info_t> kernel, std::function<void()> finish_callback) {
-              auto metadata = kernel->get_metadata();
-              metadata.data = new kernel_callback_t {
-                  .finish_callback = finish_callback,
-              };
-              kernel_load_data(sim, &metadata, kernel->get_datafile_name());
-              ventus_cyclesim_add_kernel(sim, &metadata, kernel_finish);
-          };
+    //
+    // Use this to send a kernel to GPU
+    // 
+    auto f_send_kernel_to_gpu = [sim](
+                                    std::shared_ptr<ventus_kernel_metadata_t> kernel,
+                                    std::function<void()> finish_callback
+                                ) {
+        kernel_callback_t* cb_data = static_cast<kernel_callback_t*>(kernel->data);
+        cb_data->finish_callback = finish_callback;
+        kernel_load_data(sim, kernel, cb_data->datafile);
+        ventus_cyclesim_add_kernel(sim, kernel.get(), kernel_finish);
+    };
 
+
+    //
+    // Send stand-alone kernels to GPU
+    // Activate tasks
+    //
     for (auto kernel : kernels) {
         f_send_kernel_to_gpu(kernel, nullptr);
     }
@@ -96,6 +120,9 @@ int main(int argc, char* argv[]) {
         task->activate();
     }
 
+    //
+    // Run simulation step by step
+    //
     const ventus_cyclesim_step_result_t* result;
     do {
         result = ventus_cyclesim_step(sim);
@@ -103,20 +130,24 @@ int main(int argc, char* argv[]) {
             task->exec(f_send_kernel_to_gpu);
         }
     } while (!result->time_exceed && !ventus_cyclesim_is_idle(sim));
+
+    //
+    // Finish simulation
+    //
     uint64_t sim_end_time = ventus_cyclesim_get_time(sim);
     ventus_cyclesim_finish(sim, false);
-
     std::cout << "Simulation finished at time " << sim_end_time << std::endl;
     return 0;
 }
 
 void kernel_load_data(
-    ventus_cyclesim_t* sim, const ventus_kernel_metadata_t* metadata, std::filesystem::path datafile
+    ventus_cyclesim_t* sim, std::shared_ptr<const ventus_kernel_metadata_t> metadata,
+    std::filesystem::path datafile
 ) {
     auto& mtd = *metadata;
     std::ifstream file(datafile);
     if (!file.is_open()) {
-        log_fatal("Failed to open file: %s", datafile.c_str());
+        std::cerr << "Failed to open file: " << datafile << std::endl;
         exit(-1);
         return;
     }
@@ -150,21 +181,16 @@ void kernel_load_data(
     file.close();
 }
 
-void kernel_load_data(const ventus_kernel_metadata_t* metadata) {
-    kernel_callback_t* cb_data = static_cast<kernel_callback_t*>(metadata->data);
-    assert(cb_data && cb_data->sim);
-    assert(std::filesystem::exists(cb_data->datafile));
-    kernel_load_data(cb_data->sim, metadata, cb_data->datafile);
-    if (!cb_data->finish_callback) {
-        delete cb_data;
-    }
-}
-
 void kernel_finish(const ventus_kernel_metadata_t* metadata) {
+    assert(metadata);
     kernel_callback_t* cb_data = static_cast<kernel_callback_t*>(metadata->data);
     assert(cb_data);
     if (cb_data->finish_callback) {
         cb_data->finish_callback();
-        delete cb_data;
     }
+    delete cb_data;
+    delete[] metadata->name;
+    delete[] metadata->buffer_size;
+    delete[] metadata->buffer_allocsize;
+    delete[] metadata->buffer_base;
 }
