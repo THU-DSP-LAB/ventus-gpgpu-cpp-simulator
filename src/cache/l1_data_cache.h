@@ -41,7 +41,7 @@ public:
 
     
 void coreReq_pipe0_cycle(cycle_t time){
-    if(m_memRsp_Q.m_Q.size() == 0){
+    if(m_memRsp_Q.m_Q.size() == 0){ // 没有 memRsp 时才能处理 coreReq
         if(m_coreReq.is_valid()){
             if(!m_coreReq_pipe1_reg.is_valid()){
                 auto const coreReq_opcode = m_coreReq.m_opcode;
