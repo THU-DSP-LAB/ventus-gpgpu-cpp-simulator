@@ -17,12 +17,19 @@ void SC_L1_CACHE::l1_d_cycle() {
         if(LSU_2_dcache_coreReq_port.num_available() != 0 && !dcache.m_coreReq.is_valid()) {
             dcache.m_coreReq.update_with(LSU_2_dcache_coreReq_port.read());
         }
+        if (L2_2_dcache_memRsp_port.num_available() != 0) {
+            dcache.m_memRsp_Q.m_Q.push_back(L2_2_dcache_memRsp_port.read());
+        }
 
         dcache.cycle(time);
 
         if(!dcache.m_coreRsp_Q.m_Q.empty() && dcache_2_LSU_coreRsp_port.num_free() != 0) {
             dcache_2_LSU_coreRsp_port.write(dcache.m_coreRsp_Q.m_Q.front());
             dcache.m_coreRsp_Q.m_Q.pop_front();
+        }
+        if (dcache.m_memReq_pipe3_reg.is_valid() && dcache_2_L2_memReq_port.num_free() != 0) {
+            dcache_2_L2_memReq_port.write(dcache.m_memReq_pipe3_reg);
+            dcache.m_memReq_pipe3_reg.invalidate();
         }
 
         time++;
