@@ -1,21 +1,26 @@
 #pragma once
 
+#include "physical_mem.hpp"
+#include "sv39_supervisor.hpp"
 #include "CTA_Scheduler.hpp"
 #include "sm/BASE.h"
 #include "sm/BASE_sti.h"
 #include "sysc/communication/sc_clock.h"
 #include "ventus_cyclesim.h"
 #include <functional>
+#include <memory>
 
 class Top_gpgpu {
-    using pagetable_t = uint64_t;
-    using vaddr_t = uint64_t;
-    Memory* m_mem;
+    using pagetable_t = SV39_supervisor::pagetable_t;
+    using vaddr_t = SV39_supervisor::vaddr_t;
+    std::shared_ptr<PhysicalMemory> m_gmem;
     std::vector<BASE*> m_sm;
     CTA_Scheduler* m_cta;
     BASE_sti* m_rst_gen;
     sc_clock m_clk;
     sc_signal<bool> m_rstn;
+
+    std::unique_ptr<SV39_supervisor> m_sv39;
 
     int m_kernel_cnt = 0;
 
@@ -29,8 +34,8 @@ public:
         std::function<void(const ventus_kernel_metadata_t*)> load_data_callback,
         std::function<void(const ventus_kernel_metadata_t*)> finish_callback
     );
-    void pmemcpy_d2h(void* dst, paddr_t src, size_t size);
-    void pmemcpy_h2d(paddr_t dst, const void* src, size_t size);
+    int pmemcpy_d2h(void* dst, paddr_t src, size_t size);
+    int pmemcpy_h2d(paddr_t dst, const void* src, size_t size);
     pagetable_t vmem_create();
     void vmem_destroy(pagetable_t pagetable_root);
     vaddr_t vmem_alloc(pagetable_t pagetable_root, vaddr_t vaddr, size_t size);

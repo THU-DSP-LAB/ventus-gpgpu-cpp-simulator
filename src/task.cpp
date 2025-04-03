@@ -12,20 +12,22 @@ task_t::task_t(uint32_t id, const std::string name, uint64_t pagetable)
 
 void task_t::add_kernel(std::shared_ptr<kernel_t> kernel) { m_steps.push_back(std::any(kernel)); }
 
-void task_t::exec(
-    std::function<void(std::shared_ptr<kernel_t>, std::function<void()> finish_callback)>
-        f_kernel_add
-) {
+void task_t::exec(std::function<void(
+                      std::shared_ptr<kernel_t>, std::function<void()> finish_callback,
+                      std::map<uint64_t, size_t>* vmem_allocated
+                  )>
+                      f_kernel_add) {
     assert(f_kernel_add);
     if (!m_step_is_running) {
         exec_nextstep(f_kernel_add);
     }
 }
 
-void task_t::exec_nextstep(
-    std::function<void(std::shared_ptr<kernel_t>, std::function<void()> finish_callback)>
-        f_kernel_add
-) {
+void task_t::exec_nextstep(std::function<void(
+                               std::shared_ptr<kernel_t>, std::function<void()> finish_callback,
+                               std::map<uint64_t, size_t>* vmem_allocated
+                           )>
+                               f_kernel_add) {
     if (m_status == TASKSTATUS_FINISHED) {
         return;
     }
@@ -40,7 +42,7 @@ void task_t::exec_nextstep(
         std::shared_ptr<kernel_t> kernel = std::any_cast<std::shared_ptr<kernel_t>>(thisstep);
         assert(kernel);
         std::function<void()> cb_func = std::bind(&task_t::callback_kernel_finish, this, kernel);
-        f_kernel_add(kernel, cb_func);
+        f_kernel_add(kernel, cb_func, &m_vmem_allocated);
         m_step_is_running = true;
     } else {
         log_fatal("TODO: other type of task step not implemented yet");

@@ -1,6 +1,7 @@
 #pragma once
 #include <any>
 #include <functional>
+#include <map>
 #include <memory>
 #include <vector>
 
@@ -20,7 +21,10 @@ public:
 
     int get_num_kernel() const;
 
-    void exec(std::function<void(std::shared_ptr<kernel_t>, std::function<void()> finish_callback)>
+    void exec(std::function<void(
+                  std::shared_ptr<kernel_t>, std::function<void()> finish_callback,
+                  std::map<uint64_t, size_t>* vmem_allocated
+              )>
                   f_kernel_add);
 
     void activate();
@@ -30,10 +34,11 @@ public:
     bool is_finished() const { return m_status == TASKSTATUS_FINISHED; }
 
 private:
-    void exec_nextstep(
-        std::function<void(std::shared_ptr<kernel_t>, std::function<void()> finish_callback)>
-            f_kernel_add
-    );
+    void exec_nextstep(std::function<void(
+                           std::shared_ptr<kernel_t>, std::function<void()> finish_callback,
+                           std::map<uint64_t, size_t>* vmem_allocated
+                       )>
+                           f_kernel_add);
     enum {
         STEPTYPE_NONE,
         STEPTYPE_KERNEL,
@@ -46,6 +51,7 @@ private:
     int m_step_id_running = -1;
 
     bool m_step_is_running = false;
+    std::map<uint64_t, size_t> m_vmem_allocated;
 
     enum { TASKSTATUS_IDLE, TASKSTATUS_RUNNING, TASKSTATUS_FINISHED } m_status = TASKSTATUS_IDLE;
 };

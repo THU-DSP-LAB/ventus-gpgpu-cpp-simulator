@@ -2,9 +2,10 @@
 #define BASE_H_
 
 #include <array>
+#include <memory>
 #define SC_INCLUDE_DYNAMIC_PROCESSES
 #include "../parameters.h"
-#include "../membox_sv39/memory.h"
+#include "sv39_basic.hpp"
 #include <systemc.h>
 #include "../context_model.hpp"
 
@@ -17,10 +18,10 @@ public:
     sc_in<bool> rst_n { "rst_n" };
 
     // Memory Access: global & local(shared)
-    Memory* m_mem;                                // global memory handle
+    SV39_basic m_mmu;
     std::array<uint8_t, hw_lds_size> m_local_mem; // LDS of this SM
-    bool mem_read_word(uint32_t* data, uint32_t vaddr, const I_TYPE& ins, uint64_t pagetable) const;
-    bool mem_write_word(uint32_t data, uint32_t vaddr, const I_TYPE& ins, uint64_t pagetable);
+    int mem_read_word(uint32_t* data, uint32_t vaddr, const I_TYPE& ins, uint64_t pagetable) const;
+    int mem_write_word(uint32_t data, uint32_t vaddr, const I_TYPE& ins, uint64_t pagetable);
 
     void debug_sti();
     void debug_display();
@@ -112,7 +113,8 @@ public:
         issue_ins = I_TYPE(INVALID_, 0, 0, 0);
     }
 
-    BASE(sc_core::sc_module_name name, int _sm_id, Memory* mem);
+    BASE(sc_core::sc_module_name name, int _sm_id, std::shared_ptr<PhysicalMemory> gmem);
+    
 
 public:
     std::map<OP_TYPE, decodedat> decode_table;

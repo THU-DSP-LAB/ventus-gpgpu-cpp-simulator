@@ -1,18 +1,21 @@
 #include "task.hpp"
 #include "ventus_cyclesim.h"
+#include <algorithm>
+#include <cassert>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <functional>
 #include <iostream>
+#include <map>
 #include <memory>
+#include <sys/types.h>
 #include <vector>
-#include <cassert>
 
 std::shared_ptr<ventus_kernel_metadata_t> parse_metadata(const std::filesystem::path& metafile);
 void kernel_load_data(
     ventus_cyclesim_t* sim, std::shared_ptr<const ventus_kernel_metadata_t> metadata,
-    std::filesystem::path datafile
+    std::filesystem::path datafile, std::map<uint64_t, size_t>* vmem_allocated = nullptr
 );
 // void kernel_load_data(const ventus_kernel_metadata_t* metadata);
 void kernel_finish(const ventus_kernel_metadata_t* metadata);
@@ -54,7 +57,7 @@ int main(int argc, char* argv[]) {
               kernel->kernel_id = cnt_kernel++;
               kernel->data = new kernel_callback_t {
                   .datafile = datafile,
-                //   .sim = sim,
+                  //   .sim = sim,
                   .finish_callback = nullptr,
               };
               if (add_to_task) {
@@ -97,17 +100,17 @@ int main(int argc, char* argv[]) {
 
     //
     // Use this to send a kernel to GPU
-    // 
+    //
     auto f_send_kernel_to_gpu = [sim](
                                     std::shared_ptr<ventus_kernel_metadata_t> kernel,
-                                    std::function<void()> finish_callback
+                                    std::function<void()> finish_callback,
+                                    std::map<uint64_t, size_t>* vmem_allocated = nullptr
                                 ) {
         kernel_callback_t* cb_data = static_cast<kernel_callback_t*>(kernel->data);
         cb_data->finish_callback = finish_callback;
         kernel_load_data(sim, kernel, cb_data->datafile);
         ventus_cyclesim_add_kernel(sim, kernel.get(), kernel_finish);
     };
-
 
     //
     // Send stand-alone kernels to GPU
@@ -142,7 +145,7 @@ int main(int argc, char* argv[]) {
 
 void kernel_load_data(
     ventus_cyclesim_t* sim, std::shared_ptr<const ventus_kernel_metadata_t> metadata,
-    std::filesystem::path datafile
+    std::filesystem::path datafile, std::map<uint64_t, size_t>* vmem_allocated
 ) {
     auto& mtd = *metadata;
     std::ifstream file(datafile);
@@ -156,11 +159,17 @@ void kernel_load_data(
     int bufferIndex = 0;
     std::vector<uint8_t> buffer;
     for (int bufferIndex = 0; bufferIndex < mtd.num_buffer; bufferIndex++) {
-        buffer.reserve(mtd.buffer_allocsize[bufferIndex]); // 提前分配空间
-        uint64_t vaddr = ventus_cyclesim_vmem_alloc(
-            sim, mtd.pagetable, mtd.buffer_base[bufferIndex], mtd.buffer_allocsize[bufferIndex]
-        );
-        assert(vaddr == mtd.buffer_base[bufferIndex]);
+        buffer.reserve(mtd.buffer_size[bufferIndex]); // 提前分配空间
+        uint64_t vaddr = mtd.buffer_base[bufferIndex];
+        size_t vsize = mtd.buffer_allocsize[bufferIndex];
+        if (!vmem_allocated || !vmem_allocated->contains(vaddr)) {
+            assert(!vmem_allocated || vmem_allocated->at(vaddr) == vsize);
+            uint64_t allocated_vaddr = ventus_cyclesim_vmem_alloc(sim, mtd.pagetable, vaddr, vsize);
+            if (vmem_allocated) {
+                (*vmem_allocated)[vaddr] = vsize;
+            }
+        }
+
         int readbytes = 0;
         while (readbytes < mtd.buffer_size[bufferIndex]) {
             std::getline(file, line);
@@ -171,10 +180,8 @@ void kernel_load_data(
             }
             readbytes += 4;
         }
-        buffer.resize(mtd.buffer_allocsize[bufferIndex]);
         ventus_cyclesim_vmemcpy_h2d(
-            sim, mtd.pagetable, mtd.buffer_base[bufferIndex], buffer.data(),
-            mtd.buffer_size[bufferIndex]
+            sim, mtd.pagetable, vaddr, buffer.data(), mtd.buffer_size[bufferIndex]
         );
         buffer.clear();
     }

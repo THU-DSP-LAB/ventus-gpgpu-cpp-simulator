@@ -1,9 +1,11 @@
 #include "BASE.h"
+#include "physical_mem.hpp"
+#include <memory>
 
-BASE::BASE(sc_core::sc_module_name name, int _sm_id, Memory* mem)
+BASE::BASE(sc_core::sc_module_name name, int _sm_id, std::shared_ptr<PhysicalMemory> gmem)
     : sc_module(name)
     , sm_id(_sm_id)
-    , m_mem(mem) {
+    , m_mmu(gmem) {
     for (int warp_id = 0; warp_id < hw_num_warp; warp_id++) {
         WARP_BONE* new_warp_bone_ = new WARP_BONE(warp_id);
         m_hw_warps[warp_id] = new_warp_bone_;
@@ -238,8 +240,8 @@ void BASE::INSTRUCTION_REG(int warp_id) {
                 //     sc_delta_count_at_current_time() << std::endl;
                 // hwarp->fetch_ins = m_kernel->readInsBuffer(hwarp->pc.read(),
                 // addrOutofRangeException);
-                addrOutofRangeException = m_mem->readDataVirtual(
-                    hwarp->pagetable, hwarp->pc.read(), 4, &hwarp->fetch_ins
+                addrOutofRangeException = !m_mmu.memcpy(
+                    hwarp->pagetable, &hwarp->fetch_ins.origin32bit, hwarp->pc.read(), 4
                 );
                 if (addrOutofRangeException)
                     std::cout << "SM" << sm_id << " warp" << warp_id << "INS_REG error: pc("

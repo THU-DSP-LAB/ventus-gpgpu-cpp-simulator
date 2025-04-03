@@ -2,11 +2,14 @@ if os.getenv("SYSTEMC_HOME") == nil then
     raise("Please set the SYSTEMC_HOME environment variable first!")
 end
 
+includes("dependencies/membox/xmake.lua")
 add_rules("mode.release", "mode.debug")
 
 target("VentusCycleSim")
     set_kind("shared")
     set_languages("c++20")
+    add_includedirs("dependencies/membox/src")
+    add_deps("SV39")
     add_files("src/sm/*.cpp", "src/utils/*.cpp", "src/utils/*.c")
     add_files("src/context_model.cpp", "src/CTA_Scheduler.cpp", "src/parameters.cpp", "src/top_gpgpu.cpp")
     add_files("src/ventus_cyclesim.cpp", "src/ventus_cyclesim_impl.cpp")
