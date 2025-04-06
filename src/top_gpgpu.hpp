@@ -1,7 +1,7 @@
 #pragma once
 
 #include "physical_mem.hpp"
-#include "sv39_supervisor.hpp"
+#include "sv39.hpp"
 #include "CTA_Scheduler.hpp"
 #include "sm/BASE.h"
 #include "sm/BASE_sti.h"
@@ -13,7 +13,7 @@
 class Top_gpgpu {
     using pagetable_t = SV39_supervisor::pagetable_t;
     using vaddr_t = SV39_supervisor::vaddr_t;
-    std::shared_ptr<PhysicalMemory> m_gmem;
+    std::shared_ptr<PhysicalMemoryBasicSim> m_gmem;
     std::vector<BASE*> m_sm;
     CTA_Scheduler* m_cta;
     BASE_sti* m_rst_gen;

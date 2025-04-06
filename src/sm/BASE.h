@@ -1,13 +1,14 @@
 #ifndef BASE_H_
 #define BASE_H_
 
+#include "physical_mem.hpp"
 #include <array>
 #include <memory>
 #define SC_INCLUDE_DYNAMIC_PROCESSES
-#include "../parameters.h"
-#include "sv39_basic.hpp"
-#include <systemc.h>
 #include "../context_model.hpp"
+#include "../parameters.h"
+#include "sv39.hpp"
+#include <systemc.h>
 
 class CTA_Scheduler;
 
@@ -113,8 +114,7 @@ public:
         issue_ins = I_TYPE(INVALID_, 0, 0, 0);
     }
 
-    BASE(sc_core::sc_module_name name, int _sm_id, std::shared_ptr<PhysicalMemory> gmem);
-    
+    BASE(sc_core::sc_module_name name, int _sm_id, std::shared_ptr<PhysicalMemoryInterface> gmem);
 
 public:
     std::map<OP_TYPE, decodedat> decode_table;

@@ -2,7 +2,7 @@
 #include "physical_mem.hpp"
 #include <memory>
 
-BASE::BASE(sc_core::sc_module_name name, int _sm_id, std::shared_ptr<PhysicalMemory> gmem)
+BASE::BASE(sc_core::sc_module_name name, int _sm_id, std::shared_ptr<PhysicalMemoryInterface> gmem)
     : sc_module(name)
     , sm_id(_sm_id)
     , m_mmu(gmem) {

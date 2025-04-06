@@ -1,10 +1,13 @@
 #include "top_gpgpu.hpp"
 #include "parameters.h"
+#include "physical_mem.hpp"
+#include <memory>
 
 Top_gpgpu::Top_gpgpu()
     : m_clk("clk", PERIOD, SC_NS, 0.5, 0, SC_NS, false)
     , m_rstn("rst_n") {
-    m_gmem = std::make_shared<PhysicalMemory>(1ull << 32ull);
+    std::shared_ptr<PhysicalMemoryInterface> m_gmem
+        = std::make_shared<PhysicalMemoryBasicSim>(1ull << 32ull);
     m_sv39 = std::make_unique<SV39_supervisor>(m_gmem);
     m_rst_gen = new BASE_sti("RST_GEN");
     m_rst_gen->rst_n(m_rstn);
