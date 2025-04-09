@@ -104,11 +104,11 @@ void BASE::WRITE_REG(int warp_id) {
 #ifdef SPIKE_OUTPUT
                 std::cout << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex
                           << wb_ins.read().currentpc << std::dec << " " << wb_ins << " v "
-                          << std::setfill('0') << std::setw(3) << rdv1_addr.read() << " "
-                          << std::hex << std::setw(8);
-                for (int i = m_hw_warps[wb_warpid]->CSR_reg[0x802] - 1; i > 0; i--)
-                    std::cout << rdv1_data[i] << " ";
-                std::cout << rdv1_data[0];
+                          << std::setfill('0') << std::setw(3) << rdv1_addr.read() << std::hex;
+                for (int i = m_hw_warps[wb_warpid]->CSR_reg[0x802] - 1; i >= 0; i--)
+                    std::cout << " " << std::setw(8)
+                              << (wb_ins.read().mask[i] ? rdv1_data[i]
+                                                        : hwarp->v_regfile[rdv1_addr][i]);
                 std::cout << std::dec << std::setfill(' ') << std::setw(0)
                           << "; mask=" << wb_ins.read().mask << ", s1=" << wb_ins.read().s1
                           << ",s2=" << wb_ins.read().s2 << ",s3=" << wb_ins.read().s3 << " at "

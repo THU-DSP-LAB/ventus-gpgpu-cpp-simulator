@@ -112,6 +112,21 @@ void BASE::VFPU_CALC() {
                     return iuf32_t { .i32 = (op1.f32 < op2.f32) };
                 });
                 break;
+            case DecodeParams::alu_fn_t::FN_FSGNJ: // VFSGNJ.VF, VFSGNJ.VV, FSGNJ.S
+                calc_helper([](iuf32_t op1, iuf32_t op2, iuf32_t op3) {
+                    return iuf32_t { .u32 = (op1.u32 & 0x7fffffffu) | (op2.u32 & 0x80000000u) };
+                });
+                break;
+            case DecodeParams::alu_fn_t::FN_FSGNJN: // VFSGNJN.VF, VFSGNJN.VV, FSGNJN.S
+                calc_helper([](iuf32_t op1, iuf32_t op2, iuf32_t op3) {
+                    return iuf32_t { .u32 = (op1.u32 & 0x7fffffffu) | (~op2.u32 & 0x80000000u) };
+                });
+                break;
+            case DecodeParams::alu_fn_t::FN_FSGNJX: // VFSGNJX.VF, VFSGNJX.VV, FSGNJX.S
+                calc_helper([](iuf32_t op1, iuf32_t op2, iuf32_t op3) {
+                    return iuf32_t { .u32 = op2.u32 ^ (op2.u32 & 0x80000000u) };
+                });
+                break;
             case FSQRT_S_:
                 vfputmp2.rdf1_data[0]
                     = std::bit_cast<int>(sqrtf32(std::bit_cast<float>(vfputmp1.vfpuSdata1[0])));

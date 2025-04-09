@@ -1,14 +1,18 @@
 #include "top_gpgpu.hpp"
 #include "parameters.h"
+#include "physical_mem.hpp"
+#include <memory>
 
 Top_gpgpu::Top_gpgpu()
     : m_clk("clk", PERIOD, SC_NS, 0.5, 0, SC_NS, false)
     , m_rstn("rst_n") {
-    m_mem = new Memory(1ull << 32ull);
+    std::shared_ptr<PhysicalMemoryInterface> m_gmem
+        = std::make_shared<PhysicalMemoryBasicSim>(1ull << 32ull);
+    m_sv39 = std::make_unique<SV39_supervisor>(m_gmem);
     m_rst_gen = new BASE_sti("RST_GEN");
     m_rst_gen->rst_n(m_rstn);
     for (int i = 0; i < NUM_SM; i++) {
-        m_sm.push_back(new BASE(("SM" + std::to_string(i)).c_str(), i, m_mem));
+        m_sm.push_back(new BASE(("SM" + std::to_string(i)).c_str(), i, m_gmem));
         m_sm[i]->clk(m_clk);
         m_sm[i]->rst_n(m_rstn);
         for (auto& hwarp : m_sm[i]->m_hw_warps) {
@@ -29,7 +33,6 @@ Top_gpgpu::Top_gpgpu()
 }
 
 Top_gpgpu::~Top_gpgpu() {
-    delete m_mem;
     for (auto sm : m_sm) {
         delete sm;
     }
@@ -50,30 +53,26 @@ void Top_gpgpu::add_kernel(
     m_kernel_cnt++;
 }
 
-void Top_gpgpu::pmemcpy_d2h(void* dst, paddr_t src, size_t size) {
-    m_mem->readDataPhysical(src, size, dst);
+int Top_gpgpu::pmemcpy_d2h(void* dst, paddr_t src, size_t size) {
+    return m_gmem->read(src, dst, size);
 }
-void Top_gpgpu::pmemcpy_h2d(paddr_t dst, const void* src, size_t size) {
-    m_mem->writeDataPhysical(dst, size, src);
+int Top_gpgpu::pmemcpy_h2d(paddr_t dst, const void* src, size_t size) {
+    return m_gmem->write(dst, src, size);
 }
 
-Top_gpgpu::pagetable_t Top_gpgpu::vmem_create() { return m_mem->createRootPageTable(); }
-void Top_gpgpu::vmem_destroy(pagetable_t root) {
-    // todo
-    return;
-}
+Top_gpgpu::pagetable_t Top_gpgpu::vmem_create() { return m_sv39->create_pagetable(); }
+void Top_gpgpu::vmem_destroy(pagetable_t root) { m_sv39->destroy_pagetable(root); }
 
 void Top_gpgpu::vmemcpy_d2h(pagetable_t ptroot, void* dst, uint64_t src, uint64_t size) {
-    m_mem->readDataVirtual(ptroot, src, size, dst);
+    m_sv39->memcpy(ptroot, dst, src, size);
 }
 void Top_gpgpu::vmemcpy_h2d(pagetable_t ptroot, uint64_t dst, const void* src, uint64_t size) {
-    m_mem->writeDataVirtual(ptroot, dst, size, src);
+    m_sv39->memcpy(ptroot, dst, src, size);
 }
-Top_gpgpu::vaddr_t Top_gpgpu::vmem_alloc(pagetable_t pagetable_root, vaddr_t vaddr, size_t size) {
-    m_mem->allocateMemory(pagetable_root, vaddr, size);
-    return vaddr;
+Top_gpgpu::vaddr_t Top_gpgpu::vmem_alloc(pagetable_t ptroot, vaddr_t vaddr, size_t size) {
+    return m_sv39->mmap(ptroot, vaddr, size);
 }
-void Top_gpgpu::vmem_free(pagetable_t pagetable_root, vaddr_t vaddr, size_t size) {
-    // TODO
+void Top_gpgpu::vmem_free(pagetable_t ptroot, vaddr_t vaddr, size_t size) {
+    m_sv39->munmap(ptroot, vaddr, size);
 }
 bool Top_gpgpu::is_idle() const { return m_cta->is_idle(); }

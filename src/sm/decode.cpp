@@ -109,7 +109,7 @@ void BASE::DECODE(int warp_id) {
 
                 tmpins.s1 = extractBits32(tmpins.origin32bit, 19, 15);
                 tmpins.s2 = extractBits32(tmpins.origin32bit, 24, 20);
-                tmpins.s3 = (tmpins.ddd.fp & !tmpins.ddd.isvec)
+                tmpins.s3 = (tmpins.ddd.fp && !tmpins.ddd.isvec)
                     ? extractBits32(tmpins.origin32bit, 31, 27)
                     : extractBits32(tmpins.origin32bit, 11, 7);
                 tmpins.d = extractBits32(tmpins.origin32bit, 11, 7);
@@ -117,7 +117,7 @@ void BASE::DECODE(int warp_id) {
                     tmpins.imm += extimm << 5;
                     tmpins.s1 += ext1 << 5;
                     tmpins.s2 += ext2 << 5;
-                    tmpins.s3 += ext3 << 5;
+                    tmpins.s3 += ((tmpins.ddd.fp && !tmpins.ddd.isvec) ? ext3 : extd) << 5;
                     tmpins.d += extd << 5;
                     WILLregext = false;
 #ifdef SPIKE_OUTPUT

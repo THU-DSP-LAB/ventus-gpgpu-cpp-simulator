@@ -3,7 +3,6 @@
 
 #include "parameters.h"
 #include <cstdint>
-#include <list>
 #include <memory>
 #include <tuple>
 #include <vector>
