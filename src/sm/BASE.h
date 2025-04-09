@@ -46,7 +46,7 @@ public:
         bool& insertscore
     );
     void JUDGE_DISPATCH(int warp_id);
-    void cycle_JUDGE_DISPATCH(int warp_id, I_TYPE& _readibuf);
+    bool cycle_JUDGE_DISPATCH(int warp_id);
     void BEFORE_DISPATCH(int warp_id);
     // issue
     void WARP_SCHEDULER();

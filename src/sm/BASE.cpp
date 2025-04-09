@@ -436,72 +436,67 @@ void BASE::cycle_UPDATE_SCORE(
     }
 }
 
-void BASE::cycle_JUDGE_DISPATCH(int warp_id, I_TYPE& _readibuf) {
+bool BASE::cycle_JUDGE_DISPATCH(int warp_id) {
     auto& hwarp = m_hw_warps[warp_id];
     if (hwarp->wait_bran | hwarp->jump) {
-        hwarp->can_dispatch = false;
-    } else if (!hwarp->ififo.isempty()) {
-        _readibuf = hwarp->ififo.front();
-        hwarp->can_dispatch = true;
+        return false;
+    }
+    if (hwarp->ififo.isempty()) {
+        return false;
+    }
 
-        if (_readibuf.op == INVALID_)
-            hwarp->can_dispatch = false;
-        if (_readibuf.op == ENDPRG_ && !hwarp->score.empty())
-            hwarp->can_dispatch = false;
+    const auto& instr = hwarp->ififo.front();
 
-        if (_readibuf.ddd.wxd
-            && hwarp->score.find(SCORE_TYPE(s, _readibuf.d)) != hwarp->score.end())
-            hwarp->can_dispatch = false;
-        else if (_readibuf.ddd.wvd
-                 && hwarp->score.find(SCORE_TYPE(v, _readibuf.d)) != hwarp->score.end())
-            hwarp->can_dispatch = false;
-        else if (_readibuf.ddd.sel_alu1 == DecodeParams::A1_RS1
-                 && hwarp->score.find(SCORE_TYPE(s, _readibuf.s1)) != hwarp->score.end())
-            hwarp->can_dispatch = false;
-        else if (_readibuf.ddd.sel_alu1 == DecodeParams::A1_VRS1
-                 && hwarp->score.find(SCORE_TYPE(v, _readibuf.s1)) != hwarp->score.end())
-            hwarp->can_dispatch = false;
-        else if (_readibuf.ddd.sel_alu2 == DecodeParams::sel_alu2_t::A2_RS2
-                 && hwarp->score.find(SCORE_TYPE(s, _readibuf.s2)) != hwarp->score.end())
-            hwarp->can_dispatch = false;
-        else if (_readibuf.ddd.sel_alu2 == DecodeParams::sel_alu2_t::A2_VRS2
-                 && hwarp->score.find(SCORE_TYPE(v, _readibuf.s2)) != hwarp->score.end())
-            hwarp->can_dispatch = false;
-        else if (_readibuf.ddd.sel_alu3 == DecodeParams::sel_alu3_t::A3_FRS3
-                 && hwarp->score.find(SCORE_TYPE(s, _readibuf.s3)) != hwarp->score.end())
-            hwarp->can_dispatch = false;
-        else if (_readibuf.ddd.sel_alu3 == DecodeParams::sel_alu3_t::A3_VRS3
-                 && hwarp->score.find(SCORE_TYPE(v, _readibuf.s3)) != hwarp->score.end())
-            hwarp->can_dispatch = false;
-        else if (_readibuf.ddd.sel_alu3 == DecodeParams::sel_alu3_t::A3_PC
-                 && _readibuf.ddd.branch == DecodeParams::branch_t::B_R
-                 && hwarp->score.find(SCORE_TYPE(s, _readibuf.s1)) != hwarp->score.end())
-            hwarp->can_dispatch = false;
-        else if (_readibuf.ddd.sel_alu3 == DecodeParams::sel_alu3_t::A3_SD
-                 && (_readibuf.ddd.isvec & (!_readibuf.ddd.readmask))
-                 && hwarp->score.find(SCORE_TYPE(s, _readibuf.s3)) != hwarp->score.end())
-            hwarp->can_dispatch = false;
-        else if (_readibuf.ddd.sel_alu3 == DecodeParams::sel_alu3_t::A3_SD
-                 && !(_readibuf.ddd.isvec & (!_readibuf.ddd.readmask))
-                 && hwarp->score.find(SCORE_TYPE(s, _readibuf.s2)) != hwarp->score.end())
-            hwarp->can_dispatch = false;
+    if (instr.op == INVALID_)
+        return false;
+    if (instr.op == ENDPRG_ && !hwarp->score.empty())
+        return false;
 
-        // if (sm_id == 0 && warp_id == 0)
-        //     if (hwarp->can_dispatch == false)
-        //         std::cout << "SM" << sm_id << " warp" << warp_id << " JUDGE_DISPATCH=false with
-        //         ins.bit=" << std::hex
-        //         << _readibuf.origin32bit << std::dec << " at " << sc_time_stamp() << "," <<
-        //         sc_delta_count_at_current_time() << std::endl;
+    if (instr.ddd.wxd && hwarp->score.find(SCORE_TYPE(s, instr.d)) != hwarp->score.end())
+        return false;
+    if (instr.ddd.wvd && hwarp->score.find(SCORE_TYPE(v, instr.d)) != hwarp->score.end())
+        return false;
 
-        // if (sm_id == 0 && warp_id == 0 && _readibuf.origin32bit == uint32_t(0x96013057) &&
-        // hwarp->can_dispatch == false) if (sm_id == 0 && warp_id == 0 &&
-        // hwarp->can_dispatch == false)
-        //     std::cout << "SM" << sm_id << " warp" << warp_id << " JUDGE_DISPATCH meet ins.bit="
-        //     << std::hex << _readibuf.origin32bit << std::dec << ", can't dispatch, ins.d=" <<
-        //     _readibuf.d << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time()
-        //     << std::endl;
-    } else if (hwarp->ififo.isempty())
-        hwarp->can_dispatch = false;
+    if (instr.ddd.sel_alu1 == DecodeParams::A1_RS1
+        && hwarp->score.find(SCORE_TYPE(s, instr.s1)) != hwarp->score.end())
+        return false;
+    if (instr.ddd.sel_alu1 == DecodeParams::A1_VRS1
+        && hwarp->score.find(SCORE_TYPE(v, instr.s1)) != hwarp->score.end())
+        return false;
+    if (instr.ddd.sel_alu2 == DecodeParams::sel_alu2_t::A2_RS2
+        && hwarp->score.find(SCORE_TYPE(s, instr.s2)) != hwarp->score.end())
+        return false;
+    if (instr.ddd.sel_alu2 == DecodeParams::sel_alu2_t::A2_VRS2
+        && hwarp->score.find(SCORE_TYPE(v, instr.s2)) != hwarp->score.end())
+        return false;
+    if (instr.ddd.sel_alu3 == DecodeParams::sel_alu3_t::A3_FRS3
+        && hwarp->score.find(SCORE_TYPE(s, instr.s3)) != hwarp->score.end())
+        return false;
+    if (instr.ddd.sel_alu3 == DecodeParams::sel_alu3_t::A3_VRS3
+        && hwarp->score.find(SCORE_TYPE(v, instr.s3)) != hwarp->score.end())
+        return false;
+    if (instr.ddd.sel_alu3 == DecodeParams::sel_alu3_t::A3_PC
+        && instr.ddd.branch == DecodeParams::branch_t::B_R
+        && hwarp->score.find(SCORE_TYPE(s, instr.s1)) != hwarp->score.end())
+        return false;
+    if (instr.ddd.sel_alu3 == DecodeParams::sel_alu3_t::A3_SD) {
+        if (instr.ddd.isvec) {
+            if (instr.ddd.readmask) {
+                if (hwarp->score.find(SCORE_TYPE(v, instr.s2)) != hwarp->score.end()) {
+                    return false;
+                }
+            } else {
+                if (hwarp->score.find(SCORE_TYPE(v, instr.s3)) != hwarp->score.end()) {
+                    return false;
+                }
+            }
+        } else {
+            if (hwarp->score.find(SCORE_TYPE(s, instr.s2)) != hwarp->score.end()) {
+                return false;
+            }
+        }
+    }
+    return true;
 }
 
 void BASE::BEFORE_DISPATCH(int warp_id) {
@@ -511,7 +506,6 @@ void BASE::BEFORE_DISPATCH(int warp_id) {
     std::set<SCORE_TYPE>::iterator it;
     REG_TYPE regtype_;
     bool insertscore = false;
-    I_TYPE _readibuf;
 
     auto& hwarp = m_hw_warps[warp_id];
     while (true) {
@@ -527,7 +521,7 @@ void BASE::BEFORE_DISPATCH(int warp_id) {
 
             cycle_IBUF_ACTION(warp_id, dispatch_ins_, _readdata3);
             cycle_UPDATE_SCORE(warp_id, tmpins, it, regtype_, insertscore);
-            cycle_JUDGE_DISPATCH(warp_id, _readibuf);
+            hwarp->can_dispatch = cycle_JUDGE_DISPATCH(warp_id);
             hwarp->ev_warp_dispatch.notify();
         } else {
             // 某个warp结束后，依然出发issue_list，否则warp_scheduler无法运行
@@ -585,7 +579,7 @@ void BASE::receive_warp(
     hwarp->CSR_reg[0x300] = 0x00001800; // WHY? CSR[mstatus] default value
 
     hwarp->is_warp_activated.write(true);
-    hwarp->pc.write(kernel->get_startaddr());
+    hwarp->pc.write(kernel->get_startaddr() - 4);
     hwarp->pagetable = kernel->get_pagetable();
     hwarp->num_thread = kernel->get_num_thread_per_warp();
     hwarp->blk_slot_idx = block_slot;

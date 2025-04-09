@@ -232,7 +232,6 @@ void BASE::LSU_CALC() {
                               << sc_delta_count_at_current_time() << std::endl;
             }
             lsufifo.push(lsutmp2);
-
         } else {                         // 写global/local mem
             if (lsutmp1.ins.ddd.isvec) { // vec instruction sw: check branch masks of each thread
                 bool addrOutofRangeException_flag = false;
@@ -253,19 +252,17 @@ void BASE::LSU_CALC() {
                     }
                 }
 #ifdef SPIKE_OUTPUT
-                if (addrOutofRangeException_flag) {
-                    std::cout << "↑SM" << sm_id << " warp " << lsutmp1.warp_id << " 0x" << std::hex
-                              << lsutmp1.ins.currentpc << " " << lsutmp1.ins << std::hex
-                              << " data=" << std::setw(8) << std::setfill('0');
-                    for (int i = hwarp->CSR_reg[0x802] - 1; i >= 0; i--)
-                        std::cout << lsutmp1.rsv3_data[i] << " ";
-                    std::cout << "@ ";
-                    for (int i = hwarp->CSR_reg[0x802] - 1; i >= 0; i--)
-                        std::cout << LSUaddr[i] << " ";
-                    std::cout << std::setw(0) << std::setfill(' ') << " mask=" << lsutmp1.ins.mask
-                              << " at " << sc_time_stamp() << ","
-                              << sc_delta_count_at_current_time() << std::endl;
-                }
+                std::cout << "SM" << sm_id << " warp " << lsutmp1.warp_id << " 0x" << std::hex
+                          << lsutmp1.ins.currentpc << " " << lsutmp1.ins << std::hex
+                          << " data=" << std::setw(8) << std::setfill('0');
+                for (int i = hwarp->CSR_reg[0x802] - 1; i >= 0; i--)
+                    std::cout << lsutmp1.rsv3_data[i] << " ";
+                std::cout << "@ ";
+                for (int i = hwarp->CSR_reg[0x802] - 1; i >= 0; i--)
+                    std::cout << LSUaddr[i] << " ";
+                std::cout << std::setw(0) << std::setfill(' ') << " mask=" << lsutmp1.ins.mask
+                          << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time()
+                          << std::endl;
 #endif
             } else { // scalar instruction sw
                 addrOutofRangeException = mem_write_word(
