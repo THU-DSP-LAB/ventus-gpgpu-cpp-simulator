@@ -6,7 +6,7 @@ SC_L1_CACHE::SC_L1_CACHE(sc_core::sc_module_name name)
       dcache_2_LSU_coreRsp_port("dcache_2_LSU_coreRsp_port")
 {
     SC_HAS_PROCESS(SC_L1_CACHE);
-
+    std::cout<<" time | event  |wid|src|"<<endl;
     SC_THREAD(l1_d_cycle);
 }
 

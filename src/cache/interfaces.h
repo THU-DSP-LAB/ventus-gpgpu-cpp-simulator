@@ -3,6 +3,9 @@
 
 #include <deque>
 #include "parameter.h"
+#include <ostream>
+#include <cassert>
+#include <iomanip>
 
 enum LSU_cache_coreReq_opcode {
     Read,
@@ -329,7 +332,65 @@ class memReq_pipe_reg : public dcache_2_L2_memReq, public pipe_reg_base{
         a_source = memReq.a_source;
         a_address = memReq.a_address;
         a_mask = memReq.a_mask;
+        a_data = memReq.a_data;
         set_valid();
     }
 };
+
+// 重载运算符的内联函数, 四个均有添加
+inline std::ostream& operator<<(std::ostream& os, const dcache_2_LSU_coreRsp& rsp) {
+    os << "dcache_2_LSU_coreRsp{"
+       << "wid=" << rsp.m_wid
+       << ", reg_idxw=" << rsp.m_reg_idxw
+       << ", mask=[";
+    for (bool m : rsp.m_mask) os << m << " ";
+    os << "], wxd=" << rsp.m_wxd
+       << ", data=[";
+    for (auto d : rsp.m_data) os << "0x" << std::hex << d << " ";
+    os << "]}";
+    return os;
+}
+inline std::ostream& operator<<(std::ostream& os, const LSU_2_dcache_coreReq& req) {
+    os << "LSU_2_dcache_coreReq{"
+       << "opcode=" << static_cast<int>(req.m_opcode)
+       << ", type=" << req.m_type
+       << ", wid=" << req.m_wid
+       << ", reg_idxw=" << req.m_reg_idxw
+       << ", block_idx=" << req.m_block_idx
+       << ", mask=[";
+    for (bool m : req.m_mask) os << m << " ";
+    os << "], block_offset=[";
+    for (auto b : req.m_block_offset) os << "0x" << std::hex << b << " ";
+    os << "], word_offset=[";
+    for (auto w : req.m_word_offset) os << "0x" << std::hex << w << " ";
+    os << "], data=[";
+    for (auto d : req.m_data) os << "0x" << std::hex << d << " ";
+    os << "]}";
+    return os;
+}
+inline std::ostream& operator<<(std::ostream& os, const L2_2_dcache_memRsp& rsp) {
+    os << "L2_2_dcache_memRsp{"
+       << "opcode=" << static_cast<int>(rsp.d_opcode)
+       << ", source=" << rsp.d_source
+       << ", mask=[";
+    for (bool m : rsp.d_mask) os << m << " ";
+    os << "], data=[";
+    for (auto d : rsp.d_data) os << "0x" << std::hex << d << " ";
+    os << "]}";
+    return os;
+}
+inline std::ostream& operator<<(std::ostream& os, const dcache_2_L2_memReq& req) {
+    os << "dcache_2_L2_memReq{"
+       << "opcode=" << static_cast<int>(req.a_opcode)
+       << ", param=" << req.a_param
+       << ", source=" << req.a_source
+       << ", address=0x" << std::hex << req.a_address
+       << ", mask=[";
+    for (bool m : req.a_mask) os << m << " ";
+    os << "], data=[";
+    for (auto d : req.a_data) os << "0x" << std::hex << d << " ";
+    os << "]}";
+    return os;
+}
+
 #endif

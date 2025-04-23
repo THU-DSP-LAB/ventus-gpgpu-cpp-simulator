@@ -7,6 +7,7 @@
 #include "../parameters.h"
 
 class SC_L1_CACHE : public sc_core::sc_module {
+public:
     sc_in_clk clk {"clk"};
 
     // dcache <-> core pipeline, with valid-ready handshake (use sc_fifo to work as handshake)

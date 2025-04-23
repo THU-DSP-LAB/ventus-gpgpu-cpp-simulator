@@ -6,8 +6,9 @@
 #include <deque>
 #include <systemc>
 #include <tlm>
+#include <cstdio>
 
-#include "../membox_sv39/memory.h"
+#include "physical_mem.hpp"
 #include "l1_tlm_adapter.hpp"
 
 class L2_Cache : public sc_core::sc_module
@@ -16,7 +17,7 @@ class L2_Cache : public sc_core::sc_module
     // TLM target socket
     tlm_utils::simple_target_socket<L2_Cache> target_socket;
 
-    L2_Cache(Memory *mem) : target_socket("target_socket"), m_mem(mem)
+    L2_Cache(sc_core::sc_module_name name, std::shared_ptr<PhysicalMemoryInterface> pmem) : target_socket("target_socket"), m_mem(pmem)
     {
         SC_HAS_PROCESS(L2_Cache);
 
@@ -31,7 +32,8 @@ class L2_Cache : public sc_core::sc_module
     // 记录正在等待处理的请求
     std::deque<tlm::tlm_generic_payload *> req_queue;
 
-    Memory *m_mem;
+    // PhysicalMemoryInterface *m_mem;
+    std::shared_ptr<PhysicalMemoryInterface> m_mem;
 
     // forward path 回调：收到 L1_TLM_Adapter 发起的 nb_transport_fw
     tlm::tlm_sync_enum nb_transport_fw(tlm::tlm_generic_payload &trans, tlm::tlm_phase &phase, sc_core::sc_time &delay);
