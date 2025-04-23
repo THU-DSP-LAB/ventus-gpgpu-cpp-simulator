@@ -127,203 +127,203 @@ void BASE::VFPU_CALC() {
                     return iuf32_t { .u32 = op2.u32 ^ (op2.u32 & 0x80000000u) };
                 });
                 break;
-            case FSQRT_S_:
-                vfputmp2.rdf1_data[0]
-                    = std::bit_cast<int>(sqrtf32(std::bit_cast<float>(vfputmp1.vfpuSdata1[0])));
-                break;
-            case FCVT_W_S_:
-                vfputmp2.rds1_data = (int)std::bit_cast<float>(vfputmp1.vfpuSdata1[0]);
-                break;
-            case FCVT_WU_S_:
-                vfputmp2.rds1_data = (unsigned int)std::bit_cast<float>(vfputmp1.vfpuSdata1[0]);
-                break;
-            case FCLASS_S_:
+            // case FSQRT_S_:
+            //     vfputmp2.rdf1_data[0]
+            //         = std::bit_cast<int>(sqrtf32(std::bit_cast<float>(vfputmp1.vfpuSdata1[0])));
+            //     break;
+            // case FCVT_W_S_:
+            //     vfputmp2.rds1_data = (int)std::bit_cast<float>(vfputmp1.vfpuSdata1[0]);
+            //     break;
+            // case FCVT_WU_S_:
+            //     vfputmp2.rds1_data = (unsigned int)std::bit_cast<float>(vfputmp1.vfpuSdata1[0]);
+            //     break;
+            // case FCLASS_S_:
 
-                break;
-            case FCVT_S_W_:
-                vfputmp2.rdf1_data[0] = std::bit_cast<int>((float)vfputmp1.vfpuSdata1[0]);
-                break;
-            case FCVT_S_WU_:
-                vfputmp2.rdf1_data[0] = std::bit_cast<int>((float)(unsigned)vfputmp1.vfpuSdata1[0]);
-                break;
-            case FMADD_S_:
-                source_f1 = std::bit_cast<float>(vfputmp1.vfpuSdata1[0]);
-                source_f2 = std::bit_cast<float>(vfputmp1.vfpuSdata2[0]);
-                source_f3 = std::bit_cast<float>(vfputmp1.vfpuSdata3[0]);
-                vfputmp2.rdf1_data[0] = std::bit_cast<int>(source_f1 * source_f2 + source_f3);
-                break;
-            case FMSUB_S_:
-                source_f1 = std::bit_cast<float>(vfputmp1.vfpuSdata1[0]);
-                source_f2 = std::bit_cast<float>(vfputmp1.vfpuSdata2[0]);
-                source_f3 = std::bit_cast<float>(vfputmp1.vfpuSdata3[0]);
-                vfputmp2.rdf1_data[0] = std::bit_cast<int>(source_f1 * source_f2 - source_f3);
-                break;
-            case FNMSUB_S_:
-                source_f1 = std::bit_cast<float>(vfputmp1.vfpuSdata1[0]);
-                source_f2 = std::bit_cast<float>(vfputmp1.vfpuSdata2[0]);
-                source_f3 = std::bit_cast<float>(vfputmp1.vfpuSdata3[0]);
-                vfputmp2.rdf1_data[0] = std::bit_cast<int>(-source_f1 * source_f2 + source_f3);
-                break;
-            case FNMADD_S_:
-                source_f1 = std::bit_cast<float>(vfputmp1.vfpuSdata1[0]);
-                source_f2 = std::bit_cast<float>(vfputmp1.vfpuSdata2[0]);
-                source_f3 = std::bit_cast<float>(vfputmp1.vfpuSdata3[0]);
-                vfputmp2.rdf1_data[0] = std::bit_cast<int>(-source_f1 * source_f2 - source_f3);
-                break;
-            case FADD_S_:
-                source_f1 = std::bit_cast<float>(vfputmp1.vfpuSdata1[0]);
-                source_f2 = std::bit_cast<float>(vfputmp1.vfpuSdata2[0]);
-                vfputmp2.rdf1_data[0] = std::bit_cast<int>(source_f1 + source_f2);
-                break;
-            case FSUB_S_:
-                source_f1 = std::bit_cast<float>(vfputmp1.vfpuSdata1[0]);
-                source_f2 = std::bit_cast<float>(vfputmp1.vfpuSdata2[0]);
-                vfputmp2.rdf1_data[0] = std::bit_cast<int>(source_f1 - source_f2);
-                break;
-            case FMUL_S_:
-                source_f1 = std::bit_cast<float>(vfputmp1.vfpuSdata1[0]);
-                source_f2 = std::bit_cast<float>(vfputmp1.vfpuSdata2[0]);
-                vfputmp2.rdf1_data[0] = std::bit_cast<int>(source_f1 * source_f2);
-                break;
-            case FDIV_S_:
-                source_f1 = std::bit_cast<float>(vfputmp1.vfpuSdata1[0]);
-                source_f2 = std::bit_cast<float>(vfputmp1.vfpuSdata2[0]);
-                vfputmp2.rdf1_data[0] = std::bit_cast<int>(source_f1 / source_f2);
-                break;
-            case FSGNJ_S_:
-                vfputmp2.rdf1_data[0]
-                    = (vfputmp1.vfpuSdata1[0] & 0x7fffffff) | (vfputmp1.vfpuSdata2[0] & 0x80000000);
-                break;
-            case FSGNJN_S_:
-                vfputmp2.rdf1_data[0] = (vfputmp1.vfpuSdata1[0] & 0x7fffffff)
-                    | ((vfputmp1.vfpuSdata2[0] & 0x80000000) ^ 0x80000000);
-                break;
-            case FSGNJX_S_:
-                vfputmp2.rdf1_data[0] = (vfputmp1.vfpuSdata1[0] & 0x7fffffff)
-                    | ((vfputmp1.vfpuSdata2[0] & 0x80000000) ^ (vfputmp1.vfpuSdata2[0] & 0x80000000)
-                    );
-                break;
-            case FMIN_S_:
-                source_f1 = std::bit_cast<float>(vfputmp1.vfpuSdata1[0]);
-                source_f2 = std::bit_cast<float>(vfputmp1.vfpuSdata2[0]);
-                vfputmp2.rdf1_data[0]
-                    = std::bit_cast<int>(source_f1 < source_f2 ? source_f1 : source_f2);
-                break;
-            case FMAX_S_:
-                source_f1 = std::bit_cast<float>(vfputmp1.vfpuSdata1[0]);
-                source_f2 = std::bit_cast<float>(vfputmp1.vfpuSdata2[0]);
-                vfputmp2.rdf1_data[0]
-                    = std::bit_cast<int>(source_f1 > source_f2 ? source_f1 : source_f2);
-                break;
-            case FEQ_S_:
-                source_f1 = std::bit_cast<float>(vfputmp1.vfpuSdata1[0]);
-                source_f2 = std::bit_cast<float>(vfputmp1.vfpuSdata2[0]);
-                vfputmp2.rds1_data = source_f1 == source_f2;
-                break;
-            case FLT_S_:
-                source_f1 = std::bit_cast<float>(vfputmp1.vfpuSdata1[0]);
-                source_f2 = std::bit_cast<float>(vfputmp1.vfpuSdata2[0]);
-                vfputmp2.rds1_data = source_f1 < source_f2;
-                break;
-            case FLE_S_:
-                source_f1 = std::bit_cast<float>(vfputmp1.vfpuSdata1[0]);
-                source_f2 = std::bit_cast<float>(vfputmp1.vfpuSdata2[0]);
-                vfputmp2.rds1_data = source_f1 <= source_f2;
-                break;
-            case VFMUL_VV_:
-                for (int i = 0; i < hwarp->CSR_reg[0x802]; i++)
-                    vfputmp2.rdf1_data[i] = std::bit_cast<int>(
-                        std::bit_cast<float>(vfputmp1.vfpuSdata1[i])
-                        * std::bit_cast<float>(vfputmp1.vfpuSdata2[i])
-                    );
-                break;
-            case VFMUL_VF_:
-                for (int i = 0; i < hwarp->CSR_reg[0x802]; i++)
-                    vfputmp2.rdf1_data[i] = std::bit_cast<int>(
-                        std::bit_cast<float>(vfputmp1.vfpuSdata1[0])
-                        + std::bit_cast<float>(vfputmp1.vfpuSdata2[i])
-                    );
-                break;
-            case VFMADD_VV_:
-                for (int i = 0; i < hwarp->CSR_reg[0x802]; i++)
-                    vfputmp2.rdf1_data[i] = std::bit_cast<int>(
-                        std::bit_cast<float>(vfputmp1.vfpuSdata1[i])
-                            * std::bit_cast<float>(vfputmp1.vfpuSdata3[i])
-                        + std::bit_cast<float>(vfputmp1.vfpuSdata2[i])
-                    );
-                break;
-            case VFMADD_VF_:
-                for (int i = 0; i < hwarp->CSR_reg[0x802]; i++)
-                    vfputmp2.rdf1_data[i] = std::bit_cast<int>(
-                        std::bit_cast<float>(vfputmp1.vfpuSdata1[0])
-                            * std::bit_cast<float>(vfputmp1.vfpuSdata3[i])
-                        + std::bit_cast<float>(vfputmp1.vfpuSdata2[i])
-                    );
-                break;
-            case VFNMADD_VV_:
-                for (int i = 0; i < hwarp->CSR_reg[0x802]; i++)
-                    vfputmp2.rdf1_data[i] = std::bit_cast<int>(
-                        -std::bit_cast<float>(vfputmp1.vfpuSdata1[i])
-                            * std::bit_cast<float>(vfputmp1.vfpuSdata3[i])
-                        - std::bit_cast<float>(vfputmp1.vfpuSdata2[i])
-                    );
-                break;
-            case VFNMADD_VF_:
-                for (int i = 0; i < hwarp->CSR_reg[0x802]; i++)
-                    vfputmp2.rdf1_data[i] = std::bit_cast<int>(
-                        -std::bit_cast<float>(vfputmp1.vfpuSdata1[0])
-                            * std::bit_cast<float>(vfputmp1.vfpuSdata3[i])
-                        - std::bit_cast<float>(vfputmp1.vfpuSdata2[i])
-                    );
-                break;
-            case VFMSUB_VV_:
-                for (int i = 0; i < hwarp->CSR_reg[0x802]; i++)
-                    vfputmp2.rdf1_data[i] = std::bit_cast<int>(
-                        std::bit_cast<float>(vfputmp1.vfpuSdata1[i])
-                            * std::bit_cast<float>(vfputmp1.vfpuSdata3[i])
-                        - std::bit_cast<float>(vfputmp1.vfpuSdata2[i])
-                    );
-                break;
-            case VFMSUB_VF_:
-                for (int i = 0; i < hwarp->CSR_reg[0x802]; i++)
-                    vfputmp2.rdf1_data[i] = std::bit_cast<int>(
-                        std::bit_cast<float>(vfputmp1.vfpuSdata1[0])
-                            * std::bit_cast<float>(vfputmp1.vfpuSdata3[i])
-                        - std::bit_cast<float>(vfputmp1.vfpuSdata2[i])
-                    );
-                break;
-            case VFNMSUB_VV_:
-                for (int i = 0; i < hwarp->CSR_reg[0x802]; i++)
-                    vfputmp2.rdf1_data[i] = std::bit_cast<int>(
-                        -std::bit_cast<float>(vfputmp1.vfpuSdata1[i])
-                            * std::bit_cast<float>(vfputmp1.vfpuSdata3[i])
-                        + std::bit_cast<float>(vfputmp1.vfpuSdata2[i])
-                    );
-                break;
-            case VFNMSUB_VF_:
-                for (int i = 0; i < hwarp->CSR_reg[0x802]; i++)
-                    vfputmp2.rdf1_data[i] = std::bit_cast<int>(
-                        -std::bit_cast<float>(vfputmp1.vfpuSdata1[0])
-                            * std::bit_cast<float>(vfputmp1.vfpuSdata3[i])
-                        + std::bit_cast<float>(vfputmp1.vfpuSdata2[i])
-                    );
-                break;
-            case VFMACC_VV_:
-                for (int i = 0; i < hwarp->CSR_reg[0x802]; i++)
-                    vfputmp2.rdf1_data[i] = std::bit_cast<int>(
-                        std::bit_cast<float>(vfputmp1.vfpuSdata1[i])
-                            * std::bit_cast<float>(vfputmp1.vfpuSdata2[i])
-                        + std::bit_cast<float>(vfputmp1.vfpuSdata3[i])
-                    );
-                break;
-            case VFMACC_VF_:
-                for (int i = 0; i < hwarp->CSR_reg[0x802]; i++)
-                    vfputmp2.rdf1_data[i] = std::bit_cast<int>(
-                        std::bit_cast<float>(vfputmp1.vfpuSdata1[0])
-                            * std::bit_cast<float>(vfputmp1.vfpuSdata2[i])
-                        + std::bit_cast<float>(vfputmp1.vfpuSdata3[i])
-                    );
-                break;
+            //     break;
+            // case FCVT_S_W_:
+            //     vfputmp2.rdf1_data[0] = std::bit_cast<int>((float)vfputmp1.vfpuSdata1[0]);
+            //     break;
+            // case FCVT_S_WU_:
+            //     vfputmp2.rdf1_data[0] = std::bit_cast<int>((float)(unsigned)vfputmp1.vfpuSdata1[0]);
+            //     break;
+            // case FMADD_S_:
+            //     source_f1 = std::bit_cast<float>(vfputmp1.vfpuSdata1[0]);
+            //     source_f2 = std::bit_cast<float>(vfputmp1.vfpuSdata2[0]);
+            //     source_f3 = std::bit_cast<float>(vfputmp1.vfpuSdata3[0]);
+            //     vfputmp2.rdf1_data[0] = std::bit_cast<int>(source_f1 * source_f2 + source_f3);
+            //     break;
+            // case FMSUB_S_:
+            //     source_f1 = std::bit_cast<float>(vfputmp1.vfpuSdata1[0]);
+            //     source_f2 = std::bit_cast<float>(vfputmp1.vfpuSdata2[0]);
+            //     source_f3 = std::bit_cast<float>(vfputmp1.vfpuSdata3[0]);
+            //     vfputmp2.rdf1_data[0] = std::bit_cast<int>(source_f1 * source_f2 - source_f3);
+            //     break;
+            // case FNMSUB_S_:
+            //     source_f1 = std::bit_cast<float>(vfputmp1.vfpuSdata1[0]);
+            //     source_f2 = std::bit_cast<float>(vfputmp1.vfpuSdata2[0]);
+            //     source_f3 = std::bit_cast<float>(vfputmp1.vfpuSdata3[0]);
+            //     vfputmp2.rdf1_data[0] = std::bit_cast<int>(-source_f1 * source_f2 + source_f3);
+            //     break;
+            // case FNMADD_S_:
+            //     source_f1 = std::bit_cast<float>(vfputmp1.vfpuSdata1[0]);
+            //     source_f2 = std::bit_cast<float>(vfputmp1.vfpuSdata2[0]);
+            //     source_f3 = std::bit_cast<float>(vfputmp1.vfpuSdata3[0]);
+            //     vfputmp2.rdf1_data[0] = std::bit_cast<int>(-source_f1 * source_f2 - source_f3);
+            //     break;
+            // case FADD_S_:
+            //     source_f1 = std::bit_cast<float>(vfputmp1.vfpuSdata1[0]);
+            //     source_f2 = std::bit_cast<float>(vfputmp1.vfpuSdata2[0]);
+            //     vfputmp2.rdf1_data[0] = std::bit_cast<int>(source_f1 + source_f2);
+            //     break;
+            // case FSUB_S_:
+            //     source_f1 = std::bit_cast<float>(vfputmp1.vfpuSdata1[0]);
+            //     source_f2 = std::bit_cast<float>(vfputmp1.vfpuSdata2[0]);
+            //     vfputmp2.rdf1_data[0] = std::bit_cast<int>(source_f1 - source_f2);
+            //     break;
+            // case FMUL_S_:
+            //     source_f1 = std::bit_cast<float>(vfputmp1.vfpuSdata1[0]);
+            //     source_f2 = std::bit_cast<float>(vfputmp1.vfpuSdata2[0]);
+            //     vfputmp2.rdf1_data[0] = std::bit_cast<int>(source_f1 * source_f2);
+            //     break;
+            // case FDIV_S_:
+            //     source_f1 = std::bit_cast<float>(vfputmp1.vfpuSdata1[0]);
+            //     source_f2 = std::bit_cast<float>(vfputmp1.vfpuSdata2[0]);
+            //     vfputmp2.rdf1_data[0] = std::bit_cast<int>(source_f1 / source_f2);
+            //     break;
+            // case FSGNJ_S_:
+            //     vfputmp2.rdf1_data[0]
+            //         = (vfputmp1.vfpuSdata1[0] & 0x7fffffff) | (vfputmp1.vfpuSdata2[0] & 0x80000000);
+            //     break;
+            // case FSGNJN_S_:
+            //     vfputmp2.rdf1_data[0] = (vfputmp1.vfpuSdata1[0] & 0x7fffffff)
+            //         | ((vfputmp1.vfpuSdata2[0] & 0x80000000) ^ 0x80000000);
+            //     break;
+            // case FSGNJX_S_:
+            //     vfputmp2.rdf1_data[0] = (vfputmp1.vfpuSdata1[0] & 0x7fffffff)
+            //         | ((vfputmp1.vfpuSdata2[0] & 0x80000000) ^ (vfputmp1.vfpuSdata2[0] & 0x80000000)
+            //         );
+            //     break;
+            // case FMIN_S_:
+            //     source_f1 = std::bit_cast<float>(vfputmp1.vfpuSdata1[0]);
+            //     source_f2 = std::bit_cast<float>(vfputmp1.vfpuSdata2[0]);
+            //     vfputmp2.rdf1_data[0]
+            //         = std::bit_cast<int>(source_f1 < source_f2 ? source_f1 : source_f2);
+            //     break;
+            // case FMAX_S_:
+            //     source_f1 = std::bit_cast<float>(vfputmp1.vfpuSdata1[0]);
+            //     source_f2 = std::bit_cast<float>(vfputmp1.vfpuSdata2[0]);
+            //     vfputmp2.rdf1_data[0]
+            //         = std::bit_cast<int>(source_f1 > source_f2 ? source_f1 : source_f2);
+            //     break;
+            // case FEQ_S_:
+            //     source_f1 = std::bit_cast<float>(vfputmp1.vfpuSdata1[0]);
+            //     source_f2 = std::bit_cast<float>(vfputmp1.vfpuSdata2[0]);
+            //     vfputmp2.rds1_data = source_f1 == source_f2;
+            //     break;
+            // case FLT_S_:
+            //     source_f1 = std::bit_cast<float>(vfputmp1.vfpuSdata1[0]);
+            //     source_f2 = std::bit_cast<float>(vfputmp1.vfpuSdata2[0]);
+            //     vfputmp2.rds1_data = source_f1 < source_f2;
+            //     break;
+            // case FLE_S_:
+            //     source_f1 = std::bit_cast<float>(vfputmp1.vfpuSdata1[0]);
+            //     source_f2 = std::bit_cast<float>(vfputmp1.vfpuSdata2[0]);
+            //     vfputmp2.rds1_data = source_f1 <= source_f2;
+            //     break;
+            // case VFMUL_VV_:
+            //     for (int i = 0; i < hwarp->CSR_reg[0x802]; i++)
+            //         vfputmp2.rdf1_data[i] = std::bit_cast<int>(
+            //             std::bit_cast<float>(vfputmp1.vfpuSdata1[i])
+            //             * std::bit_cast<float>(vfputmp1.vfpuSdata2[i])
+            //         );
+            //     break;
+            // case VFMUL_VF_:
+            //     for (int i = 0; i < hwarp->CSR_reg[0x802]; i++)
+            //         vfputmp2.rdf1_data[i] = std::bit_cast<int>(
+            //             std::bit_cast<float>(vfputmp1.vfpuSdata1[0])
+            //             + std::bit_cast<float>(vfputmp1.vfpuSdata2[i])
+            //         );
+            //     break;
+            // case VFMADD_VV_:
+            //     for (int i = 0; i < hwarp->CSR_reg[0x802]; i++)
+            //         vfputmp2.rdf1_data[i] = std::bit_cast<int>(
+            //             std::bit_cast<float>(vfputmp1.vfpuSdata1[i])
+            //                 * std::bit_cast<float>(vfputmp1.vfpuSdata3[i])
+            //             + std::bit_cast<float>(vfputmp1.vfpuSdata2[i])
+            //         );
+            //     break;
+            // case VFMADD_VF_:
+            //     for (int i = 0; i < hwarp->CSR_reg[0x802]; i++)
+            //         vfputmp2.rdf1_data[i] = std::bit_cast<int>(
+            //             std::bit_cast<float>(vfputmp1.vfpuSdata1[0])
+            //                 * std::bit_cast<float>(vfputmp1.vfpuSdata3[i])
+            //             + std::bit_cast<float>(vfputmp1.vfpuSdata2[i])
+            //         );
+            //     break;
+            // case VFNMADD_VV_:
+            //     for (int i = 0; i < hwarp->CSR_reg[0x802]; i++)
+            //         vfputmp2.rdf1_data[i] = std::bit_cast<int>(
+            //             -std::bit_cast<float>(vfputmp1.vfpuSdata1[i])
+            //                 * std::bit_cast<float>(vfputmp1.vfpuSdata3[i])
+            //             - std::bit_cast<float>(vfputmp1.vfpuSdata2[i])
+            //         );
+            //     break;
+            // case VFNMADD_VF_:
+            //     for (int i = 0; i < hwarp->CSR_reg[0x802]; i++)
+            //         vfputmp2.rdf1_data[i] = std::bit_cast<int>(
+            //             -std::bit_cast<float>(vfputmp1.vfpuSdata1[0])
+            //                 * std::bit_cast<float>(vfputmp1.vfpuSdata3[i])
+            //             - std::bit_cast<float>(vfputmp1.vfpuSdata2[i])
+            //         );
+            //     break;
+            // case VFMSUB_VV_:
+            //     for (int i = 0; i < hwarp->CSR_reg[0x802]; i++)
+            //         vfputmp2.rdf1_data[i] = std::bit_cast<int>(
+            //             std::bit_cast<float>(vfputmp1.vfpuSdata1[i])
+            //                 * std::bit_cast<float>(vfputmp1.vfpuSdata3[i])
+            //             - std::bit_cast<float>(vfputmp1.vfpuSdata2[i])
+            //         );
+            //     break;
+            // case VFMSUB_VF_:
+            //     for (int i = 0; i < hwarp->CSR_reg[0x802]; i++)
+            //         vfputmp2.rdf1_data[i] = std::bit_cast<int>(
+            //             std::bit_cast<float>(vfputmp1.vfpuSdata1[0])
+            //                 * std::bit_cast<float>(vfputmp1.vfpuSdata3[i])
+            //             - std::bit_cast<float>(vfputmp1.vfpuSdata2[i])
+            //         );
+            //     break;
+            // case VFNMSUB_VV_:
+            //     for (int i = 0; i < hwarp->CSR_reg[0x802]; i++)
+            //         vfputmp2.rdf1_data[i] = std::bit_cast<int>(
+            //             -std::bit_cast<float>(vfputmp1.vfpuSdata1[i])
+            //                 * std::bit_cast<float>(vfputmp1.vfpuSdata3[i])
+            //             + std::bit_cast<float>(vfputmp1.vfpuSdata2[i])
+            //         );
+            //     break;
+            // case VFNMSUB_VF_:
+            //     for (int i = 0; i < hwarp->CSR_reg[0x802]; i++)
+            //         vfputmp2.rdf1_data[i] = std::bit_cast<int>(
+            //             -std::bit_cast<float>(vfputmp1.vfpuSdata1[0])
+            //                 * std::bit_cast<float>(vfputmp1.vfpuSdata3[i])
+            //             + std::bit_cast<float>(vfputmp1.vfpuSdata2[i])
+            //         );
+            //     break;
+            // case VFMACC_VV_:
+            //     for (int i = 0; i < hwarp->CSR_reg[0x802]; i++)
+            //         vfputmp2.rdf1_data[i] = std::bit_cast<int>(
+            //             std::bit_cast<float>(vfputmp1.vfpuSdata1[i])
+            //                 * std::bit_cast<float>(vfputmp1.vfpuSdata2[i])
+            //             + std::bit_cast<float>(vfputmp1.vfpuSdata3[i])
+            //         );
+            //     break;
+            // case VFMACC_VF_:
+            //     for (int i = 0; i < hwarp->CSR_reg[0x802]; i++)
+            //         vfputmp2.rdf1_data[i] = std::bit_cast<int>(
+            //             std::bit_cast<float>(vfputmp1.vfpuSdata1[0])
+            //                 * std::bit_cast<float>(vfputmp1.vfpuSdata2[i])
+            //             + std::bit_cast<float>(vfputmp1.vfpuSdata3[i])
+            //         );
+            //     break;
             default:
                 std::cout << "VFPU_CALC warning: switch to unrecognized ins" << vfputmp1.ins
                           << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time()

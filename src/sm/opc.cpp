@@ -373,6 +373,7 @@ void BASE::OPC_EMIT() {
                               << "," << std::hex << opcfifo[entryidx].ins.origin32bit << std::dec
                               << " but undefined EXECUNIT at " << sc_time_stamp() << ","
                               << sc_delta_count_at_current_time() << "\n";
+                    assert(0);
                     break;
                 }
             }

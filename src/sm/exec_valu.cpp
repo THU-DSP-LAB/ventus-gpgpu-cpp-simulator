@@ -91,6 +91,8 @@ void BASE::VALU_CALC() {
     valu_out_t valutmp2;
     bool succeed;
     sc_bv<hw_num_thread> _velsemask, _vifmask;
+
+    std::array<iuf32_t, hw_num_thread> src1, src2, src3, dst;
     while (true) {
         wait(valu_eva | valu_eqa.default_event());
         if (valu_eqa.default_event().triggered()) {
@@ -105,59 +107,23 @@ void BASE::VALU_CALC() {
         valu_dq.pop();
         auto& hwarp = m_hw_warps[valutmp1.warp_id];
         if (valutmp1.ins.ddd.wxd | valutmp1.ins.ddd.wvd) {
+            for (int i = 0; i < hw_num_thread; i++) {
+                src1[i].i32 = valutmp1.rsv1_data[i].to_int();
+                src2[i].i32 = valutmp1.rsv2_data[i].to_int();
+                src3[i].i32 = valutmp1.rsv3_data[i].to_int();
+            }
+            auto calc_helper
+                = [ins = valutmp1.ins, num_thread = hwarp->CSR_reg[0x802], &src1, &src2, &src3,
+                   &dst](std::function<iuf32_t(iuf32_t op1, iuf32_t op2, iuf32_t op3)> calc) {
+                      exec_calc_helper(ins, num_thread, src1, src2, src3, dst, calc);
+                  };
             valutmp2.ins = valutmp1.ins;
             valutmp2.warp_id = valutmp1.warp_id;
             switch (valutmp1.ins.ddd.alu_fn) {
-
-            case DecodeParams::alu_fn_t::FN_ADD:
-                // VADD12.VI, VADD.VI, VADD.VV, VADD.VX
-                for (int i = 0; i < hwarp->CSR_reg[0x802]; i++) {
-                    if (valutmp2.ins.mask[i] == 1)
-                        valutmp2.rdv1_data[i] = valutmp1.rsv1_data[i] + valutmp1.rsv2_data[i];
-                }
-                break;
-
-            case DecodeParams::alu_fn_t::FN_AND:
-                // VAND.VI, VAND.VV, VAND.VX
-                for (int i = 0; i < hwarp->CSR_reg[0x802]; i++) {
-                    if (valutmp2.ins.mask[i] == 1)
-                        valutmp2.rdv1_data[i] = valutmp1.rsv1_data[i] & valutmp1.rsv2_data[i];
-                }
-                break;
-
-            case DecodeParams::alu_fn_t::FN_SL:
-                // VSLL.VI, VSLL.VV, VSLL.VX
-                if (!valutmp1.ins.ddd.reverse)
-                    for (int i = 0; i < hwarp->CSR_reg[0x802]; i++) {
-                        if (valutmp2.ins.mask[i] == 1)
-                            valutmp2.rdv1_data[i] = valutmp1.rsv1_data[i] << valutmp1.rsv2_data[i];
-                    }
-                else
-                    for (int i = 0; i < hwarp->CSR_reg[0x802]; i++) {
-                        if (valutmp2.ins.mask[i] == 1)
-                            valutmp2.rdv1_data[i] = valutmp1.rsv2_data[i] << valutmp1.rsv1_data[i];
-                    }
-                break;
-
-            case DecodeParams::alu_fn_t::FN_SUB:
-                // VSUB12.VI, VSUB.VV, VSUB.VX
-                if (!valutmp1.ins.ddd.reverse)
-                    for (int i = 0; i < hwarp->CSR_reg[0x802]; i++) {
-                        if (valutmp2.ins.mask[i] == 1)
-                            valutmp2.rdv1_data[i] = valutmp1.rsv1_data[i] - valutmp1.rsv2_data[i];
-                    }
-                else
-                    for (int i = 0; i < hwarp->CSR_reg[0x802]; i++) {
-                        if (valutmp2.ins.mask[i] == 1)
-                            valutmp2.rdv1_data[i] = valutmp1.rsv2_data[i] - valutmp1.rsv1_data[i];
-                    }
-                break;
-            case DecodeParams::alu_fn_t::FN_VID:
-                // VID.V
+            case DecodeParams::alu_fn_t::FN_VID: // VID.V
                 for (int i = 0; i < hwarp->CSR_reg[0x802]; i++)
-                    valutmp2.rdv1_data[i] = i;
+                    dst[i].i32 = i;
                 break;
-
             case DecodeParams::alu_fn_t::FN_A2ZERO:
                 // VMV.S.X
                 // 由于指令编码错误 现在当成vmv.v.x
@@ -165,19 +131,77 @@ void BASE::VALU_CALC() {
                 //      << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() <<
                 //      std::endl;
                 for (int i = 0; i < hwarp->CSR_reg[0x802]; i++)
-                    valutmp2.rdv1_data[i] = valutmp1.rsv1_data[0];
+                    dst[i] = src1[0];
                 break;
-            case DecodeParams::alu_fn_t::FN_SLT: // VMSLT.VV, VMSLT.VX
-                for (int i = 0; i < hwarp->CSR_reg[0x802]; i++) {
-                    if (valutmp2.ins.mask[i] == 1)
-                        valutmp2.rdv1_data[i] = valutmp1.rsv2_data[i] < valutmp1.rsv1_data[i];
-                }
+            case DecodeParams::alu_fn_t::FN_ADD: // VADD12.VI, VADD.VI, VADD.VV, VADD.VX
+                calc_helper([](iuf32_t op1, iuf32_t op2, iuf32_t op3) {
+                    return iuf32_t { .i32 = op1.i32 + op2.i32 };
+                });
+                break;
+            case DecodeParams::alu_fn_t::FN_SUB: // VSUB12.VI, VSUB.VV, VSUB.VX
+                calc_helper([](iuf32_t op1, iuf32_t op2, iuf32_t op3) {
+                    return iuf32_t { .i32 = op1.i32 - op2.i32 };
+                });
+                break;
+            case DecodeParams::alu_fn_t::FN_SEQ: // VMSEQ.VV, VMSEQ.VX, VMSEQ.VI
+                calc_helper([](iuf32_t op1, iuf32_t op2, iuf32_t op3) {
+                    return iuf32_t { .u32 = (op1.u32 == op2.u32) };
+                });
+                break;
+            case DecodeParams::alu_fn_t::FN_SNE: // VMSNE.VV, VMSNE.VX, VMSNE.VI
+                calc_helper([](iuf32_t op1, iuf32_t op2, iuf32_t op3) {
+                    return iuf32_t { .u32 = (op1.u32 != op2.u32) };
+                });
+                break;
+            case DecodeParams::alu_fn_t::FN_SLT: // VMSLT.VV, VMSLT.VX, VMSGT.VX, VMSGT.VI
+                calc_helper([](iuf32_t op1, iuf32_t op2, iuf32_t op3) {
+                    return iuf32_t { .i32 = (op1.i32 < op2.i32) };
+                });
+                break;
+            case DecodeParams::alu_fn_t::FN_SLTU: // VMSLTU.VV, VMSLTU.VX, VMSGTU_VX, VMSGTU_VI
+                calc_helper([](iuf32_t op1, iuf32_t op2, iuf32_t op3) {
+                    return iuf32_t { .u32 = (op1.u32 < op2.u32) };
+                });
+                break;
+            case DecodeParams::alu_fn_t::FN_SGE: // VMSLE.VV, VMSLE.VX, VMSLE.VI
+                calc_helper([](iuf32_t op1, iuf32_t op2, iuf32_t op3) {
+                    return iuf32_t { .i32 = (op1.i32 >= op2.i32) };
+                });
+                break;
+            case DecodeParams::alu_fn_t::FN_SGEU: // VMSLEU.VV, VMSLEU.VX, VMSLEU.VI
+                calc_helper([](iuf32_t op1, iuf32_t op2, iuf32_t op3) {
+                    return iuf32_t { .u32 = (op1.u32 >= op2.u32) };
+                });
+                break;
+            case DecodeParams::alu_fn_t::FN_AND: // VAND.VI, VAND.VV, VAND.VX
+                calc_helper([](iuf32_t op1, iuf32_t op2, iuf32_t op3) {
+                    return iuf32_t { .u32 = op1.u32 & op2.u32 };
+                });
+                break;
+            case DecodeParams::alu_fn_t::FN_OR: // VOR.VI, VOR.VV, VOR.VX
+                calc_helper([](iuf32_t op1, iuf32_t op2, iuf32_t op3) {
+                    return iuf32_t { .u32 = op1.u32 | op2.u32 };
+                });
                 break;
             case DecodeParams::alu_fn_t::FN_XOR: // VMXOR.MM, VXOR.VI, VXOR.VV, VXOR.VX
-                for (int i = 0; i < hwarp->CSR_reg[0x802]; i++) {
-                    if (valutmp2.ins.mask[i] == 1)
-                        valutmp2.rdv1_data[i] = valutmp1.rsv2_data[i] ^ valutmp1.rsv1_data[i];
-                }
+                calc_helper([](iuf32_t op1, iuf32_t op2, iuf32_t op3) {
+                    return iuf32_t { .u32 = op1.u32 ^ op2.u32 };
+                });
+                break;
+            case DecodeParams::alu_fn_t::FN_SL: // VSLL.VI, VSLL.VV, VSLL.VX
+                calc_helper([](iuf32_t op1, iuf32_t op2, iuf32_t op3) {
+                    return iuf32_t { .u32 = op1.u32 << op2.u32 };
+                });
+                break;
+            case DecodeParams::alu_fn_t::FN_SR: // VSRL.VI, VSRL.VV, VSRL.VX
+                calc_helper([](iuf32_t op1, iuf32_t op2, iuf32_t op3) {
+                    return iuf32_t { .u32 = op1.u32 >> op2.u32 };
+                });
+                break;
+            case DecodeParams::alu_fn_t::FN_SRA: // VSRA.VI, VSRA.VV, VSRA.VX
+                calc_helper([](iuf32_t op1, iuf32_t op2, iuf32_t op3) {
+                    return iuf32_t { .i32 = op1.i32 >> op2.i32 };
+                });
                 break;
             default:
                 std::cout << "VALU_CALC warning: switch to unrecognized ins" << valutmp1.ins
@@ -185,6 +209,9 @@ void BASE::VALU_CALC() {
                           << std::endl;
                 assert(0);
                 break;
+            }
+            for(int i = 0; i < hwarp->CSR_reg[0x802]; i++) {
+                valutmp2.rdv1_data[i] = dst[i].i32;
             }
             valufifo.push(valutmp2);
         } else { // for branch instructions

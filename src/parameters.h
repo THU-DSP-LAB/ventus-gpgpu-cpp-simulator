@@ -39,7 +39,7 @@ inline constexpr int NUM_SM = 2;
 inline constexpr int num_register_per_warp = 256; // 每个warp寄存器数目
 inline constexpr int NUM_MAX_KERNEL = 8;
 inline constexpr unsigned max_concurrent_kernel = 4; // 正在运行的kernel的最大数量
-inline constexpr unsigned hw_lds_size = 0x1000000;   // core的总localmem大小
+inline constexpr unsigned hw_lds_size = 0x10000000;   // core的总localmem大小
 inline constexpr unsigned MAX_RUNNING_CTA_PER_KERNEL = 32;
 inline constexpr unsigned ldsBaseAddr_core = 0x70000000;
 

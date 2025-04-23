@@ -59,11 +59,13 @@ void BASE::WARP_SCHEDULER() {
             assert(hblkslot.valid);
             switch (new_ins.op) {
             case OP_TYPE::BARRIER_:
-                if (std::all_of(
-                        hblkslot.warp_reach_barrier.begin(),
-                        hblkslot.warp_reach_barrier.begin() + hblkslot.num_warp,
-                        [](bool i) { return i == false; }
-                    )) {
+                if (hblkslot.num_warp == 1) {
+                    // do noting
+                } else if (std::all_of(
+                               hblkslot.warp_reach_barrier.begin(),
+                               hblkslot.warp_reach_barrier.begin() + hblkslot.num_warp,
+                               [](bool i) { return i == false; }
+                           )) {
                     // this is the first warp of this block that reaches barrier
                     hblkslot.warp_reach_barrier[hwarp->warp_idx_in_blk] = true;
                     wait_barrier[new_ins_warpid] = true;
@@ -72,7 +74,6 @@ void BASE::WARP_SCHEDULER() {
                               << new_ins.currentpc << " " << new_ins << " barrier" << " at "
                               << sc_time_stamp() << "," << sc_delta_count_at_current_time()
                               << std::endl;
-
                 } else {
                     // this is not the first warp of this block that reaches barrier
                     if (hblkslot.barrier_addr != new_ins.currentpc) {

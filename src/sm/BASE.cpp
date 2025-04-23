@@ -579,7 +579,8 @@ void BASE::receive_warp(
     hwarp->CSR_reg[0x300] = 0x00001800; // WHY? CSR[mstatus] default value
 
     hwarp->is_warp_activated.write(true);
-    hwarp->pc.write(kernel->get_startaddr() - 4);
+    hwarp->fetch_valid.write(true);
+    hwarp->pc.write(kernel->get_startaddr());
     hwarp->pagetable = kernel->get_pagetable();
     hwarp->num_thread = kernel->get_num_thread_per_warp();
     hwarp->blk_slot_idx = block_slot;
@@ -632,7 +633,6 @@ void BASE::exec_calc_helper(
     std::function<i32_u32_f32_t(i32_u32_f32_t, i32_u32_f32_t, i32_u32_f32_t)> calc
 ) {
     if (ins.ddd.isvec) {
-        assert(ins.ddd.sel_alu2 == DecodeParams::sel_alu2_t::A2_VRS2);
         for (int i = 0; i < num_thread_active; i++) {
             if (ins.mask[i]) {
                 i32_u32_f32_t src1_, src2_, src3_;

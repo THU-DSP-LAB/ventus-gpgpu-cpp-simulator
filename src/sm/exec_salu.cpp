@@ -212,57 +212,6 @@ void BASE::SALU_CALC() {
                 salutmp2.data = salutmp1.rss1_data ^ salutmp1.rss2_data;
                 break;
 
-            case MUL_:
-                salutmp2.data = salutmp1.rss1_data * salutmp1.rss2_data;
-                break;
-            case MULH_:
-                salutmp2.data = static_cast<int>(
-                    (static_cast<long long>(salutmp1.rss1_data)
-                     * static_cast<long long>(salutmp1.rss2_data))
-                    >> 32
-                );
-                break;
-            case MULHSU_:
-                salutmp2.data = static_cast<int>(
-                    (static_cast<long long>(salutmp1.rss1_data)
-                     * static_cast<unsigned long long>(salutmp1.rss2_data))
-                    >> 32
-                );
-                break;
-            case MULHU_:
-                salutmp2.data = static_cast<int>(
-                    (static_cast<unsigned long long>(salutmp1.rss1_data)
-                     * static_cast<unsigned long long>(salutmp1.rss2_data))
-                    >> 32
-                );
-                break;
-            case DIV_:
-                if (salutmp1.rss2_data == 0)
-                    std::cout << "SALU_CALC error: exec DIV_ but rs2=0 at " << sc_time_stamp()
-                              << "," << sc_delta_count_at_current_time() << std::endl;
-                salutmp2.data = salutmp1.rss1_data / salutmp1.rss2_data;
-                break;
-            case DIVU_:
-                if (salutmp1.rss2_data == 0)
-                    std::cout << "SALU_CALC error: exec DIVU_ but rs2=0 at " << sc_time_stamp()
-                              << "," << sc_delta_count_at_current_time() << std::endl;
-                salutmp2.data = static_cast<unsigned int>(salutmp1.rss1_data)
-                    / static_cast<unsigned int>(salutmp1.rss2_data);
-                break;
-            case REM_:
-                if (salutmp1.rss2_data == 0)
-                    std::cout << "SALU_CALC error: exec REM_ but rs2=0 at " << sc_time_stamp()
-                              << "," << sc_delta_count_at_current_time() << std::endl;
-                salutmp2.data = salutmp1.rss1_data % salutmp1.rss2_data;
-                break;
-            case REMU_:
-                if (salutmp1.rss2_data == 0)
-                    std::cout << "SALU_CALC error: exec REMU_ but rs2=0 at " << sc_time_stamp()
-                              << "," << sc_delta_count_at_current_time() << std::endl;
-                salutmp2.data = static_cast<unsigned int>(salutmp1.rss1_data)
-                    % static_cast<unsigned int>(salutmp1.rss2_data);
-                break;
-
             default:
                 std::cout << "SALU_CALC warning: switch to unrecognized ins" << salutmp1.ins
                           << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time()
