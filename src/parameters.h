@@ -1,6 +1,8 @@
 #ifndef _PARAMETERS_H
 #define _PARAMETERS_H
 
+#include <array>
+#include <memory>
 #define SC_INCLUDE_DYNAMIC_PROCESSES
 #define SPIKE_OUTPUT
 #include "systemc.h"
@@ -39,13 +41,40 @@ inline constexpr int NUM_SM = 2;
 inline constexpr int num_register_per_warp = 256; // 每个warp寄存器数目
 inline constexpr int NUM_MAX_KERNEL = 8;
 inline constexpr unsigned max_concurrent_kernel = 4; // 正在运行的kernel的最大数量
-inline constexpr unsigned hw_lds_size = 0x10000000;   // core的总localmem大小
+inline constexpr unsigned hw_lds_size = 0x10000000;  // core的总localmem大小
 inline constexpr unsigned MAX_RUNNING_CTA_PER_KERNEL = 32;
 inline constexpr unsigned ldsBaseAddr_core = 0x70000000;
+inline constexpr unsigned LSU_MSHR_SIZE = hw_num_warp;
+inline constexpr unsigned L1D_NUM_SET = 256;       // L1 D-cache的组数
+inline constexpr unsigned L1D_NUM_WAY = 2;         // L1 D-cache的组相联度
+inline constexpr unsigned L1D_BLOCK_NUM_WORD = 32; // 每个cache block包含多少个32bit
+
+// 核心流水线与L1D之间的接口 opcode & param
+inline constexpr uint8_t L1D_OPCODE_READ = 0x0;
+inline constexpr uint8_t L1D_OPCODE_WRITE = 0x1;
+inline constexpr uint8_t L1D_OPCODE_ATOMIC = 0x2;
+inline constexpr uint8_t L1D_OPCODE_CACHEOP = 0x3;
+inline constexpr uint8_t L1D_PARAM_NORMAL = 0x0;     // 常规读写
+inline constexpr uint8_t L1D_PARAM_PREFETCH = 0x1;   // 预留性读出
+inline constexpr uint8_t L1D_PARAM_CONDWRITE = 0x1;  // 条件性写入
+inline constexpr uint8_t L1D_PARAM_NONCACHE = 0x2;   // 不缓存读出/写入
+inline constexpr uint8_t L1D_PARAM_INVALIDATE = 0x0; // 全局无效化
+inline constexpr uint8_t L1D_PARAM_FLUSH = 0x1;      // 全局冲刷
+inline constexpr uint8_t L1D_PARAM_FENCE = 0x2;      // 等待MSHR清空
+
+inline constexpr uint8_t L1D_PARAM_ATOMIC_SWAP = 16;
+inline constexpr uint8_t L1D_PARAM_ATOMIC_ADD = 0;
+inline constexpr uint8_t L1D_PARAM_ATOMIC_XOR = 1;
+inline constexpr uint8_t L1D_PARAM_ATOMIC_OR = 2;
+inline constexpr uint8_t L1D_PARAM_ATOMIC_AND = 3;
+inline constexpr uint8_t L1D_PARAM_ATOMIC_MIN = 4;
+inline constexpr uint8_t L1D_PARAM_ATOMIC_MAX = 5;
+inline constexpr uint8_t L1D_PARAM_ATOMIC_MINU = 6;
+inline constexpr uint8_t L1D_PARAM_ATOMIC_MAXU = 7;
 
 // 编译期计算整数的二进制对数向上取整
-constexpr int log2Ceil(int n) {
-    int log = 0;
+constexpr unsigned log2Ceil(unsigned n) {
+    unsigned log = 0;
     n--;
     while (n > 0) {
         log++;
@@ -1000,6 +1029,23 @@ private:
     }
 };
 // typename I_TYPE sc_uint<INS_LENGTH>;
+
+typedef struct lsu_mem_cmd_t {
+    bool is_shared_memory; // 访问的是shared_memory(LDS)还是global memory
+    uint8_t instrId;       // mshr index
+    uint8_t opcode;        // tilelink opcode
+    uint8_t param;         // tilelink param
+    sc_bv<hw_num_thread> mask;
+    uint32_t pagetable_root; // pagetable root physical address for mmu
+    uint32_t cache_tag;
+    uint32_t cache_setIdx;
+    std::shared_ptr<const std::array<uint8_t, hw_num_thread>> blockOffset;
+    std::shared_ptr<const std::array<uint8_t, hw_num_thread>> wordOffset1H;
+    std::shared_ptr<const std::array<uint32_t, hw_num_thread>> addr; // for debug
+    std::array<uint32_t, hw_num_thread> data;
+    uint8_t warp_id; // only for debug
+    I_TYPE instr;    // only for debug
+} lsu_mem_cmd_t;
 
 class event_if : virtual public sc_interface // "if" means interface
 {

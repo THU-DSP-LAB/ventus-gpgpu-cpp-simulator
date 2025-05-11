@@ -1,7 +1,7 @@
 #pragma once
 
 #include "physical_mem.hpp"
-#include "sv39.hpp"
+#include "ramulator.hpp"
 #include "CTA_Scheduler.hpp"
 #include "sm/BASE.h"
 #include "sm/BASE_sti.h"
@@ -9,23 +9,27 @@
 #include "ventus_cyclesim.h"
 #include <functional>
 #include <memory>
+#include <spdlog/logger.h>
 
 class Top_gpgpu {
     using pagetable_t = SV39_supervisor::pagetable_t;
     using vaddr_t = SV39_supervisor::vaddr_t;
-    std::shared_ptr<PhysicalMemoryBasicSim> m_gmem;
+    std::shared_ptr<PhysicalMemoryInterface> m_gmem;
     std::vector<BASE*> m_sm;
     CTA_Scheduler* m_cta;
     BASE_sti* m_rst_gen;
     sc_clock m_clk;
     sc_signal<bool> m_rstn;
+    std::unique_ptr<RamulatorWrapper> m_ramulator;
 
     std::unique_ptr<SV39_supervisor> m_sv39;
+
+    std::shared_ptr<spdlog::logger> m_logger;
 
     int m_kernel_cnt = 0;
 
 public:
-    Top_gpgpu();
+    Top_gpgpu(const char* ramulator_config_filename);
     ~Top_gpgpu();
 
     void add_kernel(std::string name, std::string metafile, std::string datafile);

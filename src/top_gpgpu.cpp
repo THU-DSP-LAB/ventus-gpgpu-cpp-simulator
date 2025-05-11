@@ -1,18 +1,62 @@
 #include "top_gpgpu.hpp"
 #include "parameters.h"
-#include "physical_mem.hpp"
+#include <functional>
 #include <memory>
+#include <spdlog/common.h>
+#include <spdlog/sinks/stdout_sinks.h>
+#include <spdlog/spdlog.h>
 
-Top_gpgpu::Top_gpgpu()
+class custom_formatter : public spdlog::formatter {
+public:
+    using append_func_t = std::function<std::string()>;
+
+    explicit custom_formatter(append_func_t func)
+        : append_func_(std::move(func)) { }
+
+    void format(const spdlog::details::log_msg& msg, spdlog::memory_buf_t& dest) override {
+        auto str = fmt::format(
+            "{} {} [{} {}:{}]\n", msg.payload, append_func_(),
+            spdlog::level::to_string_view(msg.level), msg.source.filename, msg.source.line
+        );
+        dest.append(str.data(), str.data() + str.size());
+    }
+
+    std::unique_ptr<spdlog::formatter> clone() const override {
+        return std::make_unique<custom_formatter>(append_func_);
+    }
+
+private:
+    append_func_t append_func_;
+};
+
+Top_gpgpu::Top_gpgpu(const char* ramulator_config_filename)
     : m_clk("clk", PERIOD, SC_NS, 0.5, 0, SC_NS, false)
-    , m_rstn("rst_n") {
-    std::shared_ptr<PhysicalMemoryInterface> m_gmem
-        = std::make_shared<PhysicalMemoryBasicSim>(1ull << 32ull);
-    m_sv39 = std::make_unique<SV39_supervisor>(m_gmem);
+    , m_rstn("rst_n")
+    , m_ramulator(std::move(std::make_unique<RamulatorWrapper>(ramulator_config_filename))) {
+
+    m_logger = std::make_shared<spdlog::logger>(
+        "Ventus-CycleSim-spdlogger", std::make_shared<spdlog::sinks::stdout_sink_mt>()
+    );
+    m_logger->set_level(static_cast<spdlog::level::level_enum>(SPDLOG_ACTIVE_LEVEL));
+    m_logger->set_formatter(std::make_unique<custom_formatter>([]() {
+        return fmt::format(
+            "@{}ns,{}", sc_time_stamp().to_default_time_units(), sc_delta_count_at_current_time()
+        );
+    }));
+
+    m_ramulator->clk(m_clk);
+    m_gmem = m_ramulator->get_memory();
+    m_sv39 = std::make_unique<SV39_supervisor>(m_gmem, m_logger);
     m_rst_gen = new BASE_sti("RST_GEN");
     m_rst_gen->rst_n(m_rstn);
     for (int i = 0; i < NUM_SM; i++) {
-        m_sm.push_back(new BASE(("SM" + std::to_string(i)).c_str(), i, m_gmem));
+        auto ramulator_interface = [this,
+                                    i](std::unique_ptr<lsu_mem_cmd_t>& cmd,
+                                       std::function<void(std::unique_ptr<lsu_mem_cmd_t>)> callback
+                                   ) { return m_ramulator->request(i, cmd, callback); };
+        m_sm.push_back(
+            new BASE(("SM" + std::to_string(i)).c_str(), i, m_gmem, ramulator_interface, m_logger)
+        );
         m_sm[i]->clk(m_clk);
         m_sm[i]->rst_n(m_rstn);
         for (auto& hwarp : m_sm[i]->m_hw_warps) {

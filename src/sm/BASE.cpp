@@ -1,11 +1,15 @@
 #include "BASE.h"
-#include "physical_mem.hpp"
 #include <memory>
 
-BASE::BASE(sc_core::sc_module_name name, int _sm_id, std::shared_ptr<PhysicalMemoryInterface> gmem)
+BASE::BASE(
+    sc_core::sc_module_name name, int _sm_id, std::shared_ptr<PhysicalMemoryInterface> gmem,
+    mem_interface_t memif, std::shared_ptr<spdlog::logger> logger
+)
     : sc_module(name)
     , sm_id(_sm_id)
-    , m_mmu(gmem) {
+    , m_mmu(gmem, logger)
+    , l1d_request(memif)
+    , m_logger(logger ? logger : spdlog::default_logger()){
     for (int warp_id = 0; warp_id < hw_num_warp; warp_id++) {
         WARP_BONE* new_warp_bone_ = new WARP_BONE(warp_id);
         m_hw_warps[warp_id] = new_warp_bone_;
@@ -86,11 +90,8 @@ BASE::BASE(sc_core::sc_module_name name, int _sm_id, std::shared_ptr<PhysicalMem
     sensitive << clk.pos();
     SC_THREAD(VFPU_CTRL);
 
-    SC_THREAD(LSU_IN);
+    SC_THREAD(lsu_main);
     sensitive << clk.pos();
-    SC_THREAD(LSU_CALC);
-    sensitive << clk.pos();
-    SC_THREAD(LSU_CTRL);
 
     SC_THREAD(CSR_IN);
     sensitive << clk.pos();

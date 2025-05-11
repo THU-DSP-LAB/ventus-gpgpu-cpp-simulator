@@ -46,6 +46,9 @@ typedef struct ventus_kernel_metadata_t { // 这个metadata是供驱动使用的
 
 typedef struct {
     uint64_t sim_time_max; // 最大仿真时间限制
+    struct {
+        const char* config_filename;
+    } ramulator;
     // struct {               // These log sinks can be enabled simultaneously
     //     struct {           // Write log to a file (append to its tail)
     //         bool enable;

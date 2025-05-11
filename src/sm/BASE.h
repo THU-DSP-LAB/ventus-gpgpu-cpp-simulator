@@ -17,12 +17,18 @@ public:
     const int sm_id;
     sc_in_clk clk { "clk" };
     sc_in<bool> rst_n { "rst_n" };
+    std::shared_ptr<spdlog::logger> m_logger;
 
     // Memory Access: global & local(shared)
     SV39_basic m_mmu;
-    std::array<uint8_t, hw_lds_size> m_local_mem; // LDS of this SM
-    int mem_read_word(uint32_t* data, uint32_t vaddr, const I_TYPE& ins, uint64_t pagetable) const;
-    int mem_write_word(uint32_t data, uint32_t vaddr, const I_TYPE& ins, uint64_t pagetable);
+    std::array<uint8_t, hw_lds_size> m_local_mem; // SharedMem/LDS of this SM
+    int sharedMem_request(const std::unique_ptr<lsu_mem_cmd_t>& cmd);
+
+    // DDR interface
+    using mem_interface_t = std::function<
+        int(std::unique_ptr<lsu_mem_cmd_t>& cmd,
+            std::function<void(std::unique_ptr<lsu_mem_cmd_t>)> callback)>;
+    mem_interface_t l1d_request;
 
     void debug_sti();
     void debug_display();
@@ -77,9 +83,8 @@ public:
     void VFPU_IN();
     void VFPU_CALC();
     void VFPU_CTRL();
-    void LSU_IN();
-    void LSU_CALC();
-    void LSU_CTRL();
+    void lsu_main();
+    void lsu_new_req();
     void SIMT_STACK(int warp_id);
     void CSR_IN();
     void CSR_CALC();
@@ -114,7 +119,10 @@ public:
         issue_ins = I_TYPE(INVALID_, 0, 0, 0);
     }
 
-    BASE(sc_core::sc_module_name name, int _sm_id, std::shared_ptr<PhysicalMemoryInterface> gmem);
+    BASE(
+        sc_core::sc_module_name name, int _sm_id, std::shared_ptr<PhysicalMemoryInterface> gmem,
+        mem_interface_t mem_interface, std::shared_ptr<spdlog::logger> logger = nullptr
+    );
 
 public:
     std::map<OP_TYPE, decodedat> decode_table;
@@ -268,6 +276,20 @@ public:
     sc_signal<bool> lsueqa_triggered { "lsueqa_triggered" },
         lsueqb_triggered { "lsueqb_triggered" };
     sc_signal<bool> execpop_lsu { "execpop_lsu" };
+
+    typedef struct lsu_mshr_t {
+        bool valid;
+        uint8_t delay; // 额外的延迟周期数
+        uint8_t warp_id;
+        I_TYPE instr;
+        std::shared_ptr<const std::array<uint8_t, hw_num_thread>> wordOffset1H;
+        sc_bv<hw_num_thread> finished_mask;
+        std::array<uint32_t, hw_num_thread> data; // load instruction's writeback data
+        std::shared_ptr<const std::array<uint32_t, hw_num_thread>> addr; // for debug
+    } lsu_mshr_t;
+    std::array<lsu_mshr_t, LSU_MSHR_SIZE> m_lsu_mshr;
+
+    std::queue<std::unique_ptr<lsu_mem_cmd_t>> m_lsu_mem_cmd_queue;
 
     // simt stack
     sc_signal<bool> emito_simtstk {

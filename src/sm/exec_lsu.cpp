@@ -1,314 +1,434 @@
 #include "BASE.h"
-#include <iostream>
+#include <algorithm>
+#include <array>
+#include <bit>
+#include <fmt/ostream.h>
+#include <functional>
+#include <memory>
+#include <queue>
+#include <spdlog/fmt/ranges.h>
+#include <spdlog/spdlog.h>
 
-int BASE::mem_read_word(uint32_t* data, uint32_t vaddr, const I_TYPE& ins, uint64_t pagetable)
-    const {
-    uint8_t* data_bytes = reinterpret_cast<uint8_t*>(data);
-    int bytesToRead;
-    bool addrOutofRangeError = false;
+constexpr uint8_t LSU_EXTRA_DELAY = 1;
+constexpr uint8_t SHARED_MEM_DELAY_WRITE = 2;
+constexpr uint8_t SHARED_MEM_DELAY_READ = 2;
 
-    // 确定读取的字节数
-    if (ins.ddd.mem_whb == DecodeParams::MEM_W)
-        bytesToRead = 4;
-    else if (ins.ddd.mem_whb == DecodeParams::MEM_H)
-        bytesToRead = 2;
-    else if (ins.ddd.mem_whb == DecodeParams::MEM_B)
-        bytesToRead = 1;
-    else
-        assert(0);
-
-    if (vaddr >= ldsBaseAddr_core && vaddr < ldsBaseAddr_core + hw_lds_size) {
-        // 读取局部内存
-        addrOutofRangeError = false;
-        for (int i = 0; i < bytesToRead; i++) {
-            if (vaddr + i >= ldsBaseAddr_core + hw_lds_size) {
-                return -1;
-            }
-            data_bytes[i] = m_local_mem[vaddr - ldsBaseAddr_core + i];
-        }
-    } else { // 读取全局内存
-        addrOutofRangeError = !m_mmu.memcpy(pagetable, data_bytes, vaddr, bytesToRead);
-    }
-
-    // 如果不是读取4个字节，则根据mem_unsigned来决定如何处理剩余的位
-    if (bytesToRead < 4) {
-        if (ins.ddd.mem_unsigned == 1) {
-            // 零扩展，data已正确设置
-        } else {
-            // 符号位扩展
-            int shift = (4 - bytesToRead) * 8;
-            int32_t signExtension = (static_cast<int32_t>(*data) << shift) >> shift;
-            *data = static_cast<uint32_t>(signExtension);
-        }
-    }
-    return addrOutofRangeError;
-}
-
-int BASE::mem_write_word(uint32_t data, uint32_t vaddr, const I_TYPE& ins, uint64_t pagetable) {
-    uint8_t* data_bytes = reinterpret_cast<uint8_t*>(&data);
-
-    int bytesToWrite = 0; // 将要写入的字节数
-    if (ins.ddd.mem_whb == DecodeParams::MEM_W)
-        bytesToWrite = 4;
-    else if (ins.ddd.mem_whb == DecodeParams::MEM_H)
-        bytesToWrite = 2;
-    else if (ins.ddd.mem_whb == DecodeParams::MEM_B)
-        bytesToWrite = 1;
-    else
-        assert(0);
-
-    if (vaddr >= ldsBaseAddr_core && vaddr < ldsBaseAddr_core + hw_lds_size) {
-        // 写入局部内存
-        for (int i = 0; i < bytesToWrite; i++) {
-            if (vaddr + i >= ldsBaseAddr_core + hw_lds_size) {
-                return -1;
-            }
-            m_local_mem[vaddr - ldsBaseAddr_core + i] = data_bytes[i];
+// clang-format off
+static uint32_t byte_extract(uint32_t data, uint8_t wordOffset1H, bool is_unsigned) {
+    if(is_unsigned) {
+        switch(wordOffset1H) {
+            case 0b1111: return data;
+            case 0b1100: return data >> 16;
+            case 0b0011: return data & 0xFFFF;
+            case 0b1000: return (data >> 24) & 0xFF;
+            case 0b0100: return (data >> 16) & 0xFF;
+            case 0b0010: return (data >>  8) & 0xFF;
+            case 0b0001: return (data >>  0) & 0xFF;
+            default:     return data;
         }
     } else {
-        // 写入全局内存
-        return !m_mmu.memcpy(pagetable, vaddr, data_bytes, bytesToWrite);
+        int32_t data_ = static_cast<int32_t>(data);
+        switch(wordOffset1H) {
+            case 0b1111: return data_;
+            case 0b1100: return data_ >> 16;
+            case 0b0011: return (data_ << 16) >> 16;
+            case 0b1000: return (data_ <<  0) >> 24;
+            case 0b0100: return (data_ <<  8) >> 24;
+            case 0b0010: return (data_ << 16) >> 24;
+            case 0b0001: return (data_ << 24) >> 24;
+            default:     return data_;
+        }
     }
-    return false;
+}
+// clang-format on
+
+// shared memory (LDS)
+int BASE::sharedMem_request(const std::unique_ptr<lsu_mem_cmd_t>& cmd) {
+    uint32_t data = 0;
+    uint8_t* data_bytes = reinterpret_cast<uint8_t*>(&data);
+    auto& mshr_item = m_lsu_mshr.at(cmd->instrId);
+    if (!mshr_item.valid) {
+        SPDLOG_LOGGER_ERROR(
+            m_logger, "SM{} warp {} 0x{:x} {}: MSHR not valid: sharedMemory, instrId={}, addr={:x}",
+            sm_id, cmd->warp_id, cmd->instr.currentpc, fmt::streamed(cmd->instr), cmd->instrId,
+            fmt::join(*cmd->addr, " ")
+        );
+    }
+    assert(mshr_item.valid);
+    for (int threadidx = 0; threadidx < hw_num_thread; threadidx++) {
+        if (!cmd->mask[threadidx]) {
+            continue;
+        }
+        assert(!mshr_item.finished_mask[threadidx]);
+        sc_bv<4> wordOffset1H = cmd->wordOffset1H->at(threadidx);
+        uint32_t addr = (cmd->addr->at(threadidx) & ~0b11); // {tag,setIdx,blockOffset} in RTL
+        data = cmd->data[threadidx];
+        for (int i = 0; i < 4; i++) { // a word
+            if (addr + i < ldsBaseAddr_core || addr + i >= ldsBaseAddr_core + hw_lds_size) {
+                SPDLOG_LOGGER_ERROR(
+                    m_logger, "SM{} warp {} 0x{:x} {}: LDS access out of range: addr=0x{:x}", sm_id,
+                    cmd->warp_id, cmd->instr.currentpc, fmt::streamed(cmd->instr), addr + i
+                );
+                return -1;
+            }
+            if (cmd->opcode == L1D_OPCODE_READ) { // load
+                data_bytes[i] = m_local_mem[addr - ldsBaseAddr_core + i];
+            } else if (cmd->opcode == L1D_OPCODE_WRITE) { // store
+                if (wordOffset1H[i]) {
+                    m_local_mem[addr - ldsBaseAddr_core + i] = data_bytes[i];
+                }
+            } else { // unknown opcode
+                SPDLOG_LOGGER_ERROR(
+                    m_logger, "SM{} warp {} 0x{:x} {}: LDS unknown opcode: {}", sm_id, cmd->warp_id,
+                    cmd->instr.currentpc, fmt::streamed(cmd->instr), cmd->opcode
+                );
+                assert(0);
+            }
+        }
+        if (cmd->opcode == L1D_OPCODE_READ) { // load
+            mshr_item.data[threadidx]
+                = byte_extract(data, cmd->wordOffset1H->at(threadidx), cmd->instr.ddd.mem_unsigned);
+        }
+    }
+    m_lsu_mshr[cmd->instrId].finished_mask |= cmd->mask;
+    if (cmd->opcode == L1D_OPCODE_WRITE) {
+        m_lsu_mshr[cmd->instrId].delay = SHARED_MEM_DELAY_WRITE;
+    } else if (cmd->opcode == L1D_OPCODE_READ) {
+        m_lsu_mshr[cmd->instrId].delay = SHARED_MEM_DELAY_READ;
+    }
+    return 0;
 }
 
-void BASE::LSU_IN() {
-    lsu_in_t new_data;
-    int a_delay, b_delay;
+static uint8_t wordOffset1H_calc(uint32_t addr, const I_TYPE& instr) {
+    if (instr.ddd.mem_whb == DecodeParams::MEM_W) {
+        return 0b1111;
+    } else if (instr.ddd.mem_whb == DecodeParams::MEM_H) {
+        return (0b0011 << (addr & 0b10));
+    } else if (instr.ddd.mem_whb == DecodeParams::MEM_B) {
+        return (0b0001 << (addr & 0b11));
+    }
+    SPDLOG_ERROR(
+        "Unknown mem_whb type: {} in instruction {}", static_cast<int>(instr.ddd.mem_whb),
+        fmt::streamed(instr)
+    );
+    assert(0);
+    return 0;
+}
+
+void BASE::lsu_new_req() {
+    int warp_id = emitins_warpid.read();
+    const I_TYPE& instr = emit_ins.read();
+    const auto& ddd = instr.ddd;
+    const auto& hwarp = m_hw_warps[warp_id];
+    const int num_thread = hwarp->CSR_reg[0x802];
+    auto src1 = [this](int i) { return tolsu_data1[i].read(); };
+    auto src2 = [this](int i) { return tolsu_data2[i].read(); };
+
+    //
+    // 1. 为向量各分量计算访存地址
+    //
+    auto addr_ptr = std::make_shared<std::array<uint32_t, hw_num_thread>>();
+    auto& addr = *addr_ptr;
+    bool is_shared_memory;
+    bool type_conflict = false;
+    for (int i = 0; i < num_thread; i++) {
+        addr[i] = (instr.ddd.isvec && instr.ddd.disable_mask)
+            ? (instr.ddd.is_vls12()
+                   ? (src1(i) + src2(i))
+                   : ((src1(i) + src2(i)) * hw_num_thread + (i << 2) + hwarp->CSR_reg[0x807]))
+            : (instr.ddd.isvec ? (src1(i) + (instr.ddd.mop == 0 ? i << 2 : i * src2(i)))
+                               : (src1(0) + src2(0)));
+        enum { UNKNOWN, GLOBAL, SHARED } addr_type = UNKNOWN, addr_type_;
+        if (instr.mask[i]) { // 是否是shared memory访存
+            addr_type_
+                = ((addr[i] >= ldsBaseAddr_core) && (addr[i] < ldsBaseAddr_core + hw_lds_size))
+                ? SHARED
+                : GLOBAL;
+            if (addr_type == UNKNOWN) {
+                addr_type = addr_type_;
+                is_shared_memory = (addr_type == SHARED);
+            } else if (addr_type != addr_type_) {
+                type_conflict = true;
+            }
+        }
+    }
+    if (type_conflict) {
+        SPDLOG_LOGGER_ERROR(
+            m_logger,
+            "SM{} warp {} 0x{:x} {} mask={:x}: both global and shared memory access in one "
+            "instruction: MEMADDR {:x}",
+            sm_id, warp_id, instr.currentpc, fmt::streamed(instr), instr.mask.to_uint(),
+            fmt::join(addr, " ")
+        );
+        assert(0);
+    }
+
+#ifdef SPIKE_OUTPUT
+    SPDLOG_LOGGER_TRACE(
+        m_logger, "SM{} warp {} 0x{:x} {} mask={:X} MEMADDR {:x}", sm_id, warp_id, instr.currentpc,
+        fmt::streamed(instr), instr.mask.to_uint(), fmt::join(addr, " ")
+    );
+#endif
+
+    // 为向量各分量计算L1Dcache的tag、setIdx、blockOffset
+    std::array<uint32_t, hw_num_thread> cache_tag;
+    std::array<uint32_t, hw_num_thread> cache_setIdx;
+    auto blockOffset_ptr = std::make_shared<std::array<uint8_t, hw_num_thread>>();
+    auto wordOffset1H_ptr = std::make_shared<std::array<uint8_t, hw_num_thread>>();
+    auto& blockOffset = *blockOffset_ptr;
+    auto& wordOffset1H = *wordOffset1H_ptr;
+    for (int i = 0; i < num_thread; i++) {
+        cache_tag[i] = (addr[i] >> (2 + log2Ceil(L1D_BLOCK_NUM_WORD) + log2Ceil(L1D_NUM_SET)));
+        cache_setIdx[i]
+            = (addr[i] >> (2 + log2Ceil(L1D_BLOCK_NUM_WORD))) & ((1 << log2Ceil(L1D_NUM_SET)) - 1);
+        blockOffset[i] = (addr[i] >> 2) & ((1 << log2Ceil(L1D_BLOCK_NUM_WORD)) - 1);
+        wordOffset1H[i] = instr.mask[i] ? wordOffset1H_calc(addr[i], instr) : 0;
+    }
+
+    //
+    // 2. 写入mshr
+    //
+    auto mshr_it = std::find_if(m_lsu_mshr.begin(), m_lsu_mshr.end(), [](const lsu_mshr_t& mshr) {
+        return !mshr.valid;
+    });
+    const uint8_t mshr_idx = mshr_it - m_lsu_mshr.begin();
+    if (mshr_idx >= m_lsu_mshr.size()) {
+        SPDLOG_LOGGER_ERROR(
+            m_logger, "SM{} warp {} 0x{:x} {} mask={:x}: MSHR full, unacceptable lsu_req", sm_id,
+            warp_id, instr.currentpc, fmt::streamed(instr), instr.mask.to_uint()
+        );
+        assert(0);
+    }
+    mshr_it->valid = true;
+    mshr_it->warp_id = emitins_warpid;
+    mshr_it->instr = instr; // 包括写回、regidx、mask、unsigned等指令decode信息
+    mshr_it->wordOffset1H = wordOffset1H_ptr;
+    mshr_it->finished_mask = ~instr.mask; // 非活跃⇔已完成，finish_mask全1时此MSHR项目可返回
+    mshr_it->addr = addr_ptr;             // debug用的冗余信息
+    mshr_it->delay = LSU_EXTRA_DELAY; // 额外的延迟周期
+
+    //
+    // 3.1 原子release需要发送额外的flush
+    // TODO: 可能还需要fence
+    //
+    if (instr.ddd.atomic && instr.ddd.rl) {
+        std::unique_ptr<lsu_mem_cmd_t> cmd_flush = std::make_unique<lsu_mem_cmd_t>();
+        cmd_flush->opcode = L1D_OPCODE_CACHEOP;
+        cmd_flush->param = L1D_PARAM_FLUSH;
+        m_lsu_mem_cmd_queue.push(std::move(cmd_flush));
+    }
+
+    //
+    // 3.2 生成常规的访存命令
+    //
+
+    uint8_t _amo_param = (instr.ddd.alu_fn == DecodeParams::FN_AMOADD) ? L1D_PARAM_ATOMIC_ADD
+        : (instr.ddd.alu_fn == DecodeParams::FN_XOR)                   ? L1D_PARAM_ATOMIC_XOR
+        : (instr.ddd.alu_fn == DecodeParams::FN_OR)                    ? L1D_PARAM_ATOMIC_OR
+        : (instr.ddd.alu_fn == DecodeParams::FN_AND)                   ? L1D_PARAM_ATOMIC_AND
+        : (instr.ddd.alu_fn == DecodeParams::FN_MIN)                   ? L1D_PARAM_ATOMIC_MIN
+        : (instr.ddd.alu_fn == DecodeParams::FN_MAX)                   ? L1D_PARAM_ATOMIC_MAX
+        : (instr.ddd.alu_fn == DecodeParams::FN_MINU)                  ? L1D_PARAM_ATOMIC_MINU
+        : (instr.ddd.alu_fn == DecodeParams::FN_MAXU)                  ? L1D_PARAM_ATOMIC_MAXU
+        : (instr.ddd.alu_fn == DecodeParams::FN_SWAP)                  ? L1D_PARAM_ATOMIC_SWAP
+                                                                       : L1D_PARAM_ATOMIC_XOR;
+    uint8_t _cmd_opcode, _cmd_param;
+    if (instr.ddd.atomic) {
+        // Simplified from chisel code. What does this mean?
+        _cmd_opcode = (ddd.aq || ddd.rl || ddd.alu_fn != DecodeParams::FN_ADD) ? L1D_OPCODE_ATOMIC
+            : (instr.ddd.mem_cmd == DecodeParams::M_XWR)                       ? L1D_OPCODE_WRITE
+                                                                               : L1D_OPCODE_READ;
+        _cmd_param = _amo_param;
+    } else if (instr.ddd.fence) {
+        _cmd_opcode = L1D_OPCODE_CACHEOP;
+        _cmd_param = L1D_PARAM_INVALIDATE;
+        // clang-format off
+    // TODO: support from-external flush/invalidate
+    // } else if (is_flush) {
+    //     _cmd_opcode = L1D_OPCODE_CACHEOP;
+    //     _cmd_param = L1D_PARAM_INVALIDATE;
+        // clang-format on
+    } else { // regular load/store
+        _cmd_opcode = (ddd.mem_cmd == DecodeParams::M_XWR) ? L1D_OPCODE_WRITE : L1D_OPCODE_READ;
+        _cmd_param = 0;
+    }
+
+    // for vector load/store, access 1 cacheline each cycle
+    sc_bv<hw_num_thread> active_mask = instr.mask;
+    while (active_mask.or_reduce()) {
+        std::unique_ptr<lsu_mem_cmd_t> cmd = std::make_unique<lsu_mem_cmd_t>();
+        cmd->instrId = mshr_idx;
+        cmd->pagetable_root = hwarp->pagetable;
+        cmd->warp_id = warp_id;
+        cmd->instr = instr;
+        cmd->opcode = _cmd_opcode;
+        cmd->param = _cmd_param;
+        cmd->is_shared_memory = is_shared_memory;
+        cmd->addr = addr_ptr;
+        cmd->blockOffset = blockOffset_ptr;
+        cmd->wordOffset1H = wordOffset1H_ptr;
+        if (!instr.ddd.wxd && !instr.ddd.wvd) { // store instruction
+            for (int i = 0; i < hw_num_thread; i++) {
+                cmd->data[i] = instr.mask[i] ? tolsu_data3[i] : 0;
+            }
+        }
+
+        int threadidx = std::bit_width(active_mask.to_uint()) - 1; // priority encoder
+        sc_bv<hw_num_thread> addr_belonging_same_cacheline_mask = 0;
+        for (int i = 0; i < hw_num_thread; i++) {
+            if (active_mask[i] && cache_tag[i] == cache_tag[threadidx]
+                && cache_setIdx[i] == cache_setIdx[threadidx]) {
+                addr_belonging_same_cacheline_mask.set_bit(i, 1);
+            }
+        }
+        cmd->cache_tag = cache_tag[threadidx];
+        cmd->cache_setIdx = cache_setIdx[threadidx];
+        cmd->mask = addr_belonging_same_cacheline_mask;
+        m_lsu_mem_cmd_queue.push(std::move(cmd));
+        active_mask &= ~addr_belonging_same_cacheline_mask;
+    }
+
+    //
+    // 3.3 原子acquire需要发送额外的invalidate
+    // TODO: 可能还需要fence
+    //
+    if (instr.ddd.atomic && instr.ddd.aq) {
+        std::unique_ptr<lsu_mem_cmd_t> cmd_invalidate = std::make_unique<lsu_mem_cmd_t>();
+        cmd_invalidate->opcode = L1D_OPCODE_CACHEOP;
+        cmd_invalidate->param = L1D_PARAM_INVALIDATE;
+        m_lsu_mem_cmd_queue.push(std::move(cmd_invalidate));
+    }
+}
+
+void BASE::lsu_main() { // LSU sc_thread
     while (true) {
         wait();
+
+        //
+        // 1. 处理core pipline lsu_req
+        // 将其转化为(可能多个)访存命令压入m_lsu_mem_cmd_queue中、写入MSHR
+        //
         if (emito_lsu) {
-            if (lsu_ready_old == false) {
-                std::cout << "lsu error: not ready at " << sc_time_stamp() << ","
-                          << sc_delta_count_at_current_time() << std::endl;
-            }
-            lsu_unready.notify();
-
-            new_data.ins = emit_ins;
-            new_data.warp_id = emitins_warpid;
-            for (int i = 0; i < m_hw_warps[new_data.warp_id]->CSR_reg[0x802]; i++) {
-                new_data.rsv1_data[i] = tolsu_data1[i];
-                new_data.rsv2_data[i] = tolsu_data2[i];
-                new_data.rsv3_data[i] = tolsu_data3[i];
-            }
-            lsu_dq.push(new_data);
-            a_delay = 15;
-            b_delay = 5;
-            if (a_delay == 0)
-                lsu_eva.notify();
-            else if (lsueqa_triggered)
-                lsu_eqa.notify(sc_time((a_delay)*PERIOD, SC_NS));
-            else {
-                lsu_eqa.notify(sc_time((a_delay)*PERIOD, SC_NS));
-                ev_lsufifo_pushed.notify();
-            }
-            if (b_delay == 0)
-                lsu_evb.notify();
-            else {
-                lsu_eqb.notify(sc_time((b_delay)*PERIOD, SC_NS));
-                ev_lsuready_updated.notify();
-            }
-#ifdef SPIKE_OUTPUT
-            std::cout << "SM" << sm_id << " warp " << emitins_warpid << " 0x" << std::hex
-                      << emit_ins.read().currentpc << " " << emit_ins << " LSU addr=" << std::hex
-                      << std::setw(8) << std::setfill('0');
-
-            switch (emit_ins.read().op) {
-            case LW_:
-                std::cout << new_data.rsv1_data[0] << std::setw(0) << "+" << std::setw(8)
-                          << new_data.rsv2_data[0] << "="
-                          << (new_data.rsv1_data[0] + new_data.rsv2_data[0]);
-                break;
-            case SW_:
-                std::cout << new_data.rsv1_data[0] << std::setw(0) << "+" << std::setw(8)
-                          << new_data.rsv2_data[0] << "="
-                          << (new_data.rsv1_data[0] + new_data.rsv2_data[0]);
-                if (sm_id == 0 && emitins_warpid == 2) {
-                    std::cout << "\nthis inst rs1_addr=" << std::dec << new_data.ins.s1
-                              << ", rs2_addr=" << new_data.ins.s2 << std::hex << ", s_regfile[rs1]="
-                              << m_hw_warps[emitins_warpid]->s_regfile[new_data.ins.s1]
-                              << ", s_regfile[rs2]="
-                              << m_hw_warps[emitins_warpid]->s_regfile[new_data.ins.s2]
-                              << std::endl;
-                }
-                break;
-            case VLE32_V_:
-                std::cout << new_data.rsv1_data[0];
-                break;
-            case VSW12_V_:
-            case VLW12_V_:
-                for (int i = 0; i < m_hw_warps[new_data.warp_id]->CSR_reg[0x802]; i++) {
-                    std::cout << std::hex << std::setw(8)
-                              << (uint32_t)(new_data.rsv1_data[i] + new_data.rsv2_data[i]) << " ";
-                }
-                break;
-            }
-            std::cout << std::setw(0) << std::dec << std::setfill(' ') << " at " << sc_time_stamp()
-                      << "," << sc_delta_count_at_current_time() << std::endl;
-#endif
-        } else {
-            if (!lsueqa_triggered)
-                ev_lsufifo_pushed.notify();
-            if (!lsueqb_triggered)
-                ev_lsuready_updated.notify();
-        }
-    }
-}
-
-void BASE::LSU_CALC() {
-    lsufifo_elem_num = 0;
-    lsufifo_empty = 1;
-    lsueqa_triggered = false;
-    lsu_in_t lsutmp1;
-    lsu_out_t lsutmp2;
-    bool succeed;
-    unsigned int external_addr;
-    bool addrOutofRangeException;
-    std::array<uint32_t, hw_num_thread> LSUaddr;
-    while (true) {
-        wait(lsu_eva | lsu_eqa.default_event());
-        if (lsu_eqa.default_event().triggered()) {
-            lsueqa_triggered = true;
-            wait(SC_ZERO_TIME);
-            lsueqa_triggered = false;
-        }
-        // std::cout << "LSU_OUT: triggered by eva/eqa at " << sc_time_stamp() << "," <<
-        // sc_delta_count_at_current_time() << std::endl;
-        lsutmp1 = lsu_dq.front();
-        lsu_dq.pop();
-        auto& hwarp = m_hw_warps[lsutmp1.warp_id];
-
-        // 为warp中的每个线程计算访存地址
-        for (int i = 0; i < hwarp->CSR_reg[0x802]; i++) {
-            LSUaddr[i] = (lsutmp1.ins.ddd.isvec & lsutmp1.ins.ddd.disable_mask)
-                ? lsutmp1.ins.ddd.is_vls12()
-                    ? (lsutmp1.rsv1_data[i] + lsutmp1.rsv2_data[i])
-                    : ((lsutmp1.rsv1_data[i] + lsutmp1.rsv2_data[i]) * hw_num_thread + (i << 2)
-                       + hwarp->CSR_reg[0x807])
-                : lsutmp1.ins.ddd.isvec
-                ? (lsutmp1.rsv1_data[i]
-                   + (lsutmp1.ins.ddd.mop == 0 ? i << 2 : i * lsutmp1.rsv2_data[i]))
-                : (lsutmp1.rsv1_data[0] + lsutmp1.rsv2_data[0]);
+            lsu_new_req();
         }
 
-        if (lsutmp1.ins.ddd.wvd
-            || lsutmp1.ins.ddd.wxd) { // 读global/local mem，稍后要写回寄存器(write reg)
-            lsutmp2.ins = lsutmp1.ins;
-            lsutmp2.warp_id = lsutmp1.warp_id;
-            if (lsutmp1.ins.ddd.isvec) { // vec instruction lw: check branch masks of each thread
-                for (int i = 0; i < hwarp->CSR_reg[0x802]; i++) {
-                    addrOutofRangeException = false;
-                    if (lsutmp1.ins.mask[i]) {
-                        uint32_t data;
-                        addrOutofRangeException
-                            = mem_read_word(&data, LSUaddr[i], lsutmp2.ins, hwarp->pagetable);
-                        lsutmp2.rdv1_data[i] = data;
-                    } else {
-                        lsutmp2.rdv1_data[i] = 0; // don't care
-                    }
-                    if (addrOutofRangeException)
-                        std::cout << "SM" << sm_id
-                                  << " LSU read addrOutofRange error, ins=" << lsutmp1.ins
-                                  << ",addr=" << LSUaddr[i] << " at " << sc_time_stamp() << ","
-                                  << sc_delta_count_at_current_time() << std::endl;
-                    // if(lsutmp1.ins.currentpc == 0x800000f8) {
-                    //     std::cout << "SM" << sm_id << " warp " << lsutmp1.warp_id << " 0x" <<
-                    //     std::hex << lsutmp1.ins.currentpc
-                    //             << " " << lsutmp1.ins << std::hex << " addr=0x" << LSUaddr[0] <<
-                    //             " data=0x" << lsutmp2.rdv1_data[0] << std::dec
-                    //             << " at " << sc_time_stamp() << "," <<
-                    //             sc_delta_count_at_current_time() << std::endl;
-                    // }
+        //
+        // 2. 更新与OPC的握手信号
+        //
+        lsu_ready = std::any_of(m_lsu_mshr.begin(), m_lsu_mshr.end(), [](const lsu_mshr_t& mshr) {
+            return !mshr.valid;
+        });
+        ev_lsuready_updated.notify();
+
+        //
+        // 3. 每周期从cmd queue中取出一个访存命令，发向L1D Cache
+        //
+
+        // 读操作的回调函数(global memory)
+        std::function<void(std::unique_ptr<lsu_mem_cmd_t>)> read_callback
+            = [this](std::unique_ptr<lsu_mem_cmd_t> cmd) {
+                  assert(cmd && cmd->opcode == L1D_OPCODE_READ);
+                  assert(m_lsu_mshr.at(cmd->instrId).valid);
+                  auto& mshr_item = m_lsu_mshr[cmd->instrId];
+                  for (int i = 0; i < hw_num_thread; i++) {
+                      if (cmd->mask[i]) {
+                          assert(!mshr_item.finished_mask[i]);
+                          mshr_item.data[i] = byte_extract(
+                              cmd->data[i], mshr_item.wordOffset1H->at(i),
+                              m_lsu_mshr[cmd->instrId].instr.ddd.mem_unsigned
+                          );
+                      }
+                  }
+                  m_lsu_mshr[cmd->instrId].finished_mask |= cmd->mask;
+              };
+
+        // 写操作的回调函数(global memory)
+        std::function<void(std::unique_ptr<lsu_mem_cmd_t>)> write_callback
+            = [this](std::unique_ptr<lsu_mem_cmd_t> cmd) {
+                  assert(cmd && cmd->opcode == L1D_OPCODE_WRITE);
+                  assert(m_lsu_mshr.at(cmd->instrId).valid);
+                  auto& mshr_item = m_lsu_mshr[cmd->instrId];
+                  // TODO: 目前Ramulator的写操作只表明成功接受，不在执行完毕后回调
+                  // 此回调函数实质上在Ramulator接受写操作后就被回调
+                  for (int i = 0; i < hw_num_thread; i++) {
+                      if (cmd->mask[i]) {
+                          assert(mshr_item.finished_mask[i] == 0);
+                      }
+                  }
+                  mshr_item.finished_mask |= cmd->mask;
+              };
+
+        // 每周期从cmd queue中取出一个访存命令，发向L1D Cache或shared memory
+        if (m_lsu_mem_cmd_queue.size() > 0) {
+            auto& cmd = m_lsu_mem_cmd_queue.front();
+            if (cmd->is_shared_memory) {
+                // shared memory access
+                if (sharedMem_request(cmd) != 0) { // 此函数会自行写入mshr
+                    assert(0);
+                } else { // shared_memory access ok
+                    m_lsu_mem_cmd_queue.pop();
                 }
-            } else { // scalar instruction lw
-                uint32_t data;
-                addrOutofRangeException
-                    = mem_read_word(&data, LSUaddr[0], lsutmp2.ins, hwarp->pagetable);
-                lsutmp2.rdv1_data[0] = data;
-                if (addrOutofRangeException)
-                    std::cout << "SM" << sm_id
-                              << " LSU read addrOutofRange error, ins=" << lsutmp1.ins
-                              << ",addr=" << LSUaddr[0] << " at " << sc_time_stamp() << ","
-                              << sc_delta_count_at_current_time() << std::endl;
+            } else { // global memory access
+                std::function<void(std::unique_ptr<lsu_mem_cmd_t>)> callback = nullptr;
+                callback = (cmd->opcode == L1D_OPCODE_READ) ? read_callback
+                    : (cmd->opcode == L1D_OPCODE_WRITE)     ? write_callback
+                                                            : callback;
+                // TODO: ramulator以回调函数来返回，但L1D是以FIFO握手来返回，这里暂且不管
+                int failed = l1d_request(cmd, callback);
+                if (!failed) { // cmd accepted
+                    m_lsu_mem_cmd_queue.pop();
+                } else if (failed == -1) { // something wrong in the cmd
+                    SPDLOG_LOGGER_ERROR(
+                        m_logger, "SM{} warp {} 0x{:x} {}: LSU cmd error, MEMADDR {:x} mask={:x}",
+                        sm_id, cmd->warp_id, cmd->instr.currentpc, fmt::streamed(cmd->instr),
+                        fmt::join(*cmd->addr, " "), cmd->mask.to_uint()
+                    );
+                } // else: mem is busy, cmd needs to wait
             }
-            lsufifo.push(lsutmp2);
-        } else {                         // 写global/local mem
-            if (lsutmp1.ins.ddd.isvec) { // vec instruction sw: check branch masks of each thread
-                bool addrOutofRangeException_flag = false;
-                for (int i = 0; i < hwarp->CSR_reg[0x802]; i++) {
-                    addrOutofRangeException = false;
-                    if (lsutmp1.ins.mask[i]) {
-                        addrOutofRangeException = mem_write_word(
-                            lsutmp1.rsv3_data[i], LSUaddr[i], lsutmp1.ins, hwarp->pagetable
-                        );
+        }
+
+        //
+        // 4. 对于MSHR声明已完成的访存，按照登记值施加额外的延迟
+        //
+        for (auto& mshr_item : m_lsu_mshr) {
+            if (mshr_item.valid && mshr_item.finished_mask.and_reduce() && mshr_item.delay > 0) {
+                mshr_item.delay--; // 按照之前的登记值施加额外的延迟
+            }
+            if (mshr_item.valid && mshr_item.instr.currentpc == 0x800000b8) {
+#ifdef SPIKE_OUTPUT
+                // SPDLOG_LOGGER_TRACE(
+                //     m_logger, "SM{} warp {} 0x{:x} {}: MSHR finish_mask = {:x}", sm_id,
+                //     mshr_item.warp_id, mshr_item.instr.currentpc, fmt::streamed(mshr_item.instr),
+                //     mshr_item.finished_mask.to_uint()
+                // );
+#endif
+            }
+        }
+
+        //
+        // 5. 每周期从MSHR中取出一个完成的访存，发向pipeline的下一级
+        //
+        for (auto& mshr_item : m_lsu_mshr) {
+            if (mshr_item.valid && mshr_item.finished_mask.and_reduce()) { // memory access done
+#ifdef SPIKE_OUTPUT
+                // SPDLOG_LOGGER_TRACE(
+                //     m_logger, "SM{} warp {} 0x{:x} {} MEMDONE, MSHR item cleared", sm_id,
+                //     mshr_item.warp_id, mshr_item.instr.currentpc, fmt::streamed(mshr_item.instr)
+                // );
+#endif
+                if (mshr_item.instr.ddd.wxd || mshr_item.instr.ddd.wvd) { // to writeback
+                    lsu_out_t lsu_out;
+                    lsu_out.warp_id = mshr_item.warp_id;
+                    lsu_out.ins = mshr_item.instr;
+                    for (int i = 0; i < hw_num_thread; i++) {
+                        lsu_out.rdv1_data[i] = mshr_item.data[i];
                     }
-                    if (addrOutofRangeException) {
-                        std::cout << "SM" << sm_id << " warp" << lsutmp1.warp_id << " thread" << i
-                                  << " LSU write addrOutofRange error, ins=" << lsutmp1.ins
-                                  << ",addr=0x" << std::hex << LSUaddr[i] << std::dec << " at "
-                                  << sc_time_stamp() << "," << sc_delta_count_at_current_time()
-                                  << std::endl;
-                        addrOutofRangeException_flag = true;
-                    }
+                    lsufifo.push(lsu_out);
                 }
-#ifdef SPIKE_OUTPUT
-                std::cout << "SM" << sm_id << " warp " << lsutmp1.warp_id << " 0x" << std::hex
-                          << lsutmp1.ins.currentpc << " " << lsutmp1.ins << std::hex
-                          << " data=" << std::setw(8) << std::setfill('0');
-                for (int i = hwarp->CSR_reg[0x802] - 1; i >= 0; i--)
-                    std::cout << lsutmp1.rsv3_data[i] << " ";
-                std::cout << "@ ";
-                for (int i = hwarp->CSR_reg[0x802] - 1; i >= 0; i--)
-                    std::cout << LSUaddr[i] << " ";
-                std::cout << std::setw(0) << std::setfill(' ') << " mask=" << lsutmp1.ins.mask
-                          << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time()
-                          << std::endl;
-#endif
-            } else { // scalar instruction sw
-                addrOutofRangeException = mem_write_word(
-                    lsutmp1.rsv3_data[0], LSUaddr[0], lsutmp1.ins, hwarp->pagetable
-                );
-                if (addrOutofRangeException)
-                    std::cout << "SM" << sm_id
-                              << " LSU write addrOutofRange error, ins=" << lsutmp1.ins
-                              << ",addr=0x" << std::hex << LSUaddr[0] << std::dec << " at "
-                              << sc_time_stamp() << "," << sc_delta_count_at_current_time()
-                              << std::endl;
-#ifdef SPIKE_OUTPUT
-                std::cout << "SM" << sm_id << " warp " << lsutmp1.warp_id << " 0x" << std::hex
-                          << lsutmp1.ins.currentpc << " " << lsutmp1.ins << std::hex
-                          << " data=" << std::setw(8) << std::setfill('0') << lsutmp1.rsv3_data[0]
-                          << std::dec << std::setfill(' ') << " @ " << std::hex << LSUaddr[0]
-                          << std::dec << " at " << sc_time_stamp() << ","
-                          << sc_delta_count_at_current_time() << std::endl;
-#endif
+                mshr_item.valid = false;
+                break;
             }
         }
         ev_lsufifo_pushed.notify();
-    }
-}
-
-void BASE::LSU_CTRL() {
-    lsu_ready = true;
-    lsu_ready_old = true;
-    lsueqb_triggered = false;
-    while (true) {
-        wait(lsu_eqb.default_event() | lsu_unready | lsu_evb);
-        if (lsu_eqb.default_event().triggered()) {
-            lsu_ready = true;
-            lsu_ready_old = lsu_ready;
-            lsueqb_triggered = true;
-            wait(SC_ZERO_TIME);
-            lsueqb_triggered = false;
-            ev_lsuready_updated.notify();
-        } else if (lsu_evb.triggered()) {
-            lsu_ready = true;
-            lsu_ready_old = lsu_ready;
-            ev_lsuready_updated.notify();
-        } else if (lsu_unready.triggered()) {
-            lsu_ready = false;
-            lsu_ready_old = lsu_ready;
-            ev_lsuready_updated.notify();
-        }
     }
 }

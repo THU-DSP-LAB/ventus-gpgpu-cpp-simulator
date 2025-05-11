@@ -39,6 +39,7 @@ int main(int argc, char* argv[]) {
 #endif
     spdlog::set_pattern("%v [%l %s:%#]");
     ventus_cyclesim_config_t config;
+    ventus_cyclesim_get_default_config(&config);
     config.sim_time_max = 80000;
     ventus_cyclesim_t* sim = ventus_cyclesim_init(&config);
 
@@ -53,33 +54,33 @@ int main(int argc, char* argv[]) {
     auto f_new_kernel = [sim, &kernels, &tasks, &cnt_kernel](
                             std::string name, std::string metafile, std::string datafile,
                             bool add_to_task
-          ) {
-              auto kernel = parse_metadata(metafile);
-              char* kernel_name_cstr = new char[name.size() + 1];
-              std::copy(name.begin(), name.end(), kernel_name_cstr);
-              kernel_name_cstr[name.size()] = '\0';
-              kernel->name = kernel_name_cstr;
-              kernel->kernel_id = cnt_kernel++;
-              kernel->data = new kernel_callback_t {
-                  .datafile = datafile,
+                        ) {
+        auto kernel = parse_metadata(metafile);
+        char* kernel_name_cstr = new char[name.size() + 1];
+        std::copy(name.begin(), name.end(), kernel_name_cstr);
+        kernel_name_cstr[name.size()] = '\0';
+        kernel->name = kernel_name_cstr;
+        kernel->kernel_id = cnt_kernel++;
+        kernel->data = new kernel_callback_t {
+            .datafile = datafile,
             .sim = sim,
-                  .finish_callback = nullptr,
-              };
-              if (add_to_task) {
-                  if (tasks.empty()) {
-                      std::cerr << "Error: no task to add kernel to" << std::endl;
-                      return -1;
-                  }
-                  auto task = tasks.back();
-                  kernel->pagetable = task->m_pagetable;
-                  task->add_kernel(kernel);
-              } else {
-                  kernel->pagetable = ventus_cyclesim_vmem_create(sim);
-                  kernels.push_back(kernel);
+            .finish_callback = nullptr,
+        };
+        if (add_to_task) {
+            if (tasks.empty()) {
+                std::cerr << "Error: no task to add kernel to" << std::endl;
+                return -1;
+            }
+            auto task = tasks.back();
+            kernel->pagetable = task->m_pagetable;
+            task->add_kernel(kernel);
+        } else {
+            kernel->pagetable = ventus_cyclesim_vmem_create(sim);
+            kernels.push_back(kernel);
             SPDLOG_TRACE("Create new vmem for kernel {}, ptroot=0x{:x}", name, kernel->pagetable);
-              }
-              return 0;
-          };
+        }
+        return 0;
+    };
 
     auto f_new_task = [&tasks, &config, sim](std::string name) {
         auto ptroot = ventus_cyclesim_vmem_create(sim);
