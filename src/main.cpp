@@ -9,6 +9,7 @@
 #include <iostream>
 #include <map>
 #include <memory>
+#include <spdlog/spdlog.h>
 #include <sys/types.h>
 #include <vector>
 
@@ -21,7 +22,7 @@ void kernel_load_data(
 void kernel_finish(const ventus_kernel_metadata_t* metadata);
 typedef struct kernel_callback_t {
     std::filesystem::path datafile;
-    // ventus_cyclesim_t* sim;
+    ventus_cyclesim_t* sim;
     std::function<void()> finish_callback;
 } kernel_callback_t;
 
@@ -33,6 +34,10 @@ int parse_arg(
 );
 
 int main(int argc, char* argv[]) {
+#ifdef SPDLOG_ACTIVE_LEVEL
+    spdlog::set_level(static_cast<spdlog::level::level_enum>(SPDLOG_ACTIVE_LEVEL));
+#endif
+    spdlog::set_pattern("%v [%l %s:%#]");
     ventus_cyclesim_config_t config;
     config.sim_time_max = 80000;
     ventus_cyclesim_t* sim = ventus_cyclesim_init(&config);
@@ -45,9 +50,9 @@ int main(int argc, char* argv[]) {
     // functions used during parsing arguments
     //
 
-    auto f_new_kernel
-        = [sim, &kernels, &tasks, &cnt_kernel](
-              std::string name, std::string metafile, std::string datafile, bool add_to_task
+    auto f_new_kernel = [sim, &kernels, &tasks, &cnt_kernel](
+                            std::string name, std::string metafile, std::string datafile,
+                            bool add_to_task
           ) {
               auto kernel = parse_metadata(metafile);
               char* kernel_name_cstr = new char[name.size() + 1];
@@ -57,7 +62,7 @@ int main(int argc, char* argv[]) {
               kernel->kernel_id = cnt_kernel++;
               kernel->data = new kernel_callback_t {
                   .datafile = datafile,
-                  //   .sim = sim,
+            .sim = sim,
                   .finish_callback = nullptr,
               };
               if (add_to_task) {
@@ -71,14 +76,22 @@ int main(int argc, char* argv[]) {
               } else {
                   kernel->pagetable = ventus_cyclesim_vmem_create(sim);
                   kernels.push_back(kernel);
+            SPDLOG_TRACE("Create new vmem for kernel {}, ptroot=0x{:x}", name, kernel->pagetable);
               }
               return 0;
           };
 
     auto f_new_task = [&tasks, &config, sim](std::string name) {
-        tasks.emplace_back(
-            std::make_shared<task_t>(tasks.size(), name, ventus_cyclesim_vmem_create(sim))
-        );
+        auto ptroot = ventus_cyclesim_vmem_create(sim);
+        tasks.emplace_back(std::make_shared<task_t>(
+            tasks.size(), name, ptroot,
+            // to destroy the virtual memory space after the task finished
+            [sim, ptroot]() { ventus_cyclesim_vmem_destroy(sim, ptroot); },
+            // to free the private memory of threads after a kernel of task finished
+            [sim, ptroot](uint32_t vaddr, uint32_t size) {
+                ventus_cyclesim_vmem_free(sim, ptroot, vaddr, size);
+            }
+        ));
         return 0;
     };
 
@@ -108,7 +121,7 @@ int main(int argc, char* argv[]) {
                                 ) {
         kernel_callback_t* cb_data = static_cast<kernel_callback_t*>(kernel->data);
         cb_data->finish_callback = finish_callback;
-        kernel_load_data(sim, kernel, cb_data->datafile);
+        kernel_load_data(sim, kernel, cb_data->datafile, vmem_allocated);
         ventus_cyclesim_add_kernel(sim, kernel.get(), kernel_finish);
     };
 
@@ -117,14 +130,17 @@ int main(int argc, char* argv[]) {
     // Activate tasks
     //
     for (auto kernel : kernels) {
-        f_send_kernel_to_gpu(kernel, nullptr);
+        f_send_kernel_to_gpu(kernel, [sim, ptroot = kernel->pagetable]() {
+            // to destroy the virtual memory space after the kernel finished
+            ventus_cyclesim_vmem_destroy(sim, ptroot);
+        });
     }
     for (auto task : tasks) {
         task->activate();
     }
 
     //
-    // Run simulation step by step
+    // Run simulation cycle by cycle
     //
     const ventus_cyclesim_step_result_t* result;
     do {
@@ -158,17 +174,35 @@ void kernel_load_data(
     std::string line;
     int bufferIndex = 0;
     std::vector<uint8_t> buffer;
+    SPDLOG_TRACE("Start loading data for kernel {}, ptroot=0x{:x}", mtd.name, mtd.pagetable);
     for (int bufferIndex = 0; bufferIndex < mtd.num_buffer; bufferIndex++) {
         buffer.reserve(mtd.buffer_size[bufferIndex]); // 提前分配空间
         uint64_t vaddr = mtd.buffer_base[bufferIndex];
         size_t vsize = mtd.buffer_allocsize[bufferIndex];
-        if (!vmem_allocated || !vmem_allocated->contains(vaddr)) {
-            assert(!vmem_allocated || vmem_allocated->at(vaddr) == vsize);
+        if (vaddr == 0x80000000 && vsize >= mtd.buffer_size[bufferIndex] + 0x5000) {
+            // 0x80000000代码段默认被分配了过分大的0x10000000大小，将其缩小
+            vsize = mtd.buffer_size[bufferIndex] + 0x5000;
+        }
+        vsize = (vsize + 0xfff) & ~0xfff;
+        if (!vmem_allocated || !vmem_allocated->contains(vaddr)
+            || vmem_allocated->at(vaddr) < vsize) {
+            if (vmem_allocated && vmem_allocated->contains(vaddr)) {
+                vsize -= vmem_allocated->at(vaddr);
+                vaddr += vmem_allocated->at(vaddr);
+            }
             uint64_t allocated_vaddr = ventus_cyclesim_vmem_alloc(sim, mtd.pagetable, vaddr, vsize);
+            if (allocated_vaddr != vaddr) {
+                SPDLOG_ERROR(
+                    "Kernel {}: vmem_alloc failed: requested 0x{:x} + 0x{:x}, allocated 0x{:x}",
+                    mtd.name, vaddr, vsize, allocated_vaddr
+                );
+                assert(allocated_vaddr == vaddr);
+            }
             if (vmem_allocated) {
                 (*vmem_allocated)[vaddr] = vsize;
             }
         }
+        assert(!vmem_allocated || vmem_allocated->at(vaddr) == vsize);
 
         int readbytes = 0;
         while (readbytes < mtd.buffer_size[bufferIndex]) {

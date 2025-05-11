@@ -86,5 +86,5 @@ uint64_t ventus_cyclesim_vmem_alloc(
 void ventus_cyclesim_vmem_free(
     ventus_cyclesim_t* sim, paddr_t ptroot, uint64_t vaddr, uint64_t size
 ) {
-    // todo
+    sim->m_dut->vmem_free(ptroot, vaddr, size);
 }

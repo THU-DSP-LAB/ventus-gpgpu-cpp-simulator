@@ -1,4 +1,5 @@
 #pragma once
+#include "ventus_cyclesim.h"
 #include <any>
 #include <functional>
 #include <map>
@@ -14,7 +15,11 @@ public:
     const uint32_t m_id;
     const std::string m_name;
     const uint64_t m_pagetable;
-    task_t(uint32_t id, const std::string name, uint64_t pagetable);
+    task_t(
+        uint32_t id, const std::string name, uint64_t pagetable,
+        std::function<void()> finish_callback = nullptr,
+        std::function<void(uint32_t, uint32_t)> vmem_free = nullptr
+    );
 
     void add_kernel(std::shared_ptr<kernel_t> kernel);
     void callback_kernel_finish(std::shared_ptr<kernel_t> kernel);
@@ -30,7 +35,7 @@ public:
     void activate();
     bool is_running() const { return m_status == TASKSTATUS_RUNNING; }
 
-    void finish();
+    void finish(); // 标记task结束、销毁页表
     bool is_finished() const { return m_status == TASKSTATUS_FINISHED; }
 
 private:
@@ -54,4 +59,10 @@ private:
     std::map<uint64_t, size_t> m_vmem_allocated;
 
     enum { TASKSTATUS_IDLE, TASKSTATUS_RUNNING, TASKSTATUS_FINISHED } m_status = TASKSTATUS_IDLE;
+
+    uint32_t m_kernel_private_memory_vaddr = 0;
+    uint32_t m_kernel_private_memory_size = 0;
+
+    std::function<void()> m_finish_callback = nullptr; // task finish callback
+    std::function<void(uint32_t vaddr, uint32_t size)> m_vmem_free = nullptr;
 };

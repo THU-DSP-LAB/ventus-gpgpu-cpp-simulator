@@ -1,4 +1,3 @@
-#include "context_model.hpp"
 #include <cassert>
 #include <cstdlib>
 #include <cstring>
@@ -6,7 +5,6 @@
 #include <fstream>
 #include <functional>
 #include <iostream>
-#include <memory>
 #include <string>
 #include <vector>
 
