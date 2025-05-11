@@ -901,14 +901,28 @@ public:
     decodedat& operator=(const decodedat& rhs) = default;
 
     // 以下为chisel的其他decode信号
+    bool force_rm_rtz;
+    bool write_mask = false;
+    bool aq;
+    bool rl;
 
-    uint32_t mop; // 在decode函数中赋值
+    uint32_t mop;
     bool mem() const {
         int value = static_cast<int>(mem_cmd);
         return (value & 1) | ((value >> 1) & 1);
     }
 
     bool is_vls12() const { return alu_fn == DecodeParams::alu_fn_t::FN_VLS12; }
+    void decode_ext(uint32_t instr) {
+        mop = readmask ? 3 : ((instr >> 26) & 0b11);
+        // clang-format off
+        // BitPat instr: VFCVT_RTZ_X_F_V || VFCVT_RTZ_XU_F_V
+        force_rm_rtz = ((instr & 0b111111'000000'11110111'00000'1111111)
+                              == 0b010010'000000'00110001'00000'1010111);
+        // clang-format on
+        aq = atomic && ((instr >> 26) & 0b1);
+        rl = atomic && ((instr >> 25) & 0b1);
+    }
 };
 class I_TYPE // type of per instruction
 {
@@ -922,7 +936,7 @@ public:
     int imm = -1;
     decodedat ddd;
     // int jump_addr = -1; // 分支指令才有用
-    int currentpc; // 每条指令当前pc，取指后赋予
+    uint32_t currentpc; // 每条指令当前pc，取指后赋予
     sc_bv<hw_num_thread> mask;
 
     I_TYPE() {};
@@ -1133,7 +1147,7 @@ public:
         , front_index(0) { }
     void push(const T& value) {
         if (size == capacity) {
-            throw std::out_of_range("Queue is full");
+            throw std::out_of_range("StaticQueue is full");
         }
         data[(front_index + size) % capacity] = value;
         ++size;

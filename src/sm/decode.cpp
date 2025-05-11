@@ -50,6 +50,7 @@ void BASE::DECODE(int warp_id) {
             }
 
             tmpins.ddd = decode_table[(OP_TYPE)tmpins.op];
+            tmpins.ddd.decode_ext(tmpins.origin32bit);
 
             if (tmpins.op == (int)REGEXT_) {
                 hwarp->fetch_valid2 = false;
@@ -117,6 +118,8 @@ void BASE::DECODE(int warp_id) {
                     tmpins.imm += extimm << 5;
                     tmpins.s1 += ext1 << 5;
                     tmpins.s2 += ext2 << 5;
+                    // 这里与Chisel实现有所不同，Chisel要么使用extd，要么就不扩展（认定ext3=0）
+                    // c.reg_idx3 := Mux(c.fp & !c.isvec, Cat(0.U(3.W),io.inst(i)(31, 27)), Cat(regextInfo(i).regPrefix(0) ,io.inst(i)(11, 7)))
                     tmpins.s3 += ((tmpins.ddd.fp && !tmpins.ddd.isvec) ? ext3 : extd) << 5;
                     tmpins.d += extd << 5;
                     WILLregext = false;
@@ -131,7 +134,6 @@ void BASE::DECODE(int warp_id) {
 #endif
                 }
                 scinsbit = tmpins.origin32bit;
-                tmpins.ddd.mop = tmpins.ddd.readmask ? 3 : (scinsbit.range(27, 26)).to_uint();
 
                 switch (tmpins.ddd.sel_imm) {
                 case DecodeParams::sel_imm_t::IMM_I:
