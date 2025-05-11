@@ -52,7 +52,6 @@ add_subdirectory(dependencies/ramulator2)
 # target libVentusCycleSim.so
 #
 file(GLOB_RECURSE SM_SOURCES "src/sm/*.cpp")
-file(GLOB_RECURSE UTILS_SOURCES "src/utils/*.cpp" "src/utils/*.c")
 set(CORE_SOURCES 
     src/context_model.cpp 
     src/CTA_Scheduler.cpp 
@@ -64,7 +63,6 @@ set(CORE_SOURCES
 )
 add_library(VentusCycleSim SHARED
     ${SM_SOURCES}
-    ${UTILS_SOURCES}
     ${CORE_SOURCES}
 )
 target_include_directories(VentusCycleSim

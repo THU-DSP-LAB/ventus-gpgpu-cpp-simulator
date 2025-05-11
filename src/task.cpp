@@ -65,7 +65,7 @@ void task_t::activate() {
 
 void task_t::finish() {
     assert(m_status == TASKSTATUS_RUNNING);
-    SPDLOG_INFO("Task{} {} finished", m_id, m_name);
+    SPDLOG_INFO("Task {} {} finished", m_id, m_name);
     if (m_finish_callback) {
         m_finish_callback();
     }

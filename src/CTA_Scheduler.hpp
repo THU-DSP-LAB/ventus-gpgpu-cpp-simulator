@@ -4,6 +4,8 @@
 #include "parameters.h"
 #include <cstdint>
 #include <memory>
+#include <spdlog/logger.h>
+#include <spdlog/spdlog.h>
 #include <tuple>
 #include <vector>
 
@@ -79,16 +81,10 @@ public:
     sc_in<bool> rst_n { "rst_n" };
 
 public:
-    CTA_Scheduler(sc_core::sc_module_name name, BASE* sm_group_[])
-        : sc_module(name) {
-        for (int sm_idx = 0; sm_idx < NUM_SM; sm_idx++) {
-            m_sm[sm_idx].set_sm_ptr(sm_group_[sm_idx]);
-        }
-        do_reset();
-        SC_HAS_PROCESS(CTA_Scheduler);
-        SC_THREAD(step);
-    }
-
+    CTA_Scheduler(
+        sc_core::sc_module_name name, BASE* sm_group_[],
+        std::shared_ptr<spdlog::logger> logger = nullptr
+    );
 public:
     // Interface: callback function for SM when a warp finished
     void warp_finished(int sm_id, int block_slot_idx, int warp_idx_in_block);
@@ -121,6 +117,8 @@ private:
 
     // which SM does a block issued to last time (for SM select strategy)
     uint32_t m_last_issue_core = 0;
+
+    std::shared_ptr<spdlog::logger> m_logger;
 };
 
 #endif

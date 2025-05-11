@@ -3,6 +3,8 @@
 
 #include "ventus_cyclesim.h"
 #include <functional>
+#include <memory>
+#include <spdlog/logger.h>
 #include <string>
 
 struct dim3 {
@@ -17,7 +19,8 @@ class kernel_info_t {
 public:
     kernel_info_t(
         const meta_data_t& metadata, std::function<void(const meta_data_t*)> load_data_callback,
-        std::function<void(const meta_data_t*)> finish_callback
+        std::function<void(const meta_data_t*)> finish_callback,
+        std::shared_ptr<spdlog::logger> logger = nullptr
     );
 
     //
@@ -80,6 +83,11 @@ private:
 
     // Next block to dispatch
     dim3 m_next_cta = { 0, 0, 0 }; // start from 0 ~ (grid_dim - 1)
+
+    //
+    // logger
+    //
+    std::shared_ptr<spdlog::logger> m_logger;
 };
 
 #endif

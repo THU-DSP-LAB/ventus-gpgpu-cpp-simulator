@@ -14,6 +14,19 @@ void CTA_Scheduler_SM_management::construct_init() {
     }
 }
 
+CTA_Scheduler::CTA_Scheduler(
+    sc_core::sc_module_name name, BASE* sm_group_[], std::shared_ptr<spdlog::logger> logger
+)
+    : sc_module(name)
+    , m_logger(logger ? logger : spdlog::default_logger()) {
+    for (int sm_idx = 0; sm_idx < NUM_SM; sm_idx++) {
+        m_sm[sm_idx].set_sm_ptr(sm_group_[sm_idx]);
+    }
+    do_reset();
+    SC_HAS_PROCESS(CTA_Scheduler);
+    SC_THREAD(step);
+}
+
 bool CTA_Scheduler::isHexCharacter(char c) {
     return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f');
 }

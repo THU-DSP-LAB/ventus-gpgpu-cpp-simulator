@@ -65,7 +65,7 @@ Top_gpgpu::Top_gpgpu(const char* ramulator_config_filename)
             }
         }
     }
-    m_cta = new CTA_Scheduler("CTA_Scheduler", m_sm.data());
+    m_cta = new CTA_Scheduler("CTA_Scheduler", m_sm.data(), m_logger);
     for (int i = 0; i < NUM_SM; i++) {
         m_sm[i]->m_warp_finish_callback
             = [cta = this->m_cta](int sm_id, int blk_slot_idx, int warp_idx_in_blk) {
@@ -90,7 +90,7 @@ void Top_gpgpu::add_kernel(
     std::function<void(const ventus_kernel_metadata_t*)> finish_callback
 ) {
     std::shared_ptr<kernel_info_t> kernel
-        = std::make_shared<kernel_info_t>(metadata, load_data_callback, finish_callback);
+        = std::make_shared<kernel_info_t>(metadata, load_data_callback, finish_callback, m_logger);
     assert(kernel);
     kernel->activate();
     m_cta->kernel_add(kernel);
