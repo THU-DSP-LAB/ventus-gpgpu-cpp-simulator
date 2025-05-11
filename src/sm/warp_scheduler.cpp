@@ -9,14 +9,34 @@ void BASE::WARP_SCHEDULER() {
     I_TYPE new_ins; // from opc, barrier ins
     int new_ins_warpid;
     bool end_this_kernel;
-    bool reset_endprg_flush_pipe[hw_num_warp];
+    bool reset_endprg_flush_pipe[hw_num_warp] = { false };
     while (true) {
         wait(clk.posedge_event());
 
-        for (int i = 0; i < hw_num_warp; i++) {
-            if (reset_endprg_flush_pipe[i]) {
-                m_hw_warps[i]->endprg_flush_pipe.write(false);
-                reset_endprg_flush_pipe[i] = false;
+        for (int warpidx = 0; warpidx < hw_num_warp; warpidx++) {
+            auto& hwarp = m_hw_warps[warpidx];
+            auto& hblkslot = m_block_slots[hwarp->blk_slot_idx];
+            if (hwarp->endprg_flush_pipe) { // a warp endprg && flush_pipe finished
+                // reset_endprg_flush_pipe[warpidx] = false;
+                hwarp->endprg_flush_pipe.write(false);
+                if (m_warp_finish_callback) { // callback CTA Scheduler, return the finished warp
+                    m_warp_finish_callback(sm_id, hwarp->blk_slot_idx, hwarp->warp_idx_in_blk);
+                    m_hw_warps[warpidx]->will_warp_activate = false;
+                }
+                // update block_slot data
+                assert(hblkslot.num_warp > 0);
+                assert(hblkslot.hw_warp_running[warpidx]);
+                hblkslot.num_warp--;
+                hblkslot.hw_warp_running[warpidx] = false;
+                if (hblkslot.num_warp == 0) {
+                    // the last running warp of this block returns, reset its block_slot
+                    assert(std::all_of(
+                        hblkslot.hw_warp_running.begin(), hblkslot.hw_warp_running.end(),
+                        [](bool i) { return i == false; }
+                    ));
+                    hblkslot.valid = false;
+                    hblkslot.warp_reach_barrier.fill(false);
+                }
             }
         }
 
@@ -112,27 +132,7 @@ void BASE::WARP_SCHEDULER() {
 
             case OP_TYPE::ENDPRG_:
                 hwarp->is_warp_activated = false;
-                if (m_warp_finish_callback) { // callback CTA Scheduler, return the finished warp
-                    m_warp_finish_callback(sm_id, hwarp->blk_slot_idx, hwarp->warp_idx_in_blk);
-                    hwarp->will_warp_activate = false;
-                }
-
-                // update block_slot data
-                assert(hblkslot.num_warp > 0);
-                assert(hblkslot.hw_warp_running[new_ins_warpid]);
-                hblkslot.num_warp--;
-                hblkslot.hw_warp_running[new_ins_warpid] = false;
-                if (hblkslot.num_warp
-                    == 0) { // the last running warp of this block returns, reset its block_slot
-                    assert(std::all_of(
-                        hblkslot.hw_warp_running.begin(), hblkslot.hw_warp_running.end(),
-                        [](bool i) { return i == false; }
-                    ));
-                    hblkslot.valid = false;
-                    hblkslot.warp_reach_barrier.fill(false);
-                }
-
-                hwarp->initwarp();
+                hwarp->initwarp(); // need 1 more cycle to flush pipe
                 reset_endprg_flush_pipe[new_ins_warpid] = true;
 #ifdef SPIKE_OUTPUT
                 std::cout << "SM" << sm_id << " warp " << new_ins_warpid << " 0x" << std::hex

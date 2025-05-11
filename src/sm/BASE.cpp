@@ -560,6 +560,7 @@ void BASE::receive_warp(
     assert(
         hwarp != nullptr
     ); // should always find a idle warp, as CTA scheduler has checked warp_slot before
+    assert(hwarp->is_warp_activated == false);
     hwarp->will_warp_activate = true;
 
     // 将软件warp(线程束)派发到硬件warp
