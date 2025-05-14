@@ -18,11 +18,12 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # use ccache
 set(CMAKE_C_COMPILER_LAUNCHER "ccache")
 set(CMAKE_CXX_COMPILER_LAUNCHER "ccache")
-# use -O2 and enable assert for release build
+# use -O2 & enable assert & LTO for release build
 set(CMAKE_CXX_FLAGS_RELEASE "-O2")
 set(CMAKE_C_FLAGS_RELEASE "-O2")
 string(REPLACE "-DNDEBUG" "" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
 string(REPLACE "-DNDEBUG" "" CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}")
+# set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
 # use spdlog trace level for debug build
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_compile_definitions(SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE)

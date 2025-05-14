@@ -301,6 +301,12 @@ void BASE::lsu_new_req() {
 }
 
 void BASE::lsu_main() { // LSU sc_thread
+    // L1读写操作完成后的回调函数(global memory)
+    std::function<void(std::unique_ptr<lsu_mem_cmd_t>)> read_callback
+        = [this](std::unique_ptr<lsu_mem_cmd_t> cmd) { lsu_l1d_read_callback(std::move(cmd)); };
+    std::function<void(std::unique_ptr<lsu_mem_cmd_t>)> write_callback
+        = [this](std::unique_ptr<lsu_mem_cmd_t> cmd) { lsu_l1d_write_callback(std::move(cmd)); };
+
     while (true) {
         wait();
 
@@ -323,42 +329,6 @@ void BASE::lsu_main() { // LSU sc_thread
         //
         // 3. 每周期从cmd queue中取出一个访存命令，发向L1D Cache
         //
-
-        // 读操作的回调函数(global memory)
-        std::function<void(std::unique_ptr<lsu_mem_cmd_t>)> read_callback
-            = [this](std::unique_ptr<lsu_mem_cmd_t> cmd) {
-                  assert(cmd && cmd->opcode == L1D_OPCODE_READ);
-                  assert(m_lsu_mshr.at(cmd->instrId).valid);
-                  auto& mshr_item = m_lsu_mshr[cmd->instrId];
-                  for (int i = 0; i < hw_num_thread; i++) {
-                      if (cmd->mask[i]) {
-                          assert(!mshr_item.finished_mask[i]);
-                          mshr_item.data[i] = byte_extract(
-                              cmd->data[i], mshr_item.wordOffset1H->at(i),
-                              m_lsu_mshr[cmd->instrId].instr.ddd.mem_unsigned
-                          );
-                      }
-                  }
-                  m_lsu_mshr[cmd->instrId].finished_mask |= cmd->mask;
-              };
-
-        // 写操作的回调函数(global memory)
-        std::function<void(std::unique_ptr<lsu_mem_cmd_t>)> write_callback
-            = [this](std::unique_ptr<lsu_mem_cmd_t> cmd) {
-                  assert(cmd && cmd->opcode == L1D_OPCODE_WRITE);
-                  assert(m_lsu_mshr.at(cmd->instrId).valid);
-                  auto& mshr_item = m_lsu_mshr[cmd->instrId];
-                  // TODO: 目前Ramulator的写操作只表明成功接受，不在执行完毕后回调
-                  // 此回调函数实质上在Ramulator接受写操作后就被回调
-                  for (int i = 0; i < hw_num_thread; i++) {
-                      if (cmd->mask[i]) {
-                          assert(mshr_item.finished_mask[i] == 0);
-                      }
-                  }
-                  mshr_item.finished_mask |= cmd->mask;
-              };
-
-        // 每周期从cmd queue中取出一个访存命令，发向L1D Cache或shared memory
         if (m_lsu_mem_cmd_queue.size() > 0) {
             auto& cmd = m_lsu_mem_cmd_queue.front();
             if (cmd->is_shared_memory) {
@@ -380,7 +350,7 @@ void BASE::lsu_main() { // LSU sc_thread
                 } else if (failed == -1) { // something wrong in the cmd
                     SPDLOG_LOGGER_ERROR(
                         m_logger, "SM{} warp {} 0x{:x} {}: LSU cmd error, MEMADDR {:x} mask={:x}",
-                        sm_id, cmd->warp_id, cmd->instr.currentpc, fmt::streamed(cmd->instr),
+                        sm_id, cmd->warp_id, cmd->instr.currentpc, cmd->instr,
                         fmt::join(*cmd->addr, " "), cmd->mask.to_uint()
                     );
                 } // else: mem is busy, cmd needs to wait
@@ -391,17 +361,10 @@ void BASE::lsu_main() { // LSU sc_thread
         // 4. 对于MSHR声明已完成的访存，按照登记值施加额外的延迟
         //
         for (auto& mshr_item : m_lsu_mshr) {
-            if (mshr_item.valid && mshr_item.finished_mask.and_reduce() && mshr_item.delay > 0) {
+            // perf测试表明sc_bv的and_reduce方法耗时异常长，故等效替换掉
+            const bool and_reduce = (mshr_item.finished_mask.to_uint() == hw_num_thread_mask);
+            if (mshr_item.valid && and_reduce && mshr_item.delay > 0) {
                 mshr_item.delay--; // 按照之前的登记值施加额外的延迟
-            }
-            if (mshr_item.valid && mshr_item.instr.currentpc == 0x800000b8) {
-#ifdef SPIKE_OUTPUT
-                // SPDLOG_LOGGER_TRACE(
-                //     m_logger, "SM{} warp {} 0x{:x} {}: MSHR finish_mask = {:x}", sm_id,
-                //     mshr_item.warp_id, mshr_item.instr.currentpc, fmt::streamed(mshr_item.instr),
-                //     mshr_item.finished_mask.to_uint()
-                // );
-#endif
             }
         }
 
@@ -409,12 +372,13 @@ void BASE::lsu_main() { // LSU sc_thread
         // 5. 每周期从MSHR中取出一个完成的访存，发向pipeline的下一级
         //
         for (auto& mshr_item : m_lsu_mshr) {
-            if (mshr_item.valid && mshr_item.finished_mask.and_reduce()) { // memory access done
+            if (mshr_item.valid && mshr_item.finished_mask.to_uint() == hw_num_thread_mask) {
+                // memory access done
 #ifdef SPIKE_OUTPUT
-                // SPDLOG_LOGGER_TRACE(
-                //     m_logger, "SM{} warp {} 0x{:x} {} MEMDONE, MSHR item cleared", sm_id,
-                //     mshr_item.warp_id, mshr_item.instr.currentpc, fmt::streamed(mshr_item.instr)
-                // );
+                SPDLOG_LOGGER_TRACE(
+                    m_logger, "SM{} warp {} 0x{:x} {} MEMDONE, MSHR item cleared", sm_id,
+                    mshr_item.warp_id, mshr_item.instr.currentpc, mshr_item.instr
+                );
 #endif
                 if (mshr_item.instr.ddd.wxd || mshr_item.instr.ddd.wvd) { // to writeback
                     lsu_out_t lsu_out;
@@ -432,3 +396,35 @@ void BASE::lsu_main() { // LSU sc_thread
         ev_lsufifo_pushed.notify();
     }
 }
+
+// L1读操作完成的回调函数(global memory)
+void BASE::lsu_l1d_read_callback(std::unique_ptr<lsu_mem_cmd_t> cmd) {
+    assert(cmd && cmd->opcode == L1D_OPCODE_READ);
+    assert(m_lsu_mshr.at(cmd->instrId).valid);
+    auto& mshr_item = m_lsu_mshr[cmd->instrId];
+    for (int i = 0; i < hw_num_thread; i++) {
+        if (cmd->mask[i]) {
+            assert(!mshr_item.finished_mask[i]);
+            mshr_item.data[i] = byte_extract(
+                cmd->data[i], mshr_item.wordOffset1H->at(i),
+                m_lsu_mshr[cmd->instrId].instr.ddd.mem_unsigned
+            );
+        }
+    }
+    m_lsu_mshr[cmd->instrId].finished_mask |= cmd->mask;
+};
+
+// L1写操作完成的回调函数(global memory)
+void BASE::lsu_l1d_write_callback(std::unique_ptr<lsu_mem_cmd_t> cmd) {
+    assert(cmd && cmd->opcode == L1D_OPCODE_WRITE);
+    assert(m_lsu_mshr.at(cmd->instrId).valid);
+    auto& mshr_item = m_lsu_mshr[cmd->instrId];
+    // TODO: 目前Ramulator的写操作只表明成功接受，不在执行完毕后回调
+    // 此回调函数实质上在Ramulator接受写操作后就被回调
+    for (int i = 0; i < hw_num_thread; i++) {
+        if (cmd->mask[i]) {
+            assert(mshr_item.finished_mask[i] == 0);
+        }
+    }
+    mshr_item.finished_mask |= cmd->mask;
+};

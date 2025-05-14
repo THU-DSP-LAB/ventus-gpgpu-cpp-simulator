@@ -2,6 +2,7 @@
 #define _PARAMETERS_H
 
 #include <array>
+#include <fmt/ostream.h>
 #include <memory>
 #define SC_INCLUDE_DYNAMIC_PROCESSES
 #define SPIKE_OUTPUT
@@ -30,6 +31,7 @@ inline constexpr unsigned MAX_CTA_PER_CORE
 inline constexpr int MAX_WARP_PER_BLOCK = hw_num_warp; // 每个block支持的最大warp数目
 inline constexpr int xLen = 32;
 inline constexpr long unsigned int hw_num_thread = 32; // 每个warp支持的最大thread数目
+inline constexpr uint32_t hw_num_thread_mask = 0xFFFFFFFF;
 inline constexpr int ireg_bitsize = 10;
 inline constexpr int ireg_size = 1 << ireg_bitsize;
 inline constexpr int INS_LENGTH = 32; // the length of per instruction
@@ -1028,7 +1030,7 @@ private:
         return oss.str();
     }
 };
-// typename I_TYPE sc_uint<INS_LENGTH>;
+template <> struct fmt::formatter<I_TYPE> : fmt::ostream_formatter { };
 
 typedef struct lsu_mem_cmd_t {
     bool is_shared_memory; // 访问的是shared_memory(LDS)还是global memory

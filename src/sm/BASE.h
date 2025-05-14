@@ -84,6 +84,8 @@ public:
     void VFPU_CALC();
     void VFPU_CTRL();
     void lsu_main();
+    void lsu_l1d_read_callback(std::unique_ptr<lsu_mem_cmd_t> cmd);
+    void lsu_l1d_write_callback(std::unique_ptr<lsu_mem_cmd_t> cmd);
     void lsu_new_req();
     void SIMT_STACK(int warp_id);
     void CSR_IN();

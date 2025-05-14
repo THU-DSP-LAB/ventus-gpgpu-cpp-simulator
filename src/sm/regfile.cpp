@@ -6,14 +6,14 @@ std::pair<int, int> BASE::reg_arbiter(
     std::array<std::array<bool, 3>, OPCFIFO_SIZE>& ready_arr,        // opc_ready
     int bank_id, std::array<int, BANK_NUM>& REGcurrentIdx, std::array<int, BANK_NUM>& read_bank_addr
 ) {
-    const int rows = OPCFIFO_SIZE; // = addr_arr.size()
-    const int cols = 3;            // = addr_arr[0].size(), 每个opc_fifo_t四个待取元素
-    const int size = rows * cols;
+    constexpr int rows = OPCFIFO_SIZE; // = addr_arr.size()
+    constexpr int cols = 3;            // = addr_arr[0].size(), 每个opc_fifo_t四个待取元素
+    constexpr int size = rows * cols;
+    const int index_last = REGcurrentIdx[bank_id];
     std::pair<int, int> result(-1, -1); // 默认值表示没有找到有效数据
     int index, i, j;
-    for (int idx = REGcurrentIdx[bank_id] % size; idx < size + REGcurrentIdx[bank_id] % size;
-         idx++) {
-        index = idx % size;
+    for (int idx = 0; idx < size; idx++) {
+        index = (idx + index_last + 1) % size; // round-robin
         i = index / cols;
         j = index % cols;
         if (valid_arr[i][j] == true) {
@@ -25,7 +25,7 @@ std::pair<int, int> BASE::reg_arbiter(
                 result.first = i;
                 result.second = j;
                 ready_arr[i][j] = true;
-                REGcurrentIdx[bank_id] = index + 1;
+                REGcurrentIdx[bank_id] = index;
                 break;
             }
         }
