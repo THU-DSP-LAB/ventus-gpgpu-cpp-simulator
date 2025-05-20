@@ -1,29 +1,30 @@
-#include "BASE.h"
+#include "subcore.hpp"
+#include <spdlog/spdlog.h>
 
-void BASE::DECODE(int warp_id) {
+void Subcore::DECODE(int warp_id) {
     I_TYPE tmpins;
     sc_bv<32> scinsbit;
     bool WILLregext = false;
     int ext1, ext2, ext3, extd, extimm;
     auto& hwarp = m_hw_warps[warp_id];
     while (true) {
-        // std::cout << "SM" << sm_id << " warp" << warp_id << " DECODE: finish at " <<
+        // std::cout << "SM" << m_sm_id << " warp" << warp_id << " DECODE: finish at " <<
         // sc_time_stamp() << "," << sc_delta_count_at_current_time() << std::endl;
         wait(hwarp->ev_decode);
 
         if (hwarp->jump == 1 || hwarp->simtstk_jump == 1 || hwarp->endprg_flush_pipe) {
             hwarp->fetch_valid2 = false;
             WILLregext = false;
-        } else { // std::cout << "SM" << sm_id << " warp" << warp_id << " DECODE: start at " <<
+        } else { // std::cout << "SM" << m_sm_id << " warp" << warp_id << " DECODE: start at " <<
                  // sc_time_stamp() << "," << sc_delta_count_at_current_time() << std::endl;
             tmpins = I_TYPE(hwarp->fetch_ins, hwarp->pc.read());
             // if (sm_id == 0 && warp_id == 0)
-            //     std::cout << "SM" << sm_id << " warp" << warp_id << " DECODE ins.bit=" <<
+            //     std::cout << "SM" << m_sm_id << " warp" << warp_id << " DECODE ins.bit=" <<
             //     std::hex << tmpins.origin32bit << std::dec << " at " << sc_time_stamp() << "," <<
             //     sc_delta_count_at_current_time() << std::endl;
 
             bool foundBitIns = 0;
-            for (const auto& instable_item : instable_vec) {
+            for (const auto& instable_item : *m_instruction_table) {
                 std::bitset<32> masked_ins
                     = std::bitset<32>(tmpins.origin32bit) & instable_item.mask;
                 // std::cout << "warp" << warp_id << " DECODE: mask=" << instable_item.mask << ",
@@ -38,9 +39,10 @@ void BASE::DECODE(int warp_id) {
             }
             if (!foundBitIns) {
                 tmpins.op = INVALID_;
-                std::cout << "warp" << warp_id << " DECODE error: invalid bit ins " << tmpins
-                          << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time()
-                          << std::endl;
+                SPDLOG_LOGGER_ERROR(
+                    m_logger, "SM {} warp {} 0x{:x} {} DECODE invalid bit ins", m_sm_id,
+                    warpid_convert(m_subcore_id, warp_id), tmpins.currentpc, tmpins
+                );
                 assert(0);
             } else {
                 // std::cout << "warp" << warp_id << " DECODE: match ins bit=" <<
@@ -48,9 +50,6 @@ void BASE::DECODE(int warp_id) {
                 // magic_enum::enum_name((OP_TYPE)tmpins.op) << " at " << sc_time_stamp() << "," <<
                 // sc_delta_count_at_current_time() << std::endl;
             }
-
-            tmpins.ddd = decode_table[(OP_TYPE)tmpins.op];
-            tmpins.ddd.decode_ext(tmpins.origin32bit);
 
             if (tmpins.op == (int)REGEXT_) {
                 hwarp->fetch_valid2 = false;
@@ -62,11 +61,11 @@ void BASE::DECODE(int warp_id) {
                 ext1 = extractBits32(tmpins.origin32bit, 25, 23);
                 extd = extractBits32(tmpins.origin32bit, 22, 20);
 #ifdef SPIKE_OUTPUT
-                std::cout << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex
-                          << tmpins.currentpc << tmpins
-                          << " DECODE: set regext(s3,s2,s1,d)=" << ext3 << "," << ext2 << ","
-                          << ext1 << "," << extd << " at " << sc_time_stamp() << ","
-                          << sc_delta_count_at_current_time() << std::endl;
+                SPDLOG_LOGGER_TRACE(
+                    m_logger, "SM {} warp {} 0x{:x} {} REGEXT(s3,s2,s1,d)={},{},{},{}", m_sm_id,
+                    warpid_convert(m_subcore_id, warp_id), tmpins.currentpc, tmpins, ext3, ext2,
+                    ext1, extd
+                );
 #endif
             } else if (tmpins.op == (int)REGEXTI_) {
                 hwarp->fetch_valid2 = false;
@@ -78,13 +77,15 @@ void BASE::DECODE(int warp_id) {
                 ext1 = 0;
                 extd = extractBits32(tmpins.origin32bit, 22, 20);
 #ifdef SPIKE_OUTPUT
-                std::cout << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex
-                          << tmpins.currentpc << tmpins
-                          << " DECODE: set regexti(s3,s2,s1,d)=" << ext3 << "," << ext2 << ","
-                          << ext1 << "," << extd << " at " << sc_time_stamp() << ","
-                          << sc_delta_count_at_current_time() << std::endl;
+                SPDLOG_LOGGER_TRACE(
+                    m_logger, "SM {} warp {} 0x{:x} {} REGEXTI(s3,s2,s1,d)={},{},{},{}", m_sm_id,
+                    warpid_convert(m_subcore_id, warp_id), tmpins.currentpc, tmpins, ext3, ext2,
+                    ext1, extd
+                );
 #endif
-            } else {
+            } else { // op != REGEXT_ && op != REGEXTI_
+                tmpins.ddd = m_decode_table->at((OP_TYPE)tmpins.op);
+                tmpins.ddd.decode_ext(tmpins.origin32bit);
                 hwarp->fetch_valid2 = hwarp->fetch_valid12;
                 if (tmpins.ddd.tc)
                     tmpins.ddd.sel_execunit = DecodeParams::TC;
@@ -119,18 +120,19 @@ void BASE::DECODE(int warp_id) {
                     tmpins.s1 += ext1 << 5;
                     tmpins.s2 += ext2 << 5;
                     // 这里与Chisel实现有所不同，Chisel要么使用extd，要么就不扩展（认定ext3=0）
-                    // c.reg_idx3 := Mux(c.fp & !c.isvec, Cat(0.U(3.W),io.inst(i)(31, 27)), Cat(regextInfo(i).regPrefix(0) ,io.inst(i)(11, 7)))
+                    // c.reg_idx3 := Mux(c.fp & !c.isvec, Cat(0.U(3.W),io.inst(i)(31, 27)),
+                    // Cat(regextInfo(i).regPrefix(0) ,io.inst(i)(11, 7)))
                     tmpins.s3 += ((tmpins.ddd.fp && !tmpins.ddd.isvec) ? ext3 : extd) << 5;
                     tmpins.d += extd << 5;
                     WILLregext = false;
 #ifdef SPIKE_OUTPUT
-                    std::cout << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex
-                              << tmpins.currentpc << tmpins
-                              << " DECODE: regext(s3,s2,s1,d)=" << ext3 << "," << ext2 << ","
-                              << ext1 << "," << extd << " is used to set s3,s2,s1,d=" << tmpins.s3
-                              << "," << tmpins.s2 << "," << tmpins.s1 << "," << tmpins.d << " at "
-                              << sc_time_stamp() << "," << sc_delta_count_at_current_time()
-                              << std::endl;
+                    SPDLOG_LOGGER_TRACE(
+                        m_logger,
+                        "SM {} warp {} 0x{:x} {} REGEXT(s3,s2,s1,d)={},{},{},{} is used to set "
+                        "s3,s2,s1,d={},{},{},{}",
+                        m_sm_id, warp_id, tmpins.currentpc, tmpins, ext3, ext2, ext1, extd,
+                        tmpins.s3, tmpins.s2, tmpins.s1, tmpins.d
+                    );
 #endif
                 }
                 scinsbit = tmpins.origin32bit;

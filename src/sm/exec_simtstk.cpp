@@ -1,4 +1,5 @@
-#include "BASE.h"
+#include "subcore.hpp"
+#include <spdlog/spdlog.h>
 
 // 函数用于比较两个 sc_bv 中“1”的个数
 int compareOnesInSCBV(
@@ -29,7 +30,7 @@ bool checkMaskAllZero(const sc_bv<hw_num_thread>& mask, const sc_bv<hw_num_threa
     return true; // 如果所有对应位都满足条件，返回 true
 }
 
-void BASE::SIMT_STACK(int warp_id) {
+void Subcore::SIMT_STACK(int warp_id) {
     simtstack_t newstkelem;
     I_TYPE readins;
     simtstack_t tmpstkelem;
@@ -43,28 +44,29 @@ void BASE::SIMT_STACK(int warp_id) {
             hwarp->vbran_sig = true;
             readins = vbranch_ins.read();
             if (emito_simtstk && emitins_warpid == warp_id)
-                std::cout << "SM" << sm_id << " warp " << warp_id
+                std::cout << "SM" << m_sm_id << " warp " << warp_id
                           << " SIMT-STACK error: receive join & beq at the same time at "
                           << sc_time_stamp() << "," << sc_delta_count_at_current_time()
                           << std::endl;
 
 #ifdef SPIKE_OUTPUT
-            std::cout << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex
-                      << readins.currentpc << std::dec << " " << readins
-                      << " from VALU, current mask=" << readins.mask
-                      << ", branch_mask=" << branch_elsemask.read() << ", stack-size=" << std::dec
-                      << hwarp->IPDOM_stack.size() << " at " << sc_time_stamp() << ","
-                      << sc_delta_count_at_current_time() << std::endl;
+            SPDLOG_LOGGER_TRACE(
+                m_logger,
+                "SM {} warp {} 0x{:x} {} from VALU, current_mask={:X}, branch_mask={:X}, "
+                "stack-size={}",
+                m_sm_id, warpid_convert(m_subcore_id, warp_id), readins.currentpc, readins,
+                readins.mask.to_uint(), branch_elsemask.read().to_uint(), hwarp->IPDOM_stack.size()
+            );
 #endif
             if (checkMaskAllZero(
                     readins.mask, branch_elsemask.read()
                 )) { // VALU计算出的elsemask全为0，不对stack操作，不跳转
 #ifdef SPIKE_OUTPUT
-                std::cout << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex
-                          << readins.currentpc << std::dec << " " << readins << " join "
-                          << readins.mask << ", stack-size=" << std::dec
-                          << hwarp->IPDOM_stack.size() << " at " << sc_time_stamp() << ","
-                          << sc_delta_count_at_current_time() << std::endl;
+                SPDLOG_LOGGER_TRACE(
+                    m_logger, "SM {} warp {} 0x{:x} {} join mask={:X} stack-size={}", m_sm_id,
+                    warpid_convert(m_subcore_id, warp_id), readins.currentpc, readins,
+                    readins.mask.to_uint(), hwarp->IPDOM_stack.size()
+                );
 #endif
             } else if (checkMaskAllZero(
                            readins.mask, branch_ifmask.read()
@@ -75,12 +77,13 @@ void BASE::SIMT_STACK(int warp_id) {
                 hwarp->current_mask = branch_elsemask; // 其实不变
                 hwarp->simtstk_jump = true;
 #ifdef SPIKE_OUTPUT
-                std::cout << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex
-                          << readins.currentpc << std::dec << " " << readins
-                          << " goto elsepath(jump) mask=" << branch_elsemask << " jumpTO 0x"
-                          << std::hex << branch_elsepc << std::dec << ", stack-size=" << std::dec
-                          << hwarp->IPDOM_stack.size() << " at " << sc_time_stamp() << ","
-                          << sc_delta_count_at_current_time() << std::endl;
+                SPDLOG_LOGGER_TRACE(
+                    m_logger,
+                    "SM {} warp {} 0x{:x} {} goto elsepath(jump) mask={:X} jumpTO 0x{:x}, "
+                    "stack-size={}",
+                    m_sm_id, warpid_convert(m_sm_id, warp_id), readins.currentpc, readins,
+                    branch_elsemask.read().to_uint(), branch_elsepc, hwarp->IPDOM_stack.size()
+                );
 #endif
             } else {
                 if (compareOnesInSCBV(
@@ -104,12 +107,12 @@ void BASE::SIMT_STACK(int warp_id) {
                     // " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() <<
                     // std::endl;
 #ifdef SPIKE_OUTPUT
-                    std::cout << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex
-                              << readins.currentpc << std::dec << " " << readins
-                              << " goto ifpath(pc+4) mask=" << branch_ifmask
-                              << ", stack-size=" << std::dec << hwarp->IPDOM_stack.size() << " at "
-                              << sc_time_stamp() << "," << sc_delta_count_at_current_time()
-                              << std::endl;
+                    SPDLOG_LOGGER_TRACE(
+                        m_logger,
+                        "SM {} warp {} 0x{:x} {} goto ifpath(pc+4) mask={:X} stack-size={}",
+                        m_sm_id, warpid_convert(m_subcore_id, warp_id), readins.currentpc, readins,
+                        branch_ifmask.read().to_uint(), hwarp->IPDOM_stack.size()
+                    );
 #endif
                 } else { // else_mask线程数更少，先跳转到else path
                     hwarp->simtstk_jumpaddr = branch_elsepc;
@@ -132,13 +135,13 @@ void BASE::SIMT_STACK(int warp_id) {
                     // " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() <<
                     // std::endl;
 #ifdef SPIKE_OUTPUT
-                    std::cout << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex
-                              << readins.currentpc << std::dec << " " << readins
-                              << " going to elsepath(jump) mask=" << branch_elsemask << " jumpTO 0x"
-                              << std::hex << branch_elsepc << std::dec
-                              << ", stack-size=" << std::dec << hwarp->IPDOM_stack.size() << " at "
-                              << sc_time_stamp() << "," << sc_delta_count_at_current_time()
-                              << std::endl;
+                    SPDLOG_LOGGER_TRACE(
+                        m_logger,
+                        "SM {} warp {} 0x{:x} {} goto elsepath(jump) mask={:X} jumpTO 0x{:x}, "
+                        "stack-size={}",
+                        m_sm_id, warpid_convert(m_subcore_id, warp_id), readins.currentpc, readins,
+                        branch_elsemask.read().to_uint(), branch_elsepc.read(), hwarp->IPDOM_stack.size()
+                    );
 #endif
                 }
             }
@@ -147,11 +150,11 @@ void BASE::SIMT_STACK(int warp_id) {
         if (emito_simtstk && emitins_warpid == warp_id) // OPC发射的join指令
         {
 #ifdef SPIKE_OUTPUT
-            std::cout << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex
-                      << emit_ins.read().currentpc << std::dec << " SIMT_STK receive join ins"
-                      << emit_ins << ", stack-size=" << std::dec << hwarp->IPDOM_stack.size()
-                      << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time()
-                      << std::endl;
+            SPDLOG_LOGGER_TRACE(
+                m_logger, "SM {} warp {} 0x{:x} {} SIMTSTK receive join, stack-size={}", m_sm_id,
+                warpid_convert(m_subcore_id, warp_id), emit_ins.read().currentpc, emit_ins.read(),
+                hwarp->IPDOM_stack.size()
+            );
 #endif
             hwarp->vbran_sig = true;
             /*** 以下为分支控制 ***/
@@ -161,13 +164,14 @@ void BASE::SIMT_STACK(int warp_id) {
                 if (readins.currentpc == tmpstkelem.rpc) {
                     hwarp->IPDOM_stack.pop();
 #ifdef SPIKE_OUTPUT
-                    std::cout << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex
-                              << emit_ins.read().currentpc << " " << emit_ins
-                              << " jump=true, jumpTO 0x" << std::hex << tmpstkelem.nextpc
-                              << ", mask change from " << hwarp->current_mask << " to "
-                              << tmpstkelem.nextmask << ", stack-size=" << std::dec
-                              << hwarp->IPDOM_stack.size() << " at " << sc_time_stamp() << ","
-                              << sc_delta_count_at_current_time() << std::endl;
+                    SPDLOG_LOGGER_TRACE(
+                        m_logger,
+                        "SM {} warp {} 0x{:x} {} SIMTSTK jump=true, jumpTO 0x{:x}, "
+                        "mask change from {:X} to {:X}, stack-size={}",
+                        m_sm_id, warpid_convert(m_subcore_id, warp_id), emit_ins.read().currentpc,
+                        emit_ins.read(), tmpstkelem.nextpc, hwarp->current_mask.read().to_uint(), tmpstkelem.nextmask.to_uint(),
+                        hwarp->IPDOM_stack.size()
+                    );
 #endif
                     hwarp->simtstk_jumpaddr = tmpstkelem.nextpc;
                     hwarp->current_mask = tmpstkelem.nextmask;
@@ -176,12 +180,13 @@ void BASE::SIMT_STACK(int warp_id) {
                 } else {
 // 栈顶元素不是当前rpc，什么都不做。在循环时适用
 #ifdef SPIKE_OUTPUT
-                    std::cout << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex
-                              << emit_ins.read().currentpc << std::dec
-                              << " SIMT_STK receive join ins and nothing to do"
-                              << ", stack-size=" << std::dec << hwarp->IPDOM_stack.size() << " at "
-                              << sc_time_stamp() << "," << sc_delta_count_at_current_time()
-                              << std::endl;
+                    SPDLOG_LOGGER_TRACE(
+                        m_logger,
+                        "SM {} warp {} 0x{:x} {} SIMTSTK receive join ins and nothing to do, "
+                        "stack-size={}",
+                        m_sm_id, warpid_convert(m_subcore_id, warp_id), emit_ins.read().currentpc,
+                        emit_ins.read(), hwarp->IPDOM_stack.size()
+                    );
 #endif
                 }
             } else {

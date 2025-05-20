@@ -1,6 +1,6 @@
-#include "BASE.h"
+#include "subcore.hpp"
 
-void BASE::MUL_IN() {
+void Subcore::MUL_IN() {
     mul_in_t new_data;
     int a_delay, b_delay;
     while (true) {
@@ -56,7 +56,7 @@ void BASE::MUL_IN() {
     }
 }
 
-void BASE::MUL_CALC() {
+void Subcore::MUL_CALC() {
     mulfifo_elem_num = 0;
     mulfifo_empty = 1;
     muleqa_triggered = false;
@@ -124,7 +124,7 @@ void BASE::MUL_CALC() {
     }
 }
 
-void BASE::MUL_CTRL() {
+void Subcore::MUL_CTRL() {
     mul_ready = true;
     mul_ready_old = true;
     muleqb_triggered = false;

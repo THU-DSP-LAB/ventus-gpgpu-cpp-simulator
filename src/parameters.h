@@ -1,6 +1,7 @@
 #ifndef _PARAMETERS_H
 #define _PARAMETERS_H
 
+#include "ventus_cyclesim.h"
 #include <array>
 #include <fmt/ostream.h>
 #include <memory>
@@ -25,7 +26,10 @@
 
 // #include <format>  // gcc13支持std::format
 
-inline constexpr int hw_num_warp = 8; // 每个SM的硬件warp数量
+inline constexpr unsigned SUBCORE_NUM = 2;
+inline constexpr unsigned SUBCORE_WARP_NUM = 4;
+
+inline constexpr int hw_num_warp = SUBCORE_WARP_NUM * SUBCORE_NUM; // 每个SM的硬件warp数量
 inline constexpr unsigned MAX_CTA_PER_CORE
     = hw_num_warp; // 每个core支持的最大cta数目，不应大于hw_num_warp
 inline constexpr int MAX_WARP_PER_BLOCK = hw_num_warp; // 每个block支持的最大warp数目
@@ -50,6 +54,8 @@ inline constexpr unsigned LSU_MSHR_SIZE = hw_num_warp;
 inline constexpr unsigned L1D_NUM_SET = 256;       // L1 D-cache的组数
 inline constexpr unsigned L1D_NUM_WAY = 2;         // L1 D-cache的组相联度
 inline constexpr unsigned L1D_BLOCK_NUM_WORD = 32; // 每个cache block包含多少个32bit
+using vaddr_t = uint32_t;
+using paddr_t = uint32_t;
 
 // 核心流水线与L1D之间的接口 opcode & param
 inline constexpr uint8_t L1D_OPCODE_READ = 0x0;
@@ -1361,54 +1367,12 @@ struct lsu_in_t {
     I_TYPE ins;
     int warp_id;
     std::array<reg_t, hw_num_thread> rsv1_data, rsv2_data, rsv3_data;
-
-    // below 3 data is to store
-    reg_t rds1_data;
-    std::array<reg_t, hw_num_thread> rdv1_data;
-    std::array<float, hw_num_thread> rdf1_data;
 };
 struct lsu_out_t {
     I_TYPE ins;
     int warp_id;
-    reg_t rds1_data;
-    std::array<reg_t, hw_num_thread> rdv1_data;
-    std::array<float, hw_num_thread> rdf1_data;
-    bool operator==(const lsu_out_t& rhs) const {
-        return rhs.ins == ins && rhs.rds1_data == rds1_data && rhs.rdv1_data == rdv1_data
-            && rhs.rdf1_data == rdf1_data;
-    }
-    lsu_out_t& operator=(const lsu_out_t& rhs) {
-        ins = rhs.ins;
-        rds1_data = rhs.rds1_data;
-        rdv1_data = rhs.rdv1_data;
-        rdf1_data = rhs.rdf1_data;
-        warp_id = rhs.warp_id;
-        return *this;
-    }
-    friend ostream& operator<<(ostream& os, lsu_out_t const& v) {
-        os << "{" << v.ins << ";" << v.rds1_data << ";";
-        auto it = v.rdv1_data.begin();
-        while (it != v.rdv1_data.end()) {
-            os << *it << " ";
-            it = std::next(it);
-        }
-        os << ";";
-        auto itf = v.rdf1_data.begin();
-        while (itf != v.rdf1_data.end()) {
-            os << *itf << " ";
-            itf = std::next(itf);
-        }
-        os << "}";
-        return os;
-    }
-    friend void sc_trace(sc_trace_file* tf, const lsu_out_t& v, const std::string& NAME) {
-        sc_trace(tf, v.ins, NAME + ".ins");
-        sc_trace(tf, v.rds1_data, NAME + ".rds1_data");
-        for (int i = 0; i < hw_num_thread; i++)
-            sc_trace(tf, v.rdv1_data[i], NAME + ".rdv1_data(" + std::to_string(i) + ")");
-
-        sc_trace(tf, v.warp_id, NAME + ".warp_id");
-    }
+    std::unique_ptr<std::array<reg_t, hw_num_thread>> rdv1_data;
+    bool operator==(const lsu_out_t& rhs) const = default;
 };
 
 class simtstack_t {

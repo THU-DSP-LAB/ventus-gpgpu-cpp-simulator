@@ -1,5 +1,7 @@
 #include "top_gpgpu.hpp"
+#include "context_model.hpp"
 #include "parameters.h"
+#include <cstring>
 #include <functional>
 #include <memory>
 #include <spdlog/common.h>
@@ -30,10 +32,13 @@ private:
     append_func_t append_func_;
 };
 
+extern std::shared_ptr<std::map<OP_TYPE, decodedat>> gen_decodetable();
+extern std::shared_ptr<std::vector<instable_t>> gen_instruction_table();
+
 Top_gpgpu::Top_gpgpu(const char* ramulator_config_filename)
     : m_clk("clk", PERIOD, SC_NS, 0.5, 0, SC_NS, false)
     , m_rstn("rst_n")
-    , m_ramulator(std::move(std::make_unique<RamulatorWrapper>(ramulator_config_filename))) {
+    , m_ramulator(std::make_unique<RamulatorWrapper>(ramulator_config_filename)) {
 
     m_logger = std::make_shared<spdlog::logger>(
         "Ventus-CycleSim-spdlogger", std::make_shared<spdlog::sinks::stdout_sink_mt>()
@@ -45,6 +50,9 @@ Top_gpgpu::Top_gpgpu(const char* ramulator_config_filename)
         );
     }));
 
+    auto instruction_table = gen_instruction_table();
+    auto decode_table = gen_decodetable();
+
     m_ramulator->clk(m_clk);
     m_gmem = m_ramulator->get_memory();
     m_sv39 = std::make_unique<SV39_supervisor>(m_gmem, m_logger);
@@ -55,16 +63,12 @@ Top_gpgpu::Top_gpgpu(const char* ramulator_config_filename)
                                     i](std::unique_ptr<lsu_mem_cmd_t>& cmd,
                                        std::function<void(std::unique_ptr<lsu_mem_cmd_t>)> callback
                                    ) { return m_ramulator->request(i, cmd, callback); };
-        m_sm.push_back(
-            new BASE(("SM" + std::to_string(i)).c_str(), i, m_gmem, ramulator_interface, m_logger)
-        );
+        m_sm.push_back(new BASE(
+            fmt::format("SM{}", i).c_str(), i, instruction_table, decode_table, m_gmem,
+            ramulator_interface, m_logger
+        ));
         m_sm[i]->clk(m_clk);
         m_sm[i]->rst_n(m_rstn);
-        for (auto& hwarp : m_sm[i]->m_hw_warps) {
-            if (hwarp != nullptr) {
-                m_sm[i]->ev_warp_dispatch_list &= hwarp->ev_warp_dispatch;
-            }
-        }
     }
     m_cta = new CTA_Scheduler("CTA_Scheduler", m_sm.data(), m_logger);
     for (int i = 0; i < NUM_SM; i++) {

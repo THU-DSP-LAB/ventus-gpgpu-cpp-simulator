@@ -1,6 +1,7 @@
-#include "BASE.h"
+#include "subcore.hpp"
+#include <spdlog/spdlog.h>
 
-void BASE::SALU_IN() {
+void Subcore::SALU_IN() {
     salu_in_t new_data;
     int a_delay, b_delay;
     while (true) {
@@ -68,12 +69,12 @@ void BASE::SALU_IN() {
     }
 }
 
-void BASE::SALU_CALC() {
+void Subcore::SALU_CALC() {
     salufifo_elem_num = 0;
     salufifo_empty = 1;
     salueqa_triggered = false;
     bool succeed;
-    int jump_addr_tmp;
+    vaddr_t jump_addr_tmp;
     while (true) {
         wait(salu_eva | salu_eqa.default_event());
         if (salu_eqa.default_event().triggered()) {
@@ -104,11 +105,11 @@ void BASE::SALU_CALC() {
                 if (salutmp1.ins.ddd.branch == DecodeParams::branch_t::B_J) // jal
                 {
 #ifdef SPIKE_OUTPUT
-                    std::cout << "SM" << sm_id << " warp " << salutmp1.warp_id << " 0x" << std::hex
-                              << salutmp1.ins.currentpc << " " << salutmp1.ins
-                              << " jump=true, jumpTO 0x" << std::hex << salutmp1.rss3_data
-                              << std::dec << " at " << sc_time_stamp() << ","
-                              << sc_delta_count_at_current_time() << std::endl;
+                    SPDLOG_LOGGER_TRACE(
+                        m_logger, "SM {} warp {} 0x{:x} {} JUMP=true, jumpTO 0x{:x}",
+                        m_sm_id, salutmp1.warp_id, salutmp1.ins.currentpc, salutmp1.ins,
+                        salutmp1.rss3_data
+                    );
 #endif
                     hwarp->branch_sig = true;
                     hwarp->jump = 1;
@@ -117,31 +118,31 @@ void BASE::SALU_CALC() {
                 {
                     jump_addr_tmp = (salutmp1.rss3_data + salutmp1.ins.imm) & (~1);
 #ifdef SPIKE_OUTPUT
-                    std::cout << "SM" << sm_id << " warp " << salutmp1.warp_id << " 0x" << std::hex
-                              << salutmp1.ins.currentpc << " " << salutmp1.ins
-                              << " jump=true, jumpTO 0x" << std::hex << jump_addr_tmp << std::dec
-                              << " at " << sc_time_stamp() << ","
-                              << sc_delta_count_at_current_time() << std::endl;
+                    SPDLOG_LOGGER_TRACE(
+                        m_logger, "SM {} warp {} 0x{:x} {} JUMP=true, jumpTO 0x{:x}",
+                        m_sm_id, salutmp1.warp_id, salutmp1.ins.currentpc, salutmp1.ins,
+                        jump_addr_tmp
+                    );
 #endif
                     hwarp->branch_sig = true;
                     hwarp->jump = 1;
                     hwarp->jump_addr = jump_addr_tmp;
                 } else {
 #ifdef SPIKE_OUTPUT
-                    if (salutmp1.warp_id == 2 && sm_id == 0) {
-                        std::cout << "SM" << sm_id << " warp " << salutmp1.warp_id << " 0x"
-                                  << std::hex << salutmp1.ins.currentpc << " " << salutmp1.ins
-                                  << ", rs1=" << std::hex << salutmp1.rss1_data
-                                  << ", rs2=" << salutmp1.rss2_data << std::dec << " at "
-                                  << sc_time_stamp() << "," << sc_delta_count_at_current_time()
-                                  << std::endl;
-                        std::cout << "↑currently, rs1_addr=" << salutmp1.ins.s1
-                                  << ",rs2_addr=" << salutmp1.ins.s2
-                                  << ",rd_addr=" << salutmp1.ins.d
-                                  << ", s_regfile[rs1_addr]=" << hwarp->s_regfile[salutmp1.ins.s1]
-                                  << ", s_regfile[rs2_addr]=" << hwarp->s_regfile[salutmp1.ins.s2]
-                                  << std::endl;
-                    }
+                    // if (salutmp1.warp_id == 2 && m_sm_id == 0) {
+                    //     std::cout << "SM" << m_sm_id << " warp " << salutmp1.warp_id << " 0x"
+                    //               << std::hex << salutmp1.ins.currentpc << " " << salutmp1.ins
+                    //               << ", rs1=" << std::hex << salutmp1.rss1_data
+                    //               << ", rs2=" << salutmp1.rss2_data << std::dec << " at "
+                    //               << sc_time_stamp() << "," << sc_delta_count_at_current_time()
+                    //               << std::endl;
+                    //     std::cout << "↑currently, rs1_addr=" << salutmp1.ins.s1
+                    //               << ",rs2_addr=" << salutmp1.ins.s2
+                    //               << ",rd_addr=" << salutmp1.ins.d
+                    //               << ", s_regfile[rs1_addr]=" << hwarp->s_regfile[salutmp1.ins.s1]
+                    //               << ", s_regfile[rs2_addr]=" << hwarp->s_regfile[salutmp1.ins.s2]
+                    //               << std::endl;
+                    // }
 #endif
                 }
 
@@ -222,8 +223,10 @@ void BASE::SALU_CALC() {
             salufifo.push(salutmp2);
         } else { // for branch instructions
 #ifdef SPIKE_OUTPUT
-            std::cout << "SM" << sm_id << " warp " << salutmp1.warp_id << " 0x" << std::hex
-                      << salutmp1.ins.currentpc << " " << salutmp1.ins << " jump=";
+            std::string log_str = fmt::format(
+                "SM {} warp {} 0x{:x} {} mask={:X}, JUMP=", m_sm_id, salutmp1.warp_id,
+                salutmp1.ins.currentpc, salutmp1.ins, salutmp1.ins.mask.to_uint64()
+            );
 #endif
             switch (salutmp1.ins.ddd.alu_fn) {
             // case BEQ_:
@@ -233,14 +236,11 @@ void BASE::SALU_CALC() {
                     hwarp->jump = 1;
                     hwarp->jump_addr = salutmp1.rss3_data;
 #ifdef SPIKE_OUTPUT
-                    std::cout << "true, jumpTO 0x" << std::hex << salutmp1.rss3_data << std::dec
-                              << " at " << sc_time_stamp() << ","
-                              << sc_delta_count_at_current_time() << std::endl;
+                    log_str += fmt::format("true, jumpTO 0x{:x}", salutmp1.rss3_data.to_uint());
 #endif
                 } else {
 #ifdef SPIKE_OUTPUT
-                    std::cout << "false at " << sc_time_stamp() << ","
-                              << sc_delta_count_at_current_time() << std::endl;
+                    log_str += "false";
 #endif
                 }
                 break;
@@ -252,14 +252,11 @@ void BASE::SALU_CALC() {
                     hwarp->jump = 1;
                     hwarp->jump_addr = salutmp1.rss3_data;
 #ifdef SPIKE_OUTPUT
-                    std::cout << "true, jumpTO 0x" << std::hex << salutmp1.rss3_data << std::dec
-                              << " at " << sc_time_stamp() << ","
-                              << sc_delta_count_at_current_time() << std::endl;
+                    log_str += fmt::format("true, jumpTO 0x{:x}", salutmp1.rss3_data.to_uint());
 #endif
                 } else {
 #ifdef SPIKE_OUTPUT
-                    std::cout << "false at " << sc_time_stamp() << ","
-                              << sc_delta_count_at_current_time() << std::endl;
+                    log_str += "false";
 #endif
                 }
                 break;
@@ -271,14 +268,11 @@ void BASE::SALU_CALC() {
                     hwarp->jump = 1;
                     hwarp->jump_addr = salutmp1.rss3_data;
 #ifdef SPIKE_OUTPUT
-                    std::cout << "true, jumpTO 0x" << std::hex << salutmp1.rss3_data << std::dec
-                              << " at " << sc_time_stamp() << ","
-                              << sc_delta_count_at_current_time() << std::endl;
+                    log_str += fmt::format("true, jumpTO 0x{:x}", salutmp1.rss3_data.to_uint());
 #endif
                 } else {
 #ifdef SPIKE_OUTPUT
-                    std::cout << "false at " << sc_time_stamp() << ","
-                              << sc_delta_count_at_current_time() << std::endl;
+                    log_str += "false";
 #endif
                 }
                 break;
@@ -289,14 +283,11 @@ void BASE::SALU_CALC() {
                     hwarp->jump = 1;
                     hwarp->jump_addr = salutmp1.rss3_data;
 #ifdef SPIKE_OUTPUT
-                    std::cout << "true, jumpTO 0x" << std::hex << salutmp1.rss3_data << std::dec
-                              << " at " << sc_time_stamp() << ","
-                              << sc_delta_count_at_current_time() << std::endl;
+                    log_str += fmt::format("true, jumpTO 0x{:x}", salutmp1.rss3_data.to_uint());
 #endif
                 } else {
 #ifdef SPIKE_OUTPUT
-                    std::cout << "false at " << sc_time_stamp() << ","
-                              << sc_delta_count_at_current_time() << std::endl;
+                    log_str += "false";
 #endif
                 }
                 break;
@@ -308,14 +299,11 @@ void BASE::SALU_CALC() {
                     hwarp->jump = 1;
                     hwarp->jump_addr = salutmp1.rss3_data;
 #ifdef SPIKE_OUTPUT
-                    std::cout << "true, jumpTO 0x" << std::hex << salutmp1.rss3_data << std::dec
-                              << " at " << sc_time_stamp() << ","
-                              << sc_delta_count_at_current_time() << std::endl;
+                    log_str += fmt::format("true, jumpTO 0x{:x}", salutmp1.rss3_data.to_uint());
 #endif
                 } else {
 #ifdef SPIKE_OUTPUT
-                    std::cout << "false at " << sc_time_stamp() << ","
-                              << sc_delta_count_at_current_time() << std::endl;
+                    log_str += fmt::format("false");
 #endif
                 }
                 break;
@@ -327,31 +315,32 @@ void BASE::SALU_CALC() {
                     hwarp->jump = 1;
                     hwarp->jump_addr = salutmp1.rss3_data;
 #ifdef SPIKE_OUTPUT
-                    std::cout << "true, jumpTO 0x" << std::hex << salutmp1.rss3_data << std::dec
-                              << " at " << sc_time_stamp() << ","
-                              << sc_delta_count_at_current_time() << std::endl;
+                    log_str += fmt::format("true, jumpTO 0x{:x}", salutmp1.rss3_data.to_uint());
 #endif
                 } else {
 #ifdef SPIKE_OUTPUT
-                    std::cout << "false at " << sc_time_stamp() << ","
-                              << sc_delta_count_at_current_time() << std::endl;
+                    log_str += fmt::format("false");
 #endif
                 }
                 break;
 
             default:
-                std::cout << "SALU_CALC warning: switch to unrecognized ins" << salutmp1.ins
-                          << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time()
-                          << std::endl;
+                SPDLOG_LOGGER_ERROR(
+                    m_logger, "SALU_CALC : switch to unrecognized ins {} @ 0x{:x}", salutmp1.ins,
+                    salutmp1.ins.currentpc
+                );
                 assert(0);
                 break;
             }
+#ifdef SPIKE_OUTPUT
+            SPDLOG_LOGGER_TRACE(m_logger, "{}", log_str);
+#endif
         }
         ev_salufifo_pushed.notify();
     }
 }
 
-void BASE::SALU_CTRL() {
+void Subcore::SALU_CTRL() {
     salu_ready = true;
     salu_ready_old = true;
     salueqb_triggered = false;

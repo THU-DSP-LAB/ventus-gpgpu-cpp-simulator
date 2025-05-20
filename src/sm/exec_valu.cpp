@@ -1,6 +1,6 @@
-#include "BASE.h"
+#include "subcore.hpp"
 
-void BASE::VALU_IN() {
+void Subcore::VALU_IN() {
     valu_in_t new_data;
     int a_delay, b_delay;
     sc_bv<hw_num_thread> _velsemask;
@@ -83,7 +83,7 @@ void BASE::VALU_IN() {
     }
 }
 
-void BASE::VALU_CALC() {
+void Subcore::VALU_CALC() {
     valufifo_elem_num = 0;
     valufifo_empty = 1;
     valueqa_triggered = false;
@@ -359,7 +359,7 @@ void BASE::VALU_CALC() {
     }
 }
 
-void BASE::VALU_CTRL() {
+void Subcore::VALU_CTRL() {
     valu_ready = true;
     valu_ready_old = true;
     valueqb_triggered = false;

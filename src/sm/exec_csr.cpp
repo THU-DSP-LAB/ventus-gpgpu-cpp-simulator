@@ -1,6 +1,7 @@
-#include "BASE.h"
+#include "subcore.hpp"
+#include <spdlog/spdlog.h>
 
-void BASE::CSR_IN() {
+void Subcore::CSR_IN() {
     csr_in_t new_data;
     int a_delay, b_delay;
     while (true) {
@@ -47,7 +48,7 @@ void BASE::CSR_IN() {
     }
 }
 
-void BASE::CSR_CALC() {
+void Subcore::CSR_CALC() {
     csrfifo_elem_num = 0;
     csrfifo_empty = true;
     csreqa_triggered = false;
@@ -75,10 +76,11 @@ void BASE::CSR_CALC() {
                 csrtmp2.data = t;
                 hwarp->CSR_reg[csr_addr] = csrtmp1.csrSdata1;
 #ifdef SPIKE_OUTPUT
-                std::cout << "SM" << sm_id << " warp " << csrtmp1.warp_id << " write CSR[0x"
-                          << std::hex << csr_addr << "]=0x" << hwarp->CSR_reg[csr_addr]
-                          << " by ins pc=0x" << csrtmp1.ins.currentpc << csrtmp1.ins << " at "
-                          << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                SPDLOG_LOGGER_TRACE(
+                    m_logger, "SM {} warp {} 0x{:x} {} CSR[0x{:x}]=0x{:x}", m_sm_id,
+                    warpid_convert(m_subcore_id, csrtmp1.warp_id), csrtmp1.ins.currentpc,
+                    csrtmp1.ins, csr_addr, static_cast<uint32_t>(hwarp->CSR_reg[csr_addr])
+                );
 #endif
                 break;
             case CSRRS_:
@@ -88,10 +90,11 @@ void BASE::CSR_CALC() {
 // std::cout << "CSRRS, t=" << std::hex << t << ", csrSdata1=" << csrtmp1.csrSdata1 << std::dec <<
 // ", ins.s1=" << csrtmp1.ins.s1 << "\n";
 #ifdef SPIKE_OUTPUT
-                std::cout << "SM" << sm_id << " warp " << csrtmp1.warp_id << " write CSR[0x"
-                          << std::hex << csr_addr << "]=0x" << hwarp->CSR_reg[csr_addr]
-                          << " by ins pc=0x" << csrtmp1.ins.currentpc << csrtmp1.ins << " at "
-                          << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                SPDLOG_LOGGER_TRACE(
+                    m_logger, "SM {} warp {} 0x{:x} {} CSR[0x{:x}]=0x{:x}", m_sm_id,
+                    warpid_convert(m_subcore_id, csrtmp1.warp_id), csrtmp1.ins.currentpc,
+                    csrtmp1.ins, csr_addr, static_cast<uint32_t>(hwarp->CSR_reg[csr_addr])
+                );
 #endif
                 break;
             case CSRRC_:
@@ -99,21 +102,22 @@ void BASE::CSR_CALC() {
                 csrtmp2.data = t;
                 hwarp->CSR_reg[csr_addr] = t & ~csrtmp1.csrSdata1;
 #ifdef SPIKE_OUTPUT
-                std::cout << "SM" << sm_id << " warp " << csrtmp1.warp_id << " write CSR[0x"
-                          << std::hex << csr_addr << "]=0x" << hwarp->CSR_reg[csr_addr]
-                          << " by ins pc=0x" << csrtmp1.ins.currentpc << csrtmp1.ins << " at "
-                          << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-
+                SPDLOG_LOGGER_TRACE(
+                    m_logger, "SM {} warp {} 0x{:x} {} CSR[0x{:x}]=0x{:x}", m_sm_id,
+                    warpid_convert(m_subcore_id, csrtmp1.warp_id), csrtmp1.ins.currentpc,
+                    csrtmp1.ins, csr_addr, static_cast<uint32_t>(hwarp->CSR_reg[csr_addr])
+                );
 #endif
                 break;
             case CSRRWI_:
                 csrtmp2.data = hwarp->CSR_reg[csr_addr];
                 hwarp->CSR_reg[csr_addr] = csrtmp1.ins.s1;
 #ifdef SPIKE_OUTPUT
-                std::cout << "SM" << sm_id << " warp " << csrtmp1.warp_id << " write CSR[0x"
-                          << std::hex << csr_addr << "]=0x" << hwarp->CSR_reg[csr_addr]
-                          << " by ins pc=0x" << csrtmp1.ins.currentpc << csrtmp1.ins << " at "
-                          << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                SPDLOG_LOGGER_TRACE(
+                    m_logger, "SM {} warp {} 0x{:x} {} CSR[0x{:x}]=0x{:x}", m_sm_id,
+                    warpid_convert(m_subcore_id, csrtmp1.warp_id), csrtmp1.ins.currentpc,
+                    csrtmp1.ins, csr_addr, static_cast<uint32_t>(hwarp->CSR_reg[csr_addr])
+                );
 #endif
                 break;
             case CSRRSI_:
@@ -121,10 +125,11 @@ void BASE::CSR_CALC() {
                 csrtmp2.data = t;
                 hwarp->CSR_reg[csr_addr] = csrtmp1.ins.s1;
 #ifdef SPIKE_OUTPUT
-                std::cout << "SM" << sm_id << " warp " << csrtmp1.warp_id << " write CSR[0x"
-                          << std::hex << csr_addr << "]=0x" << hwarp->CSR_reg[csr_addr]
-                          << " by ins pc=0x" << csrtmp1.ins.currentpc << csrtmp1.ins << " at "
-                          << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                SPDLOG_LOGGER_TRACE(
+                    m_logger, "SM {} warp {} 0x{:x} {} CSR[0x{:x}]=0x{:x}", m_sm_id,
+                    warpid_convert(m_subcore_id, csrtmp1.warp_id), csrtmp1.ins.currentpc,
+                    csrtmp1.ins, csr_addr, static_cast<uint32_t>(hwarp->CSR_reg[csr_addr])
+                );
 #endif
                 break;
             case CSRRCI_:
@@ -132,10 +137,11 @@ void BASE::CSR_CALC() {
                 csrtmp2.data = t;
                 hwarp->CSR_reg[csr_addr] = t & ~csrtmp1.ins.s1;
 #ifdef SPIKE_OUTPUT
-                std::cout << "SM" << sm_id << " warp " << csrtmp1.warp_id << " write CSR[0x"
-                          << std::hex << csr_addr << "]=0x" << hwarp->CSR_reg[csr_addr]
-                          << " by ins pc=0x" << csrtmp1.ins.currentpc << csrtmp1.ins << " at "
-                          << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                SPDLOG_LOGGER_TRACE(
+                    m_logger, "SM {} warp {} 0x{:x} {} CSR[0x{:x}]=0x{:x}", m_sm_id,
+                    warpid_convert(m_subcore_id, csrtmp1.warp_id), csrtmp1.ins.currentpc,
+                    csrtmp1.ins, csr_addr, static_cast<uint32_t>(hwarp->CSR_reg[csr_addr])
+                );
 #endif
                 break;
             case VSETVLI_:
@@ -145,10 +151,11 @@ void BASE::CSR_CALC() {
                 hwarp->CSR_reg[0x80c] = csrtmp1.csrSdata1 + csrtmp1.csrSdata2;
                 csrtmp2.data = 0;
 #ifdef SPIKE_OUTPUT
-                std::cout << "SM" << sm_id << " warp " << csrtmp1.warp_id << std::hex << " 0x"
-                          << csrtmp1.ins.currentpc << " " << csrtmp1.ins << std::hex
-                          << " CSR[0X80c]=0x" << hwarp->CSR_reg[0x80c] << std::dec << " at "
-                          << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                SPDLOG_LOGGER_TRACE(
+                    m_logger, "SM {} warp {} 0x{:x} {} CSR[0x{:x}]=0x{:x}", m_sm_id,
+                    warpid_convert(m_subcore_id, csrtmp1.warp_id), csrtmp1.ins.currentpc,
+                    csrtmp1.ins, csr_addr, static_cast<uint32_t>(hwarp->CSR_reg[csr_addr])
+                );
 #endif
                 break;
             default:
@@ -169,7 +176,7 @@ void BASE::CSR_CALC() {
     }
 }
 
-void BASE::CSR_CTRL() {
+void Subcore::CSR_CTRL() {
     csr_ready = true;
     csr_ready_old = true;
     csreqb_triggered = false;

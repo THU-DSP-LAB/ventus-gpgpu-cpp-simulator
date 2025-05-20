@@ -1,4 +1,5 @@
 #include "BASE.h"
+#include "subcore.hpp"
 #include <algorithm>
 #include <array>
 #include <bit>
@@ -89,7 +90,8 @@ int BASE::sharedMem_request(const std::unique_ptr<lsu_mem_cmd_t>& cmd) {
             }
         }
         if (cmd->opcode == L1D_OPCODE_READ) { // load
-            mshr_item.data[threadidx]
+            assert(mshr_item.data != nullptr);
+            mshr_item.data->at(threadidx)
                 = byte_extract(data, cmd->wordOffset1H->at(threadidx), cmd->instr.ddd.mem_unsigned);
         }
     }
@@ -119,15 +121,17 @@ static uint8_t wordOffset1H_calc(uint32_t addr, const I_TYPE& instr) {
 }
 
 void BASE::lsu_new_req() {
-    int warp_id = emitins_warpid.read();
-    const I_TYPE& instr = emit_ins.read();
+    assert(m_lsu_subcore_req_queue.size() == 1 || m_lsu_subcore_req_queue.size() == 2);
+    auto& req = m_lsu_subcore_req_queue.front();
+    int warp_id = warpid_convert(req.subcore_id, req.subcore_warp_id);
+    const I_TYPE& instr = req.instr;
     const auto& ddd = instr.ddd;
     const auto& isvec = ddd.isvec;
     const sc_bv<hw_num_thread> mask = isvec ? instr.mask : sc_bv<hw_num_thread> { 1 };
     const int num_thread = std::bit_width(mask.to_uint());
-
-    auto src1 = [this](int i) { return tolsu_data1[i].read(); };
-    auto src2 = [this](int i) { return tolsu_data2[i].read(); };
+    auto& src1 = *req.src_data1;
+    auto& src2 = *req.src_data2;
+    auto& src3 = *req.src_data3;
 
     //
     // 1. 为向量各分量计算访存地址
@@ -141,10 +145,10 @@ void BASE::lsu_new_req() {
     for (int i = 0; i < num_thread; i++) {
         addr[i] = (instr.ddd.isvec && instr.ddd.disable_mask)
             ? (instr.ddd.is_vls12()
-                   ? (src1(i) + src2(i))
-                   : ((src1(i) + src2(i)) * hw_num_thread + (i << 2) + hwarp->CSR_reg[0x807]))
-            : (instr.ddd.isvec ? (src1(i) + (instr.ddd.mop == 0 ? i << 2 : i * src2(i)))
-                               : (src1(0) + src2(0)));
+                   ? (src1[i] + src2[i])
+                   : ((src1[i] + src2[i]) * hw_num_thread + (i << 2) + req.pds_base)) // TODO: check
+            : (instr.ddd.isvec ? (src1[i] + (instr.ddd.mop == 0 ? i << 2 : i * src2[i]))
+                               : (src1[0] + src2[0]));
         enum { UNKNOWN, GLOBAL, SHARED } addr_type = UNKNOWN, addr_type_;
         if (mask[i]) { // 是否是shared memory访存
             addr_type_
@@ -207,12 +211,14 @@ void BASE::lsu_new_req() {
         assert(0);
     }
     mshr_it->valid = true;
-    mshr_it->warp_id = emitins_warpid;
+    mshr_it->warp_id = warp_id;
     mshr_it->instr = instr; // 包括写回、regidx、mask、unsigned等指令decode信息
     mshr_it->wordOffset1H = wordOffset1H_ptr;
     mshr_it->finished_mask = ~mask; // 非活跃⇔已完成，finish_mask全1时此MSHR项目可返回
     mshr_it->addr = addr_ptr;       // debug用的冗余信息
     mshr_it->delay = LSU_EXTRA_DELAY; // 额外的延迟周期
+    mshr_it->data
+        = (ddd.wxd || ddd.wvd) ? std::make_unique<std::array<reg_t, hw_num_thread>>() : nullptr;
 
     //
     // 3.1 原子release需要发送额外的flush
@@ -265,7 +271,7 @@ void BASE::lsu_new_req() {
     while (active_mask.or_reduce()) {
         std::unique_ptr<lsu_mem_cmd_t> cmd = std::make_unique<lsu_mem_cmd_t>();
         cmd->instrId = mshr_idx;
-        cmd->pagetable_root = hwarp->pagetable;
+        cmd->pagetable_root = req.pagetable_root;
         cmd->warp_id = warp_id;
         cmd->instr = instr;
         cmd->opcode = _cmd_opcode;
@@ -305,6 +311,8 @@ void BASE::lsu_new_req() {
         cmd_invalidate->param = L1D_PARAM_INVALIDATE;
         m_lsu_mem_cmd_queue.push(std::move(cmd_invalidate));
     }
+
+    m_lsu_subcore_req_queue.pop();
 }
 
 void BASE::lsu_main() { // LSU sc_thread
@@ -315,23 +323,28 @@ void BASE::lsu_main() { // LSU sc_thread
         = [this](std::unique_ptr<lsu_mem_cmd_t> cmd) { lsu_l1d_write_callback(std::move(cmd)); };
 
     while (true) {
-        wait();
+        wait(clk->posedge_event());
 
         //
         // 1. 处理core pipline lsu_req
         // 将其转化为(可能多个)访存命令压入m_lsu_mem_cmd_queue中、写入MSHR
         //
-        if (emito_lsu) {
+        if (std::any_of(std::begin(emito_lsu), std::end(emito_lsu), [](const sc_signal<bool>& sig) {
+                return sig.read() == true;
+            })) {
+            assert(
+                std::count_if(
+                    std::begin(emito_lsu), std::end(emito_lsu),
+                    [](const sc_signal<bool>& sig) { return sig.read() == true; }
+                )
+                == 1
+            );
             lsu_new_req();
         }
 
         //
         // 2. 更新与OPC的握手信号
         //
-        lsu_ready = std::any_of(m_lsu_mshr.begin(), m_lsu_mshr.end(), [](const lsu_mshr_t& mshr) {
-            return !mshr.valid;
-        });
-        ev_lsuready_updated.notify();
 
         //
         // 3. 每周期从cmd queue中取出一个访存命令，发向L1D Cache
@@ -356,12 +369,12 @@ void BASE::lsu_main() { // LSU sc_thread
                     m_lsu_mem_cmd_queue.pop();
                 } else if (failed == -1) { // something wrong in the cmd
                     if (cmd->instr.ddd.isvec) {
-                    SPDLOG_LOGGER_ERROR(
+                        SPDLOG_LOGGER_ERROR(
                             m_logger,
                             "SM {} warp {} 0x{:x} {}: LSU cmd error, MEMADDR {:x} mask={:x}", sm_id,
                             cmd->warp_id, cmd->instr.currentpc, cmd->instr,
-                        fmt::join(*cmd->addr, " "), cmd->mask.to_uint()
-                    );
+                            fmt::join(*cmd->addr, " "), cmd->mask.to_uint()
+                        );
                     } else {
                         SPDLOG_LOGGER_ERROR(
                             m_logger, "SM {} warp {} 0x{:x} {}: LSU cmd error, MEMADDR {:x}", sm_id,
@@ -396,19 +409,19 @@ void BASE::lsu_main() { // LSU sc_thread
                 );
 #endif
                 if (mshr_item.instr.ddd.wxd || mshr_item.instr.ddd.wvd) { // to writeback
-                    lsu_out_t lsu_out;
-                    lsu_out.warp_id = mshr_item.warp_id;
-                    lsu_out.ins = mshr_item.instr;
-                    for (int i = 0; i < hw_num_thread; i++) {
-                        lsu_out.rdv1_data[i] = mshr_item.data[i];
-                    }
-                    lsufifo.push(lsu_out);
+                    const auto [subcore_idx, subcore_warp_idx] = warpid_convert(mshr_item.warp_id);
+                    m_subcores[subcore_idx]->lsu_writeback(
+                        mshr_item.instr, subcore_warp_idx, std::move(mshr_item.data)
+                    );
                 }
                 mshr_item.valid = false;
                 break;
             }
         }
-        ev_lsufifo_pushed.notify();
+        // 每个subcore每周期都需要激活此事件，即使并没有发出相应的writeback
+        for (auto& subcore : m_subcores) {
+            subcore->lsu_writeback_event();
+        }
     }
 }
 
@@ -420,7 +433,8 @@ void BASE::lsu_l1d_read_callback(std::unique_ptr<lsu_mem_cmd_t> cmd) {
     for (int i = 0; i < hw_num_thread; i++) {
         if (cmd->mask[i]) {
             assert(!mshr_item.finished_mask[i]);
-            mshr_item.data[i] = byte_extract(
+            assert(mshr_item.data != nullptr);
+            mshr_item.data->at(i) = byte_extract(
                 cmd->data[i], mshr_item.wordOffset1H->at(i),
                 m_lsu_mshr[cmd->instrId].instr.ddd.mem_unsigned
             );

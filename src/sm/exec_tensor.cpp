@@ -1,6 +1,6 @@
-#include "BASE.h"
+#include "subcore.hpp"
 
-void BASE::TC_IN() {
+void Subcore::TC_IN() {
     tc_in_t new_data;
     int a_delay, b_delay;
     while (true) {
@@ -49,7 +49,7 @@ void BASE::TC_IN() {
     }
 }
 
-void BASE::TC_CALC() {
+void Subcore::TC_CALC() {
     tcfifo_elem_num = 0;
     tcfifo_empty = true;
     tceqa_triggered = false;
@@ -134,7 +134,7 @@ void BASE::TC_CALC() {
     }
 }
 
-void BASE::TC_CTRL() {
+void Subcore::TC_CTRL() {
     tc_ready = true;
     tc_ready_old = true;
     tceqb_triggered = false;

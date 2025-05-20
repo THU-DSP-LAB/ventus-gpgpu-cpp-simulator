@@ -25,7 +25,11 @@ data = []
 with open(cppfile, "w") as out_file:
     # 逐行读取输入文件内容
     out_file.write(
-        '#include "BASE.h"\nvoid BASE::INIT_DECODETABLE(){\ndecode_table = {\n'
+        '#include "../parameters.h"\n' +
+        '#include <map>\n' +
+        '#include <memory>\n' +
+        'std::shared_ptr<std::map<OP_TYPE, decodedat>> gen_decodetable(){\n' +
+        'return std::make_shared<std::map<OP_TYPE, decodedat>>(std::map<OP_TYPE, decodedat>({\n'
     )
     for line in lines:
         # 使用正则表达式匹配当前行的内容
@@ -66,7 +70,7 @@ with open(cppfile, "w") as out_file:
             code_params = ", ".join(processed_params)
             # 将结果写入输出文件
             out_file.write("{{{0}_, {{{1}}}}}, \n".format(opcode, code_params))
-    out_file.write("};\n}")
+    out_file.write("}));\n}")
 
 opcodes.sort()
 with open(supportfile, "w") as supportinsf:

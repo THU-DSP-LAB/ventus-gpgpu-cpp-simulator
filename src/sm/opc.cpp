@@ -1,20 +1,22 @@
-#include "BASE.h"
+#include "subcore.hpp"
+#include <memory>
+#include <spdlog/spdlog.h>
 
-bank_t BASE::bank_decode(int warp_id, int srcaddr) {
+bank_t Subcore::bank_decode(int warp_id, int srcaddr) {
     bank_t tmp;
     tmp.bank_id = srcaddr % BANK_NUM;
     tmp.addr = warp_id * num_register_per_warp / BANK_NUM + srcaddr / BANK_NUM;
     return tmp;
 }
 
-warpaddr_t BASE::bank_undecode(int bank_id, int bankaddr) {
+warpaddr_t Subcore::bank_undecode(int bank_id, int bankaddr) {
     warpaddr_t tmp;
     tmp.warp_id = bankaddr / (num_register_per_warp / BANK_NUM);
     tmp.addr = (bankaddr % (num_register_per_warp / BANK_NUM)) * BANK_NUM + bank_id;
     return tmp;
 }
 
-void BASE::OPC_FIFO() {
+void Subcore::OPC_FIFO() {
     vector_t printdata_;
     I_TYPE _readdata4;
     int _readwarpid;
@@ -181,35 +183,36 @@ void BASE::OPC_FIFO() {
     }
 }
 
-void BASE::OPC_EMIT() {
-    reg_t pa1;
-    reg_t* pa2; // 用于int转float
-    float *pf1, *pf2;
-    // FloatAndInt pr1, pr2;
-    int p20;
+void Subcore::OPC_EMIT() {
+    // reg_t pa1;
+    // reg_t* pa2; // 用于int转float
+    // float *pf1, *pf2;
+    // int p20;
     last_emit_entryid = 0;
     while (true) {
         wait(
             ev_opc_pop & // 等opc当前cycle pop之后再判断下一cycle的pop
-            ev_saluready_updated & ev_valuready_updated & ev_vfpuready_updated & ev_lsuready_updated
-            & ev_csrready_updated & ev_mulready_updated & ev_sfuready_updated & ev_tcready_updated
+            ev_saluready_updated & ev_valuready_updated & ev_vfpuready_updated & ev_csrready_updated
+            & ev_mulready_updated & ev_sfuready_updated & ev_tcready_updated
         );
-        // std::cout << "OPC_EMIT start at " << sc_time_stamp() << "," <<
-        // sc_delta_count_at_current_time() << "\n";
+        // ↑ LSU特殊，由多个subcore共享，需要先函数调用req，在其中等待各Subcore的req都到齐后再仲裁
+        // 用req函数的返回值标识是否接受本subcore的emit
         doemit = false;
         findemit = 0;
         emito_salu = false;
         emito_valu = false;
         emito_vfpu = false;
-        emito_lsu = false;
         emito_simtstk = false;
         emito_csr = false;
         emito_mul = false;
         emito_sfu = false;
         emito_tc = false;
         emito_warpscheduler = false;
+        bool instr_tried_emit_to_lsu = false;
         for (int i = last_emit_entryid; i < last_emit_entryid + OPCFIFO_SIZE; i++) {
             int entryidx = i % OPCFIFO_SIZE;
+            const auto& opcitem = opcfifo[entryidx];
+            auto& hwarp = m_hw_warps[opcitem.warp_id];
             if (findemit) {
                 break;
             }
@@ -280,20 +283,31 @@ void BASE::OPC_EMIT() {
                     }
                     break;
 
-                case DecodeParams::LSU:
-                    if (lsu_ready) {
+                case DecodeParams::LSU: {
+                    if(instr_tried_emit_to_lsu) {
+                        break; // only one lsu_req per cycle
+                    }
+                    auto src1 = std::make_unique<std::array<reg_t, hw_num_thread>>(opcitem.data[0]);
+                    auto src2 = std::make_unique<std::array<reg_t, hw_num_thread>>(opcitem.data[1]);
+                    auto src3 = std::make_unique<std::array<reg_t, hw_num_thread>>(opcitem.data[2]);
+                    int result = f_lsu_subcore_req(
+                        true, m_subcore_id, opcitem.warp_id, opcitem.ins, hwarp->CSR_reg[0x807],
+                        hwarp->pagetable, src1, src2, src3
+                    );
+                    if (result == 0) {
                         emit_idx = entryidx;
                         last_emit_entryid = entryidx + 1;
                         findemit = 1;
                         doemit = true;
-                        emito_lsu = true;
-                        for (int j = 0; j < hw_num_thread; j++) {
-                            tolsu_data1[j] = opcfifo[entryidx].data[0][j];
-                            tolsu_data2[j] = opcfifo[entryidx].data[1][j];
-                            tolsu_data3[j] = opcfifo[entryidx].data[2][j];
-                        }
+                    } else {
+                        // SPDLOG_LOGGER_TRACE(
+                        //     m_logger, "SM {} warp {} 0x{:x} {} LSU req refused", m_sm_id,
+                        //     warpid_convert(m_subcore_id, opcitem.warp_id), opcitem.ins.currentpc,
+                        //     opcitem.ins
+                        // );
                     }
-                    break;
+                    instr_tried_emit_to_lsu = true;
+                } break;
 
                 case DecodeParams::CSR:
                     if (csr_ready) {
@@ -363,14 +377,15 @@ void BASE::OPC_EMIT() {
                     break;
 
                 case DecodeParams::INVALID_EXECUNIT:
-                    std::cout << "SM" << sm_id << " OPC_EMIT error: ins=" << opcfifo[entryidx].ins
+                    std::cout << "SM" << m_sm_id << " OPC_EMIT error: ins=" << opcfifo[entryidx].ins
                               << "," << std::hex << opcfifo[entryidx].ins.origin32bit << std::dec
                               << " but INVALID EXECUNIT at " << sc_time_stamp() << ","
                               << sc_delta_count_at_current_time() << "\n";
                     break;
                 default:
-                    std::cout << "SM" << sm_id << " OPC_EMIT warning: ins=" << opcfifo[entryidx].ins
-                              << "," << std::hex << opcfifo[entryidx].ins.origin32bit << std::dec
+                    std::cout << "SM" << m_sm_id
+                              << " OPC_EMIT warning: ins=" << opcfifo[entryidx].ins << ","
+                              << std::hex << opcfifo[entryidx].ins.origin32bit << std::dec
                               << " but undefined EXECUNIT at " << sc_time_stamp() << ","
                               << sc_delta_count_at_current_time() << "\n";
                     assert(0);
@@ -379,11 +394,18 @@ void BASE::OPC_EMIT() {
             }
         }
         // std::cout << "emit_idx is set to " << emit_idx << "\n";
+        if (!instr_tried_emit_to_lsu) {
+            std::unique_ptr<std::array<reg_t, hw_num_thread>> unique_ptr_null = nullptr;
+            f_lsu_subcore_req(
+                false, m_subcore_id, 0, opcfifo[emit_idx].ins, 0, 0, unique_ptr_null,
+                unique_ptr_null, unique_ptr_null
+            );
+        }
         ev_opc_judge_emit.notify();
     }
 }
 
-void BASE::OPC_FETCH() {
+void Subcore::OPC_FETCH() {
     while (true) {
         wait(ev_opc_store);
         for (int i = 0; i < OPCFIFO_SIZE; i++) {

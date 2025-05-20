@@ -1,6 +1,6 @@
-#include "BASE.h"
+#include "subcore.hpp"
 
-void BASE::WRITE_BACK() {
+void Subcore::WRITE_BACK() {
     // FloatAndInt newFI;
 
     while (true) {
@@ -8,14 +8,8 @@ void BASE::WRITE_BACK() {
             ev_salufifo_pushed & ev_valufifo_pushed & ev_vfpufifo_pushed & ev_lsufifo_pushed
             & ev_csrfifo_pushed & ev_mulfifo_pushed & ev_sfufifo_pushed & ev_tcfifo_pushed
         );
-        // if (sm_id == 1)
-        //     std::cout << "SM" << sm_id << " WRITEBACK: start at " << sc_time_stamp() << "," <<
-        //     sc_delta_count_at_current_time() << "\n";
         if (execpop_salu) {
             salufifo.pop();
-            // if (sm_id == 0)
-            //     std::cout << "SM" << sm_id << " WB pop salufifo at " << sc_time_stamp() << "," <<
-            //     sc_delta_count_at_current_time() << "\n";
         }
         if (execpop_valu)
             valufifo.pop();
@@ -44,10 +38,9 @@ void BASE::WRITE_BACK() {
         if (!vfpufifo_empty)
             vfputop_dat = vfpufifo.front();
         vfpufifo_elem_num = vfpufifo.used();
-        lsufifo_empty = lsufifo.isempty();
-        if (!lsufifo_empty)
-            lsutop_dat = lsufifo.front();
-        lsufifo_elem_num = lsufifo.used();
+        lsufifo_empty = lsufifo.empty();
+        lsufifo_elem_num = lsufifo.size();
+        assert(lsufifo.size() <= 10);
         csrfifo_empty = csrfifo.isempty();
         if (!csrfifo_empty)
             csrtop_dat = csrfifo.front();
@@ -129,9 +122,7 @@ void BASE::WRITE_BACK() {
             // std::cout << "} at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() <<
             // "\n";
         } else if (lsufifo_empty == false) {
-            // if (sm_id == 0)
-            //     std::cout << "SM" << sm_id << " WB judge poplsu, at " << sc_time_stamp() << ","
-            //     << sc_delta_count_at_current_time() << "\n";
+            auto& lsutop_dat = lsufifo.front();
             execpop_lsu = true;
             if (lsutop_dat.ins.ddd.wxd) {
                 write_s = true;
@@ -143,11 +134,9 @@ void BASE::WRITE_BACK() {
 
             wb_ena = true;
             wb_ins = lsutop_dat.ins;
-
             rdv1_addr = lsutop_dat.ins.d;
-            for (int i = 0; i < hw_num_thread; i++)
-                rdv1_data[i] = lsutop_dat.rdv1_data[i];
-
+            for (int i = 0; i < lsutop_dat.rdv1_data->size(); i++)
+                rdv1_data[i] = (*lsutop_dat.rdv1_data)[i];
             wb_warpid = lsutop_dat.warp_id;
         } else if (csrfifo_empty == false) {
             // if (sm_id == 0)

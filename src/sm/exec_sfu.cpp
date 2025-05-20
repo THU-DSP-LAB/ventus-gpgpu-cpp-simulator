@@ -1,6 +1,6 @@
-#include "BASE.h"
+#include "subcore.hpp"
 
-void BASE::SFU_IN() {
+void Subcore::SFU_IN() {
     sfu_in_t new_data;
     int a_delay, b_delay;
     while (true) {
@@ -55,7 +55,7 @@ void BASE::SFU_IN() {
     }
 }
 
-void BASE::SFU_CALC() {
+void Subcore::SFU_CALC() {
     sfufifo_elem_num = 0;
     sfufifo_empty = 1;
     sfueqa_triggered = false;
@@ -160,7 +160,7 @@ void BASE::SFU_CALC() {
     }
 }
 
-void BASE::SFU_CTRL() {
+void Subcore::SFU_CTRL() {
     sfu_ready = true;
     sfu_ready_old = true;
     sfueqb_triggered = false;

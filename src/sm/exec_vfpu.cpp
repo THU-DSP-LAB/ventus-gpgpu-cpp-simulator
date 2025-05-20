@@ -1,7 +1,6 @@
-#include "BASE.h"
-#include <algorithm>
+#include "subcore.hpp"
 
-void BASE::VFPU_IN() {
+void Subcore::VFPU_IN() {
     vfpu_in_t new_data;
     int a_delay, b_delay;
     while (true) {
@@ -48,7 +47,7 @@ void BASE::VFPU_IN() {
     }
 }
 
-void BASE::VFPU_CALC() {
+void Subcore::VFPU_CALC() {
     vfpufifo_elem_num = 0;
     vfpufifo_empty = true;
     vfpueqa_triggered = false;
@@ -342,7 +341,7 @@ void BASE::VFPU_CALC() {
     }
 }
 
-void BASE::VFPU_CTRL() {
+void Subcore::VFPU_CTRL() {
     vfpu_ready = true;
     vfpu_ready_old = true;
     vfpueqb_triggered = false;

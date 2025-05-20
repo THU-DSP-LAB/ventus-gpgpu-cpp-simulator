@@ -1,6 +1,8 @@
-#include "BASE.h"
-void BASE::INIT_DECODETABLE(){
-decode_table = {
+#include "../parameters.h"
+#include <map>
+#include <memory>
+std::shared_ptr<std::map<OP_TYPE, decodedat>> gen_decodetable(){
+return std::make_shared<std::map<OP_TYPE, decodedat>>(std::map<OP_TYPE, decodedat>({
 {BNE_, {0, 0, 0, DecodeParams::B_B, 0, 0, DecodeParams::CSR_N, 0, DecodeParams::A3_PC, DecodeParams::A2_RS2, DecodeParams::A1_RS1, DecodeParams::IMM_B, DecodeParams::MEM_X, DecodeParams::FN_SNE, 0, DecodeParams::M_X, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}}, 
 {BEQ_, {0, 0, 0, DecodeParams::B_B, 0, 0, DecodeParams::CSR_N, 0, DecodeParams::A3_PC, DecodeParams::A2_RS2, DecodeParams::A1_RS1, DecodeParams::IMM_B, DecodeParams::MEM_X, DecodeParams::FN_SEQ, 0, DecodeParams::M_X, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}}, 
 {BLT_, {0, 0, 0, DecodeParams::B_B, 0, 0, DecodeParams::CSR_N, 0, DecodeParams::A3_PC, DecodeParams::A2_RS2, DecodeParams::A1_RS1, DecodeParams::IMM_B, DecodeParams::MEM_X, DecodeParams::FN_SLT, 0, DecodeParams::M_X, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}}, 
@@ -277,5 +279,5 @@ decode_table = {
 {VSUB12_VI_, {1, 0, 0, DecodeParams::B_N, 0, 0, DecodeParams::CSR_N, 0, DecodeParams::A3_X, DecodeParams::A2_IMM, DecodeParams::A1_VRS1, DecodeParams::IMM_I, DecodeParams::MEM_X, DecodeParams::FN_SUB, 0, DecodeParams::M_X, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0}}, 
 {VFTTA_VV_, {1, 1, 0, DecodeParams::B_N, 0, 0, DecodeParams::CSR_N, 0, DecodeParams::A3_VRS3, DecodeParams::A2_VRS2, DecodeParams::A1_VRS1, DecodeParams::IMM_X, DecodeParams::MEM_X, DecodeParams::FN_TTF, 0, DecodeParams::M_X, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0}}, 
 {VFEXP_V_, {1, 1, 0, DecodeParams::B_N, 0, 0, DecodeParams::CSR_N, 0, DecodeParams::A3_X, DecodeParams::A2_VRS2, DecodeParams::A1_X, DecodeParams::IMM_X, DecodeParams::MEM_X, DecodeParams::FN_EXP, 0, DecodeParams::M_X, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0}}, 
-};
+}));
 }
