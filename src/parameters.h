@@ -1625,8 +1625,8 @@ public:
     sc_signal<bool, SC_MANY_WRITERS> fetch_valid2; // 2是真正的valid，直接与ibuffer沟通
     sc_signal<bool, SC_MANY_WRITERS> jump, branch_sig,
         vbran_sig; // 无论是否jump，只要发生了分支判断，将branch_sig置为1。其中branch_sig是标量分支，vbran_sig是向量分支
-    sc_signal<uint32_t> jump_addr;
-    sc_signal<uint32_t, SC_MANY_WRITERS> pc;
+    sc_signal<vaddr_t> jump_addr;
+    sc_signal<vaddr_t, SC_MANY_WRITERS> pc;
     I_TYPE fetch_ins;
     sc_signal<I_TYPE> decode_ins;
     // ibuffer

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstddef>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -15,7 +17,8 @@ extern "C" {
 #include <stdint.h>
 
 typedef struct ventus_cyclesim_t ventus_cyclesim_t;
-typedef uint64_t paddr_t;
+typedef uint32_t paddr_t;
+typedef uint32_t vaddr_t;
 
 typedef struct ventus_kernel_metadata_t { // 这个metadata是供驱动使用的，而不是给硬件的
     // Additional data
@@ -164,11 +167,11 @@ DLL_PUBLIC int ventus_cyclesim_pmem_page_free(ventus_cyclesim_t* sim, paddr_t ba
 // Physical memory read & write
 // copy data from host to device
 DLL_PUBLIC int ventus_cyclesim_pmemcpy_h2d(
-    ventus_cyclesim_t* sim, paddr_t dst, const void* src, uint64_t size
+    ventus_cyclesim_t* sim, paddr_t dst, const void* src, size_t size
 );
 // copy data from device to host
 DLL_PUBLIC int ventus_cyclesim_pmemcpy_d2h(
-    ventus_cyclesim_t* sim, void* dst, paddr_t src, uint64_t size
+    ventus_cyclesim_t* sim, void* dst, paddr_t src, size_t size
 );
 
 DLL_PUBLIC paddr_t ventus_cyclesim_vmem_create(ventus_cyclesim_t* sim);

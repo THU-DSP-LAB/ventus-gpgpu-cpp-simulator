@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <memory>
+#include <spdlog/spdlog.h>
 #include <tuple>
 
 void CTA_Scheduler_SM_management::construct_init() {
@@ -175,6 +176,10 @@ void CTA_Scheduler::collect_finished_blocks() {
                 }
                 // mark that this block is finished (on real gpu: tell host)
                 kernel->m_block_status[blk_idx] = kernel_info_t::BLOCK_STATUS_FINISHED;
+                SPDLOG_LOGGER_DEBUG(
+                    m_logger, "kernel {} {} block {} finished", kernel->get_kid(),
+                    kernel->get_kname(), blk_idx
+                );
 
                 // if all blocks of this kernel finished, release this kernel
                 if (std::all_of(

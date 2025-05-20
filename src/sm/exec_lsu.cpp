@@ -4,8 +4,10 @@
 #include <bit>
 #include <fmt/ostream.h>
 #include <functional>
+#include <iterator>
 #include <memory>
 #include <queue>
+#include <ranges>
 #include <spdlog/fmt/ranges.h>
 #include <spdlog/spdlog.h>
 
@@ -49,8 +51,9 @@ int BASE::sharedMem_request(const std::unique_ptr<lsu_mem_cmd_t>& cmd) {
     auto& mshr_item = m_lsu_mshr.at(cmd->instrId);
     if (!mshr_item.valid) {
         SPDLOG_LOGGER_ERROR(
-            m_logger, "SM{} warp {} 0x{:x} {}: MSHR not valid: sharedMemory, instrId={}, addr={:x}",
-            sm_id, cmd->warp_id, cmd->instr.currentpc, fmt::streamed(cmd->instr), cmd->instrId,
+            m_logger,
+            "SM {} warp {} 0x{:x} {}: MSHR not valid: sharedMemory, instrId={}, addr={:x}", sm_id,
+            cmd->warp_id, cmd->instr.currentpc, fmt::streamed(cmd->instr), cmd->instrId,
             fmt::join(*cmd->addr, " ")
         );
     }
@@ -66,8 +69,8 @@ int BASE::sharedMem_request(const std::unique_ptr<lsu_mem_cmd_t>& cmd) {
         for (int i = 0; i < 4; i++) { // a word
             if (addr + i < ldsBaseAddr_core || addr + i >= ldsBaseAddr_core + hw_lds_size) {
                 SPDLOG_LOGGER_ERROR(
-                    m_logger, "SM{} warp {} 0x{:x} {}: LDS access out of range: addr=0x{:x}", sm_id,
-                    cmd->warp_id, cmd->instr.currentpc, fmt::streamed(cmd->instr), addr + i
+                    m_logger, "SM {} warp {} 0x{:x} {}: LDS access out of range: addr=0x{:x}",
+                    sm_id, cmd->warp_id, cmd->instr.currentpc, fmt::streamed(cmd->instr), addr + i
                 );
                 return -1;
             }
@@ -79,8 +82,8 @@ int BASE::sharedMem_request(const std::unique_ptr<lsu_mem_cmd_t>& cmd) {
                 }
             } else { // unknown opcode
                 SPDLOG_LOGGER_ERROR(
-                    m_logger, "SM{} warp {} 0x{:x} {}: LDS unknown opcode: {}", sm_id, cmd->warp_id,
-                    cmd->instr.currentpc, fmt::streamed(cmd->instr), cmd->opcode
+                    m_logger, "SM {} warp {} 0x{:x} {}: LDS unknown opcode: {}", sm_id,
+                    cmd->warp_id, cmd->instr.currentpc, fmt::streamed(cmd->instr), cmd->opcode
                 );
                 assert(0);
             }
@@ -119,8 +122,10 @@ void BASE::lsu_new_req() {
     int warp_id = emitins_warpid.read();
     const I_TYPE& instr = emit_ins.read();
     const auto& ddd = instr.ddd;
-    const auto& hwarp = m_hw_warps[warp_id];
-    const int num_thread = hwarp->CSR_reg[0x802];
+    const auto& isvec = ddd.isvec;
+    const sc_bv<hw_num_thread> mask = isvec ? instr.mask : sc_bv<hw_num_thread> { 1 };
+    const int num_thread = std::bit_width(mask.to_uint());
+
     auto src1 = [this](int i) { return tolsu_data1[i].read(); };
     auto src2 = [this](int i) { return tolsu_data2[i].read(); };
 
@@ -129,6 +134,8 @@ void BASE::lsu_new_req() {
     //
     auto addr_ptr = std::make_shared<std::array<uint32_t, hw_num_thread>>();
     auto& addr = *addr_ptr;
+    auto addr_log_range
+        = std::ranges::subrange(addr.begin(), addr.begin() + (isvec ? addr.size() : 1));
     bool is_shared_memory;
     bool type_conflict = false;
     for (int i = 0; i < num_thread; i++) {
@@ -139,7 +146,7 @@ void BASE::lsu_new_req() {
             : (instr.ddd.isvec ? (src1(i) + (instr.ddd.mop == 0 ? i << 2 : i * src2(i)))
                                : (src1(0) + src2(0)));
         enum { UNKNOWN, GLOBAL, SHARED } addr_type = UNKNOWN, addr_type_;
-        if (instr.mask[i]) { // 是否是shared memory访存
+        if (mask[i]) { // 是否是shared memory访存
             addr_type_
                 = ((addr[i] >= ldsBaseAddr_core) && (addr[i] < ldsBaseAddr_core + hw_lds_size))
                 ? SHARED
@@ -155,18 +162,18 @@ void BASE::lsu_new_req() {
     if (type_conflict) {
         SPDLOG_LOGGER_ERROR(
             m_logger,
-            "SM{} warp {} 0x{:x} {} mask={:x}: both global and shared memory access in one "
+            "SM {} warp {} 0x{:x} {} mask={:X}: both global and shared memory access in one "
             "instruction: MEMADDR {:x}",
-            sm_id, warp_id, instr.currentpc, fmt::streamed(instr), instr.mask.to_uint(),
-            fmt::join(addr, " ")
+            sm_id, warp_id, instr.currentpc, instr, instr.mask.to_uint(),
+            fmt::join(addr_log_range, " ")
         );
         assert(0);
     }
 
 #ifdef SPIKE_OUTPUT
     SPDLOG_LOGGER_TRACE(
-        m_logger, "SM{} warp {} 0x{:x} {} mask={:X} MEMADDR {:x}", sm_id, warp_id, instr.currentpc,
-        fmt::streamed(instr), instr.mask.to_uint(), fmt::join(addr, " ")
+        m_logger, "SM {} warp {} 0x{:x} {} mask={:X} MEMADDR {:x}", sm_id, warp_id, instr.currentpc,
+        instr, instr.mask.to_uint(), fmt::join(addr_log_range, " ")
     );
 #endif
 
@@ -182,7 +189,7 @@ void BASE::lsu_new_req() {
         cache_setIdx[i]
             = (addr[i] >> (2 + log2Ceil(L1D_BLOCK_NUM_WORD))) & ((1 << log2Ceil(L1D_NUM_SET)) - 1);
         blockOffset[i] = (addr[i] >> 2) & ((1 << log2Ceil(L1D_BLOCK_NUM_WORD)) - 1);
-        wordOffset1H[i] = instr.mask[i] ? wordOffset1H_calc(addr[i], instr) : 0;
+        wordOffset1H[i] = mask[i] ? wordOffset1H_calc(addr[i], instr) : 0;
     }
 
     //
@@ -194,8 +201,8 @@ void BASE::lsu_new_req() {
     const uint8_t mshr_idx = mshr_it - m_lsu_mshr.begin();
     if (mshr_idx >= m_lsu_mshr.size()) {
         SPDLOG_LOGGER_ERROR(
-            m_logger, "SM{} warp {} 0x{:x} {} mask={:x}: MSHR full, unacceptable lsu_req", sm_id,
-            warp_id, instr.currentpc, fmt::streamed(instr), instr.mask.to_uint()
+            m_logger, "SM {} warp {} 0x{:x} {} mask={:x}: LSU MSHR full, unacceptable lsu_req",
+            sm_id, warp_id, instr.currentpc, instr, instr.mask.to_uint()
         );
         assert(0);
     }
@@ -203,8 +210,8 @@ void BASE::lsu_new_req() {
     mshr_it->warp_id = emitins_warpid;
     mshr_it->instr = instr; // 包括写回、regidx、mask、unsigned等指令decode信息
     mshr_it->wordOffset1H = wordOffset1H_ptr;
-    mshr_it->finished_mask = ~instr.mask; // 非活跃⇔已完成，finish_mask全1时此MSHR项目可返回
-    mshr_it->addr = addr_ptr;             // debug用的冗余信息
+    mshr_it->finished_mask = ~mask; // 非活跃⇔已完成，finish_mask全1时此MSHR项目可返回
+    mshr_it->addr = addr_ptr;       // debug用的冗余信息
     mshr_it->delay = LSU_EXTRA_DELAY; // 额外的延迟周期
 
     //
@@ -254,7 +261,7 @@ void BASE::lsu_new_req() {
     }
 
     // for vector load/store, access 1 cacheline each cycle
-    sc_bv<hw_num_thread> active_mask = instr.mask;
+    sc_bv<hw_num_thread> active_mask = mask;
     while (active_mask.or_reduce()) {
         std::unique_ptr<lsu_mem_cmd_t> cmd = std::make_unique<lsu_mem_cmd_t>();
         cmd->instrId = mshr_idx;
@@ -268,8 +275,8 @@ void BASE::lsu_new_req() {
         cmd->blockOffset = blockOffset_ptr;
         cmd->wordOffset1H = wordOffset1H_ptr;
         if (!instr.ddd.wxd && !instr.ddd.wvd) { // store instruction
-            for (int i = 0; i < hw_num_thread; i++) {
-                cmd->data[i] = instr.mask[i] ? tolsu_data3[i] : 0;
+            for (int i = 0; i < num_thread; i++) {
+                cmd->data[i] = mask[i] ? src3[i].to_uint() : 0;
             }
         }
 
@@ -348,11 +355,19 @@ void BASE::lsu_main() { // LSU sc_thread
                 if (!failed) { // cmd accepted
                     m_lsu_mem_cmd_queue.pop();
                 } else if (failed == -1) { // something wrong in the cmd
+                    if (cmd->instr.ddd.isvec) {
                     SPDLOG_LOGGER_ERROR(
-                        m_logger, "SM{} warp {} 0x{:x} {}: LSU cmd error, MEMADDR {:x} mask={:x}",
-                        sm_id, cmd->warp_id, cmd->instr.currentpc, cmd->instr,
+                            m_logger,
+                            "SM {} warp {} 0x{:x} {}: LSU cmd error, MEMADDR {:x} mask={:x}", sm_id,
+                            cmd->warp_id, cmd->instr.currentpc, cmd->instr,
                         fmt::join(*cmd->addr, " "), cmd->mask.to_uint()
                     );
+                    } else {
+                        SPDLOG_LOGGER_ERROR(
+                            m_logger, "SM {} warp {} 0x{:x} {}: LSU cmd error, MEMADDR {:x}", sm_id,
+                            cmd->warp_id, cmd->instr.currentpc, cmd->instr, cmd->addr->at(0)
+                        );
+                    }
                 } // else: mem is busy, cmd needs to wait
             }
         }
@@ -376,7 +391,7 @@ void BASE::lsu_main() { // LSU sc_thread
                 // memory access done
 #ifdef SPIKE_OUTPUT
                 SPDLOG_LOGGER_TRACE(
-                    m_logger, "SM{} warp {} 0x{:x} {} MEMDONE, MSHR item cleared", sm_id,
+                    m_logger, "SM {} warp {} 0x{:x} {} MEMDONE, MSHR item cleared", sm_id,
                     mshr_item.warp_id, mshr_item.instr.currentpc, mshr_item.instr
                 );
 #endif

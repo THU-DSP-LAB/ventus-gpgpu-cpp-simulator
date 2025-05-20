@@ -14,9 +14,10 @@ public:
         : append_func_(std::move(func)) { }
 
     void format(const spdlog::details::log_msg& msg, spdlog::memory_buf_t& dest) override {
+        auto filename = std::strrchr(msg.source.filename, '/'); // 去除路径
         auto str = fmt::format(
             "{} {} [{} {}:{}]\n", msg.payload, append_func_(),
-            spdlog::level::to_string_view(msg.level), msg.source.filename, msg.source.line
+            spdlog::level::to_string_view(msg.level), filename + 1, msg.source.line
         );
         dest.append(str.data(), str.data() + str.size());
     }

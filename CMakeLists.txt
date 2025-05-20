@@ -27,6 +27,8 @@ string(REPLACE "-DNDEBUG" "" CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}")
 # use spdlog trace level for debug build
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_compile_definitions(SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE)
+else()
+    add_compile_definitions(SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_DEBUG)
 endif()
 # export compile_commands.json
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -52,8 +54,9 @@ add_subdirectory(dependencies/ramulator2)
 #
 # target libVentusCycleSim.so
 #
-file(GLOB_RECURSE SM_SOURCES "src/sm/*.cpp")
-set(CORE_SOURCES 
+file(GLOB_RECURSE SM_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/sm/*.cpp")
+add_library(VentusCycleSim SHARED
+    ${SM_SOURCES}
     src/context_model.cpp 
     src/CTA_Scheduler.cpp 
     src/parameters.cpp 
@@ -61,10 +64,6 @@ set(CORE_SOURCES
     src/ramulator.cpp
     src/ventus_cyclesim.cpp 
     src/ventus_cyclesim_impl.cpp
-)
-add_library(VentusCycleSim SHARED
-    ${SM_SOURCES}
-    ${CORE_SOURCES}
 )
 target_include_directories(VentusCycleSim
     PRIVATE ${SYSTEMC_INCLUDE_DIR}
