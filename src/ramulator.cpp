@@ -58,18 +58,19 @@ int RamulatorWrapper::request(
         req->callback = callback;
         req->id = m_request_id++;
         uint64_t req_id = req->id;
+        // 也可直接捕获req迭代器，而不是再加一个req_id字段，因为std::list只要不删除此元素其迭代器就一直有效
+        // 但这样编译器会报warning
         auto ramulator_callback = [this, req_id](Ramulator::Request& _) {
             auto it = std::find_if(
                 m_pending_requests.begin(), m_pending_requests.end(),
                 [req_id](const request_t& r) { return r.id == req_id; }
             );
-            if (it != m_pending_requests.end()) {
-                assert(it->cmd->opcode == L1D_OPCODE_READ);
-                if (it->callback) {
-                    it->callback(std::move(it->cmd));
-                }
-                m_pending_requests.erase(it);
+            assert(it != m_pending_requests.end());
+            assert(it->cmd->opcode == L1D_OPCODE_READ);
+            if (it->callback) {
+                it->callback(std::move(it->cmd));
             }
+            m_pending_requests.erase(it);
         };
         if (m_frontend->receive_external_requests(0, paddr_block, sm_id, ramulator_callback)) {
             for (int i = 0; i < hw_num_thread; i++) {
@@ -80,8 +81,8 @@ int RamulatorWrapper::request(
                 }
             }
             return 0;
-        } else {
-            cmd_ = std::move(req->cmd);
+        } else { // memory controller busy, request not accepted, try again later
+            cmd_ = std::move(req->cmd); // return the borrowed ownership
             m_pending_requests.erase(req);
             return 1;
         }
@@ -93,12 +94,11 @@ int RamulatorWrapper::request(
                 if (cmd_->mask[threadidx]) {
                     sc_bv<4> wordOffset1H = cmd_->wordOffset1H->at(threadidx);
                     uint32_t paddr = paddr_block + (cmd_->blockOffset->at(threadidx) << 2);
-                    for (int wordOffset = 0; wordOffset < 4; wordOffset++) {
-                        if (wordOffset1H[wordOffset]) {
-                            m_mem->write(
-                                paddr + wordOffset,
-                                reinterpret_cast<uint8_t*>(&cmd_->data[threadidx]) + wordOffset, 1
-                            );
+                    const uint8_t* data = reinterpret_cast<const uint8_t*>(&cmd_->data[threadidx]);
+                    for (int dataOffset = 0, addrOffset = 0; addrOffset < 4; addrOffset++) {
+                        if (wordOffset1H[addrOffset]) {
+                            m_mem->write(paddr + addrOffset, data + dataOffset, 1);
+                            dataOffset++;
                         }
                     }
                 }

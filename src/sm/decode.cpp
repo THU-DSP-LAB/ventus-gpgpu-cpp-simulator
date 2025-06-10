@@ -83,7 +83,8 @@ void Subcore::DECODE(int warp_id) {
                     ext1, extd
                 );
 #endif
-            } else { // op != REGEXT_ && op != REGEXTI_
+            } else if (m_decode_table->contains((OP_TYPE)tmpins.op)) {
+                // op != REGEXT_ && op != REGEXTI_
                 tmpins.ddd = m_decode_table->at((OP_TYPE)tmpins.op);
                 tmpins.ddd.decode_ext(tmpins.origin32bit);
                 hwarp->fetch_valid2 = hwarp->fetch_valid12;
@@ -178,7 +179,11 @@ void Subcore::DECODE(int warp_id) {
                 default:
                     break;
                 }
-
+                hwarp->decode_ins = tmpins;
+            } else {
+                // 发现非法指令，但不能直接报错，因为这条指令可能后续不会实际发射执行
+                // 例如，可能是.text段之后的垃圾数据，在执行前就会跳转走
+                tmpins.op = INVALID_;
                 hwarp->decode_ins = tmpins;
             }
         }
