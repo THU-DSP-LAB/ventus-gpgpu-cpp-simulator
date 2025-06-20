@@ -5,7 +5,7 @@ project(VentusSimulator
 
 # 检查 SYSTEMC_HOME 环境变量
 if(NOT DEFINED ENV{SYSTEMC_HOME})
-    message(FATAL_ERROR "请设置 SYSTEMC_HOME 环境变量！")
+    message(FATAL_ERROR "Please set SYSTEMC_HOME environment variable to the path of your SystemC 2.3.4 installation.")
 endif()
 
 #
@@ -79,8 +79,9 @@ target_link_libraries(VentusCycleSim
     PRIVATE fmt
 )
 set_target_properties(VentusCycleSim PROPERTIES
-    INSTALL_RPATH "${SYSTEMC_LIBRARY_DIR};${RAMULATOR2_SRC_DIR}"
-    PUBLIC_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/ventus_cyclesim.h"
+    # libramulator.so will be installed together, use $ORIGIN
+    INSTALL_RPATH "${SYSTEMC_LIBRARY_DIR};$ORIGIN"
+    PUBLIC_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/src/ventus_cyclesim.h"
 )
 target_compile_definitions(VentusCycleSim PRIVATE
     VENTUS_CYCLESIM_PROJECT_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
