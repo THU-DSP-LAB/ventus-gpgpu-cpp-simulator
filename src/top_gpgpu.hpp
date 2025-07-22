@@ -6,6 +6,7 @@
 #include "sm/BASE.h"
 #include "sm/BASE_sti.h"
 #include "sysc/communication/sc_clock.h"
+#include "sysc/tracing/sc_trace.h"
 #include "ventus_cyclesim.h"
 #include <functional>
 #include <memory>
@@ -26,10 +27,12 @@ class Top_gpgpu {
 
     std::shared_ptr<spdlog::logger> m_logger;
 
+    sc_trace_file* m_tf = nullptr;
+
     int m_kernel_cnt = 0;
 
 public:
-    Top_gpgpu(const char* ramulator_config_filename);
+    Top_gpgpu(const char* ramulator_config_filename, const char* vcd_filename = nullptr);
     ~Top_gpgpu();
 
     void add_kernel(std::string name, std::string metafile, std::string datafile);

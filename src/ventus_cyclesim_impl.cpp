@@ -5,11 +5,13 @@
 // make libsystemc happy
 int sc_main(int argc, char* argv[]) { return 0; }
 
-
 void ventus_cyclesim_t::constructor(const ventus_cyclesim_config_t* config) {
     m_config = *config;
     sc_set_time_resolution(1, SC_NS);
-    m_dut = new Top_gpgpu(m_config.ramulator.config_filename);
+    m_dut = new Top_gpgpu(
+        m_config.ramulator.config_filename,
+        m_config.waveform.enable ? m_config.waveform.filename : nullptr
+    );
     m_result.error = false;
     m_result.time_exceed = false;
     m_result.idle = false;

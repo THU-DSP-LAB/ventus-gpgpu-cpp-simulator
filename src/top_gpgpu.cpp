@@ -35,7 +35,7 @@ private:
 extern std::shared_ptr<std::map<OP_TYPE, decodedat>> gen_decodetable();
 extern std::shared_ptr<std::vector<instable_t>> gen_instruction_table();
 
-Top_gpgpu::Top_gpgpu(const char* ramulator_config_filename)
+Top_gpgpu::Top_gpgpu(const char* ramulator_config_filename, const char* vcd_filename)
     : m_clk("clk", PERIOD, SC_NS, 0.5, 0, SC_NS, false)
     , m_rstn("rst_n")
     , m_ramulator(std::make_unique<RamulatorWrapper>(ramulator_config_filename)) {
@@ -79,6 +79,15 @@ Top_gpgpu::Top_gpgpu(const char* ramulator_config_filename)
     }
     m_cta->clk(m_clk);
     m_cta->rst_n(m_rstn);
+
+    if(vcd_filename != nullptr) {
+        m_tf = sc_core::sc_create_vcd_trace_file(vcd_filename);
+        m_clk.trace(m_tf);
+        m_rstn.trace(m_tf);
+        for (int i = 0; i < NUM_SM; i++) {
+            m_sm[i]->export_vcd_trace(m_tf, fmt::format("SM{}", i));
+        }
+    }
 }
 
 Top_gpgpu::~Top_gpgpu() {
@@ -87,6 +96,9 @@ Top_gpgpu::~Top_gpgpu() {
     }
     delete m_cta;
     delete m_rst_gen;
+    if (m_tf) {
+        sc_core::sc_close_vcd_trace_file(m_tf);
+    }
 }
 
 void Top_gpgpu::add_kernel(

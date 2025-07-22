@@ -49,6 +49,8 @@ public:
         std::shared_ptr<spdlog::logger> logger = nullptr
     );
 
+    void export_vcd_trace(sc_core::sc_trace_file* tf, const std::string& prefix) const;
+
 public:
     // shared components of subcore's warp_scheduler
     typedef struct {  // hardware block slot in SM, records block(CTA) information

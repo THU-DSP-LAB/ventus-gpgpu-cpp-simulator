@@ -44,6 +44,8 @@ public:
         std::shared_ptr<spdlog::logger> logger = nullptr
     );
 
+    void export_vcd_trace(sc_core::sc_trace_file* tf, const std::string& prefix) const;
+
 private:
     std::shared_ptr<spdlog::logger> m_logger;
     SV39_basic m_mmu;

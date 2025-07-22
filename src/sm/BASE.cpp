@@ -53,6 +53,14 @@ BASE::BASE(
     SC_THREAD(lsu_main);
 }
 
+void BASE::export_vcd_trace(sc_core::sc_trace_file* tf, const std::string& prefix) const {
+    for (int i = 0; i < m_subcores.size(); i++) {
+        m_subcores[i]->export_vcd_trace(tf, fmt::format("{}.subcore{}", prefix, i));
+    }
+    sc_trace(tf, lsu_subcore_req_valid.to_ulong(), prefix + ".lsu_subcore_req_valid");
+    sc_trace(tf, lsu_subcore_req_arbiter_last, prefix + ".lsu_subcore_req_arbiter_last");
+}
+
 int BASE::lsu_subcore_req(
     bool valid, uint32_t subcore_id, uint32_t subcore_warp_id, I_TYPE instr, vaddr_t pds_base,
     paddr_t pagetable_root, std::unique_ptr<std::array<reg_t, hw_num_thread>>& src_data1,

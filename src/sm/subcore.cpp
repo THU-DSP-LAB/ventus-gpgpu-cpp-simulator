@@ -127,6 +127,99 @@ Subcore::Subcore(
     sensitive << clk.pos();
 }
 
+void Subcore::export_vcd_trace(sc_core::sc_trace_file* tf, const std::string& prefix) const {
+    for (int i = 0; i < SUBCORE_WARP_NUM; i++) {
+        m_hw_warps[i]->export_vcd_trace(tf, fmt::format("{}.warp{}", prefix, i));
+    }
+    sc_trace(tf, clk, fmt::format("{}.clk", prefix));
+    sc_trace(tf, rst_n, fmt::format("{}.rst_n", prefix));
+    sc_trace(tf, opc_full, prefix + ".opc_full");
+    sc_trace(tf, last_dispatch_warpid, prefix + ".last_dispatch_warpid");
+    sc_trace(tf, issue_ins, prefix + ".issue_ins");
+    sc_trace(tf, issueins_warpid, prefix + ".issueins_warpid");
+    sc_trace(tf, dispatch_valid, prefix + ".dispatch_valid");
+    sc_trace(tf, dispatch_ready, prefix + ".dispatch_ready");
+    sc_trace(tf, opcfifo_elem_num, prefix + ".opcfifo_elem_num");
+    sc_trace(tf, emit_ins, prefix + ".emit_ins");
+    sc_trace(tf, emitins_warpid, prefix + ".emitins_warpid");
+    sc_trace(tf, doemit, prefix + ".doemit");
+    sc_trace(tf, findemit, prefix + ".findemit");
+    sc_trace(tf, emit_idx, prefix + ".emit_idx");
+    sc_trace(tf, emito_salu, prefix + ".emito_salu");
+    sc_trace(tf, emito_valu, prefix + ".emito_valu");
+    sc_trace(tf, emito_vfpu, prefix + ".emito_vfpu");
+    sc_trace(tf, emito_simtstk, prefix + ".emito_simtstk");
+    sc_trace(tf, emito_warpscheduler, prefix + ".emito_warpscheduler");
+    // salu
+    sc_trace(tf, tosalu_data1, prefix + ".tosalu_data.data1");
+    sc_trace(tf, tosalu_data2, prefix + ".tosalu_data.data2");
+    sc_trace(tf, tosalu_data3, prefix + ".tosalu_data.data3");
+    sc_trace(tf, salu_ready, prefix + ".salu_ready");
+    sc_trace(tf, salufifo_empty, prefix + ".salufifo_empty");
+    sc_trace(tf, salutmp2, prefix + ".salutmp2");
+    sc_trace(tf, salutop_dat, prefix + ".salutop_dat");
+    sc_trace(tf, salufifo_elem_num, prefix + ".salufifo_elem_num");
+    // valu
+    sc_trace(tf, valu_ready, prefix + ".valu_ready");
+    sc_trace(tf, valuto_simtstk, prefix + ".valuto_simtstk");
+    sc_trace(tf, branch_elsemask, prefix + ".branch_elsemask");
+    sc_trace(tf, branch_elsepc, prefix + ".branch_elsepc");
+    sc_trace(tf, vbranch_ins, prefix + ".vbranch_ins");
+    sc_trace(tf, vbranchins_warpid, prefix + ".vbranchins_warpid");
+    sc_trace(tf, valufifo_empty, prefix + ".valufifo_empty");
+    sc_trace(tf, valutop_dat, prefix + ".valutop_dat");
+    sc_trace(tf, valufifo_elem_num, prefix + ".valufifo_elem_num");
+    // simt-stack
+    sc_trace(tf, emito_simtstk, "emito_simtstk");
+    // vfpu
+    sc_trace(tf, vfpu_ready, "vfpu_ready");
+    sc_trace(tf, vfpufifo_empty, "vfpufifo_empty");
+    sc_trace(tf, vfputop_dat, "vfputop_dat");
+    sc_trace(tf, vfpufifo_elem_num, "vfpufifo_elem_num");
+    // lsu
+    sc_trace(tf, lsufifo_empty, "lsufifo_empty");
+    sc_trace(tf, lsufifo_elem_num, "lsufifo_elem_num");
+    // writeback
+    sc_trace(tf, write_s, "write_s");
+    sc_trace(tf, write_v, "write_v");
+    sc_trace(tf, write_f, "write_f");
+    sc_trace(tf, execpop_salu, "execpop_salu");
+    sc_trace(tf, execpop_valu, "execpop_valu");
+    sc_trace(tf, execpop_vfpu, "execpop_vfpu");
+    sc_trace(tf, execpop_lsu, "execpop_lsu");
+    sc_trace(tf, wb_ena, "wb_ena");
+    sc_trace(tf, wb_ins, "wb_ins");
+    sc_trace(tf, wb_warpid, "wb_warpid");
+}
+
+void WARP_BONE::export_vcd_trace(sc_core::sc_trace_file* tf, const std::string& prefix) const {
+    sc_trace(tf, is_warp_activated, prefix + ".is_warp_activated");
+    sc_trace(tf, ibuf_swallow, prefix + ".ibuf_swallow");
+    sc_trace(tf, fetch_valid, prefix + ".fetch_valid");
+    sc_trace(tf, fetch_valid2, prefix + ".fetch_valid2");
+    sc_trace(tf, jump, prefix + ".jump");
+    sc_trace(tf, branch_sig, prefix + ".branch_sig");
+    sc_trace(tf, vbran_sig, prefix + ".vbran_sig");
+    sc_trace(tf, jump_addr, prefix + ".jump_addr");
+    sc_trace(tf, pc, prefix + ".pc");
+    sc_trace(tf, decode_ins, prefix + ".decode_ins");
+    sc_trace(tf, ibuf_empty, prefix + ".ibuf_empty");
+    sc_trace(tf, ibuf_full, prefix + ".ibuf_full");
+    sc_trace(tf, ibuftop_ins, prefix + ".ibuftop_ins");
+    sc_trace(tf, ififo_elem_num, prefix + ".ififo_elem_num");
+    sc_trace(tf, dispatch_warp_valid, prefix + ".dispatch_warp_valid");
+    sc_trace(tf, current_mask, prefix + ".current_mask");
+    sc_trace(tf, simtstk_jumpaddr, prefix + ".simtstk_jumpaddr");
+    sc_trace(tf, simtstk_jump, prefix + ".simtstk_jump");
+    sc_trace(tf, simtstk_jump, prefix + ".simtstk_jump");
+    sc_trace(tf, simtstk_jumpaddr, prefix + ".simtstk_jumpaddr");
+    sc_trace(tf, current_mask, prefix + ".current_mask");
+    sc_trace(tf, vbran_sig, prefix + ".vbran_sig");
+    for (int i = 0; i < s_regfile.size(); i++) {
+        sc_trace(tf, s_regfile[i], fmt::format("{}.sgpr[{}]", prefix, i));
+    }
+}
+
 void Subcore::PROGRAM_COUNTER(const int warp_id) {
     auto& hwarp = m_hw_warps[warp_id];
     while (true) {

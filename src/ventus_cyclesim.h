@@ -69,13 +69,13 @@ typedef struct {
     //     uint64_t auto_alloc; // 若访存到未分配的物理页，自动分配（如此则与实际硬件内存行为相同）
     //     // 注意，自动分配的物理内存是不会释放的，除非整个仿真结束
     // } pmem;
-    // struct { // 波形输出功能，这里只设置正常仿真流程，对仿真快照回溯后的波形输出无影响
-    //     bool enable;         // 是否启用？仿真快照回溯后将自动启用
-    //     uint64_t time_begin; // 输出波形的起始时刻
-    //     uint64_t time_end;   // 输出波形的结束时刻，end > begin才有波形输出
-    //     int levels;          // 波形输出的层级
-    //     const char* filename;
-    // } waveform;
+    struct { // 波形输出功能，这里只设置正常仿真流程，对仿真快照回溯后的波形输出无影响
+        bool enable;         // 是否启用？仿真快照回溯后将自动启用
+        // uint64_t time_begin; // 输出波形的起始时刻
+        // uint64_t time_end;   // 输出波形的结束时刻，end > begin才有波形输出
+        // int levels;          // 波形输出的层级
+        const char* filename;
+    } waveform;
     // struct { // 仿真快照，当仿真出错时可回溯仿真进度到最旧快照，开启波形记录重新仿真
     //     bool enable;
     //     uint64_t time_interval; // 快照时间间隔

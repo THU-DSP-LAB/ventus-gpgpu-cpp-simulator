@@ -1564,6 +1564,8 @@ public:
         will_warp_activate = false;
     }
 
+    void export_vcd_trace(sc_core::sc_trace_file* tf, const std::string& prefix) const;
+
     void initwarp() {
         fetch_valid12 = false;
         ififo.clear();
