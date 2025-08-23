@@ -24,17 +24,25 @@ void Subcore::DECODE(int warp_id) {
             //     sc_delta_count_at_current_time() << std::endl;
 
             bool foundBitIns = 0;
-            for (const auto& instable_item : *m_instruction_table) {
-                std::bitset<32> masked_ins
-                    = std::bitset<32>(tmpins.origin32bit) & instable_item.mask;
-                // std::cout << "warp" << warp_id << " DECODE: mask=" << instable_item.mask << ",
-                // masked_ins=" << masked_ins << " at " << sc_time_stamp() << "," <<
-                // sc_delta_count_at_current_time() << std::endl;
-                auto it = instable_item.itable.find(masked_ins);
-                if (it != instable_item.itable.end()) {
-                    tmpins.op = it->second;
-                    foundBitIns = true;
-                    break;
+
+            std::bitset<32> _ins = tmpins.origin32bit;
+            if ((_ins & std::bitset<32>(0x7f)) == 0) {
+                // Auxiliary self-defined debug/print instruction only for this simulator
+                tmpins.op = (int)CUSTOM_PRINT_;
+                foundBitIns = true;
+            } else {
+                for (const auto& instable_item : *m_instruction_table) {
+                    std::bitset<32> masked_ins
+                        = std::bitset<32>(tmpins.origin32bit) & instable_item.mask;
+                    // std::cout << "warp" << warp_id << " DECODE: mask=" << instable_item.mask <<
+                    // ", masked_ins=" << masked_ins << " at " << sc_time_stamp() << "," <<
+                    // sc_delta_count_at_current_time() << std::endl;
+                    auto it = instable_item.itable.find(masked_ins);
+                    if (it != instable_item.itable.end()) {
+                        tmpins.op = it->second;
+                        foundBitIns = true;
+                        break;
+                    }
                 }
             }
             if (!foundBitIns) {
@@ -83,6 +91,25 @@ void Subcore::DECODE(int warp_id) {
                     ext1, extd
                 );
 #endif
+            } else if (tmpins.op == (int)CUSTOM_PRINT_) {
+                // Auxiliary self-defined debug/print instruction only for this simulator
+                tmpins.ddd = m_decode_table->at(OP_TYPE::VADD_VX_); // they are similar
+                tmpins.ddd.sel_execunit = DecodeParams::INVALID_EXECUNIT;
+                tmpins.ddd.alu_fn = DecodeParams::FN_X;
+                tmpins.ddd.wvd = false;
+                tmpins.ddd.wxd = false;
+                tmpins.s1 = extractBits32(tmpins.origin32bit, 19, 15);
+                tmpins.s2 = extractBits32(tmpins.origin32bit, 24, 20);
+                tmpins.d = 0;
+                if (WILLregext) {
+                    tmpins.s1 += ext1 << 5;
+                    tmpins.s2 += ext2 << 5;
+                    tmpins.s3 += ((tmpins.ddd.fp && !tmpins.ddd.isvec) ? ext3 : extd) << 5;
+                    tmpins.d += extd << 5;
+                    WILLregext = false;
+                }
+                hwarp->decode_ins.write(tmpins);
+                hwarp->fetch_valid2 = hwarp->fetch_valid12;
             } else if (m_decode_table->contains((OP_TYPE)tmpins.op)) {
                 // op != REGEXT_ && op != REGEXTI_
                 tmpins.ddd = m_decode_table->at((OP_TYPE)tmpins.op);

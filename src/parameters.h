@@ -125,6 +125,7 @@ struct vector_t : std::array<reg_t, hw_num_thread> {
 
 enum OP_TYPE {
     INVALID_,
+    CUSTOM_PRINT_,
     ADD_,
     ADDI_,
     AMOADD_W_,

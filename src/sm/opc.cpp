@@ -1,4 +1,5 @@
 #include "subcore.hpp"
+#include <fmt/format.h>
 #include <memory>
 #include <spdlog/spdlog.h>
 
@@ -376,19 +377,57 @@ void Subcore::OPC_EMIT() {
                     emito_warpscheduler = true;
                     break;
 
-                case DecodeParams::INVALID_EXECUNIT:
-                    std::cout << "SM" << m_sm_id << " OPC_EMIT error: ins=" << opcfifo[entryidx].ins
-                              << "," << std::hex << opcfifo[entryidx].ins.origin32bit << std::dec
-                              << " but INVALID EXECUNIT at " << sc_time_stamp() << ","
-                              << sc_delta_count_at_current_time() << "\n";
-                    break;
+                // case DecodeParams::INVALID_EXECUNIT:
+                //     std::cout << "SM" << m_sm_id << " OPC_EMIT error: ins=" <<
+                //     opcfifo[entryidx].ins
+                //               << "," << std::hex << opcfifo[entryidx].ins.origin32bit << std::dec
+                //               << " but INVALID EXECUNIT at " << sc_time_stamp() << ","
+                //               << sc_delta_count_at_current_time() << "\n";
+                //     break;
                 default:
-                    std::cout << "SM" << m_sm_id
-                              << " OPC_EMIT warning: ins=" << opcfifo[entryidx].ins << ","
-                              << std::hex << opcfifo[entryidx].ins.origin32bit << std::dec
-                              << " but undefined EXECUNIT at " << sc_time_stamp() << ","
-                              << sc_delta_count_at_current_time() << "\n";
-                    assert(0);
+                    if (opcfifo[entryidx].ins.op == CUSTOM_PRINT_) {
+                        // Auxiliary instruction for debug/print
+                        char format_char = opcitem.data[0][0];
+                        std::string print_str;
+                        print_str.reserve(512);
+                        if (format_char == 'f' || format_char == 'F') {
+                            for (int tid = 0; tid < opcitem.data[1].size(); tid++) {
+                                iuf32_t data(opcitem.data[1][tid].to_uint());
+                                print_str += fmt::format("{:f} ", data.f32);
+                            }
+                        } else if (format_char == 'd' || format_char == 'D') {
+                            for (int tid = 0; tid < opcitem.data[1].size(); tid++) {
+                                print_str += fmt::format("{:d} ", opcitem.data[1][tid].to_uint());
+                            }
+                        } else {
+                            for (int tid = 0; tid < opcitem.data[1].size(); tid++) {
+                                print_str += fmt::format("{:x} ", opcitem.data[1][tid].to_uint());
+                            }
+                        }
+                        // for (int threadIdx = 0; threadIdx < opcitem.data[1].size(); threadIdx++)
+                        // {
+                        //     ptr += std::snprintf(
+                        //         ptr, sizeof(print_buf) - (ptr - print_buf), format.c_str(),
+                        //         opcitem.data[1][threadIdx].to_uint()
+                        //     );
+                        // }
+                        SPDLOG_LOGGER_INFO(
+                            m_logger, "SM {} warp {} 0x{:x} {} PRINT%{:c}: {}", m_sm_id,
+                            warpid_convert(m_subcore_id, opcitem.warp_id), opcitem.ins.currentpc,
+                            opcitem.ins, opcfifo[entryidx].data[0][0], print_str
+                        );
+                        emit_idx = entryidx;
+                        last_emit_entryid = entryidx + 1;
+                        findemit = 1;
+                        doemit = true;
+                    } else {
+                        std::cout << "SM" << m_sm_id
+                                  << " OPC_EMIT warning: ins=" << opcfifo[entryidx].ins << ","
+                                  << std::hex << opcfifo[entryidx].ins.origin32bit << std::dec
+                                  << " but undefined EXECUNIT at " << sc_time_stamp() << ","
+                                  << sc_delta_count_at_current_time() << "\n";
+                        assert(0);
+                    }
                     break;
                 }
             }

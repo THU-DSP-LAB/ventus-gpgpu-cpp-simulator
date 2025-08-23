@@ -484,6 +484,8 @@ bool Subcore::cycle_JUDGE_DISPATCH(int warp_id) {
         return false;
     if (instr.op == ENDPRG_ && !hwarp->score.empty())
         return false;
+    if (instr.op == CUSTOM_PRINT_ && !hwarp->score.empty())
+        return false;
 
     if (instr.ddd.wxd && hwarp->score.find(SCORE_TYPE(s, instr.d)) != hwarp->score.end())
         return false;
