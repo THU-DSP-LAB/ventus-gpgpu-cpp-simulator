@@ -474,6 +474,9 @@ bool Subcore::cycle_JUDGE_DISPATCH(int warp_id) {
     if (hwarp->ififo.isempty()) {
         return false;
     }
+    if (opc_in_ready(warp_id) == false) {
+        return false; // 限制OPC中1个warp只有1条指令，防止单warp在OPC出口出现乱序，导致同地址Load/Store乱序
+    }
 
     const auto& instr = hwarp->ififo.front();
 
