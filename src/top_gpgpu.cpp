@@ -37,8 +37,7 @@ extern std::shared_ptr<std::vector<instable_t>> gen_instruction_table();
 
 Top_gpgpu::Top_gpgpu(const char* ramulator_config_filename, const char* vcd_filename)
     : m_clk("clk", PERIOD, SC_NS, 0.5, 0, SC_NS, false)
-    , m_rstn("rst_n")
-    , m_ramulator(std::make_unique<RamulatorWrapper>(ramulator_config_filename)) {
+    , m_rstn("rst_n") {
 
     m_logger = std::make_shared<spdlog::logger>(
         "Ventus-CycleSim-spdlogger", std::make_shared<spdlog::sinks::stdout_sink_mt>()
@@ -49,6 +48,7 @@ Top_gpgpu::Top_gpgpu(const char* ramulator_config_filename, const char* vcd_file
             "@{}ns,{}", sc_time_stamp().to_default_time_units(), sc_delta_count_at_current_time()
         );
     }));
+    m_ramulator = std::make_unique<RamulatorWrapper>(ramulator_config_filename, m_logger);
 
     auto instruction_table = gen_instruction_table();
     auto decode_table = gen_decodetable();
@@ -80,7 +80,7 @@ Top_gpgpu::Top_gpgpu(const char* ramulator_config_filename, const char* vcd_file
     m_cta->clk(m_clk);
     m_cta->rst_n(m_rstn);
 
-    if(vcd_filename != nullptr) {
+    if (vcd_filename != nullptr) {
         m_tf = sc_core::sc_create_vcd_trace_file(vcd_filename);
         m_clk.trace(m_tf);
         m_rstn.trace(m_tf);
@@ -124,10 +124,10 @@ int Top_gpgpu::pmemcpy_h2d(paddr_t dst, const void* src, size_t size) {
 Top_gpgpu::pagetable_t Top_gpgpu::vmem_create() { return m_sv39->create_pagetable(); }
 void Top_gpgpu::vmem_destroy(pagetable_t root) { m_sv39->destroy_pagetable(root); }
 
-void Top_gpgpu::vmemcpy_d2h(pagetable_t ptroot, void* dst, uint64_t src, uint64_t size) {
+void Top_gpgpu::vmemcpy_d2h(pagetable_t ptroot, void* dst, vaddr_t src, size_t size) {
     m_sv39->memcpy(ptroot, dst, src, size);
 }
-void Top_gpgpu::vmemcpy_h2d(pagetable_t ptroot, uint64_t dst, const void* src, uint64_t size) {
+void Top_gpgpu::vmemcpy_h2d(pagetable_t ptroot, vaddr_t dst, const void* src, size_t size) {
     m_sv39->memcpy(ptroot, dst, src, size);
 }
 Top_gpgpu::vaddr_t Top_gpgpu::vmem_alloc(pagetable_t ptroot, vaddr_t vaddr, size_t size) {

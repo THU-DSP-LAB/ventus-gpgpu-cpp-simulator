@@ -176,17 +176,17 @@ DLL_PUBLIC int ventus_cyclesim_pmemcpy_d2h(
 
 DLL_PUBLIC paddr_t ventus_cyclesim_vmem_create(ventus_cyclesim_t* sim);
 DLL_PUBLIC void ventus_cyclesim_vmem_destroy(ventus_cyclesim_t* sim, paddr_t pagetable_root);
-DLL_PUBLIC uint64_t ventus_cyclesim_vmem_alloc(
-    ventus_cyclesim_t* sim, paddr_t pagetable_root, uint64_t vaddr, uint64_t size
+DLL_PUBLIC vaddr_t ventus_cyclesim_vmem_alloc(
+    ventus_cyclesim_t* sim, paddr_t pagetable_root, vaddr_t vaddr, size_t size
 );
 DLL_PUBLIC void ventus_cyclesim_vmem_free(
-    ventus_cyclesim_t* sim, paddr_t pagetable_root, uint64_t vaddr, uint64_t size
+    ventus_cyclesim_t* sim, paddr_t pagetable_root, vaddr_t vaddr, size_t size
 );
 DLL_PUBLIC void ventus_cyclesim_vmemcpy_h2d(
-    ventus_cyclesim_t* sim, paddr_t pagetable_root, uint64_t dst, const void* src, uint64_t size
+    ventus_cyclesim_t* sim, paddr_t pagetable_root, vaddr_t dst, const void* src, size_t size
 );
 DLL_PUBLIC void ventus_cyclesim_vmemcpy_d2h(
-    ventus_cyclesim_t* sim, paddr_t pagetable_root, void* dst, uint64_t src, uint64_t size
+    ventus_cyclesim_t* sim, paddr_t pagetable_root, void* dst, vaddr_t src, size_t size
 );
 
 #undef DLL_PUBLIC

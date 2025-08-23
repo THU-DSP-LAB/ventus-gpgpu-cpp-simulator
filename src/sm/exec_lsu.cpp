@@ -175,10 +175,22 @@ void BASE::lsu_new_req() {
     }
 
 #ifdef SPIKE_OUTPUT
-    SPDLOG_LOGGER_TRACE(
-        m_logger, "SM {} warp {} 0x{:x} {} mask={:X} MEMADDR {:x}", sm_id, warp_id, instr.currentpc,
-        instr, instr.mask.to_uint(), fmt::join(addr_log_range, " ")
-    );
+    if (ddd.mem_cmd == DecodeParams::M_XWR) {
+        std::vector<uint32_t> data(isvec ? num_thread : 1, 0);
+        for (int i = 0; i < data.size(); i++) {
+            data[i] = mask[i] ? src3[i].to_uint() : 0;
+        }
+        SPDLOG_LOGGER_TRACE(
+            m_logger, "SM {} warp {} 0x{:x} {} mask={:X} ADDR {:x}, DATA {:x}", sm_id, warp_id,
+            instr.currentpc, instr, instr.mask.to_uint(), fmt::join(addr_log_range, " "),
+            fmt::join(data, " ")
+        );
+    } else {
+        SPDLOG_LOGGER_TRACE(
+            m_logger, "SM {} warp {} 0x{:x} {} mask={:X} MEMADDR {:x}", sm_id, warp_id,
+            instr.currentpc, instr, instr.mask.to_uint(), fmt::join(addr_log_range, " ")
+        );
+    }
 #endif
 
     // 为向量各分量计算L1Dcache的tag、setIdx、blockOffset
@@ -403,10 +415,10 @@ void BASE::lsu_main() { // LSU sc_thread
             if (mshr_item.valid && mshr_item.finished_mask.to_uint() == hw_num_thread_mask) {
                 // memory access done
 #ifdef SPIKE_OUTPUT
-                SPDLOG_LOGGER_TRACE(
-                    m_logger, "SM {} warp {} 0x{:x} {} MEMDONE, MSHR item cleared", sm_id,
-                    mshr_item.warp_id, mshr_item.instr.currentpc, mshr_item.instr
-                );
+                // SPDLOG_LOGGER_TRACE(
+                //     m_logger, "SM {} warp {} 0x{:x} {} MEMDONE, MSHR item cleared", sm_id,
+                //     mshr_item.warp_id, mshr_item.instr.currentpc, mshr_item.instr
+                // );
 #endif
                 if (mshr_item.instr.ddd.wxd || mshr_item.instr.ddd.wvd) { // to writeback
                     const auto [subcore_idx, subcore_warp_idx] = warpid_convert(mshr_item.warp_id);

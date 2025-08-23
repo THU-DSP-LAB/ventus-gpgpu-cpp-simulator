@@ -69,25 +69,25 @@ void ventus_cyclesim_vmem_destroy(ventus_cyclesim_t* sim, paddr_t pagetable_root
 }
 
 void ventus_cyclesim_vmemcpy_h2d(
-    ventus_cyclesim_t* sim, paddr_t ptroot, uint64_t dst, const void* src, uint64_t size
+    ventus_cyclesim_t* sim, paddr_t ptroot, vaddr_t dst, const void* src, uint64_t size
 ) {
     sim->m_dut->vmemcpy_h2d(ptroot, dst, src, size);
 }
 
 void ventus_cyclesim_vmemcpy_d2h(
-    ventus_cyclesim_t* sim, paddr_t ptroot, void* dst, uint64_t src, uint64_t size
+    ventus_cyclesim_t* sim, paddr_t ptroot, void* dst, vaddr_t src, size_t size
 ) {
     sim->m_dut->vmemcpy_d2h(ptroot, dst, src, size);
 }
 
-uint64_t ventus_cyclesim_vmem_alloc(
-    ventus_cyclesim_t* sim, paddr_t ptroot, uint64_t vaddr, uint64_t size
+vaddr_t ventus_cyclesim_vmem_alloc(
+    ventus_cyclesim_t* sim, paddr_t ptroot, vaddr_t vaddr, size_t size
 ) {
     return sim->m_dut->vmem_alloc(ptroot, vaddr, size);
 }
 
 void ventus_cyclesim_vmem_free(
-    ventus_cyclesim_t* sim, paddr_t ptroot, uint64_t vaddr, uint64_t size
+    ventus_cyclesim_t* sim, paddr_t ptroot, vaddr_t vaddr, size_t size
 ) {
     sim->m_dut->vmem_free(ptroot, vaddr, size);
 }

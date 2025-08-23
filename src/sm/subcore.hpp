@@ -177,6 +177,8 @@ private:
     sc_signal<int> opcfifo_elem_num { "opcfifo_elem_num" };
     bool findemit; // 轮询时，找到了全ready且执行单元也ready的entry
     sc_signal<bool> doemit { "doemit" };
+    bool opc_in_ready() const; 
+    bool opc_in_ready(int warp_id) const; 
     // regfile
     sc_signal<int> rdv1_addr { "rdv1_addr" };
     // sc_signal<reg_t> rds1_data { "rds1_data" };

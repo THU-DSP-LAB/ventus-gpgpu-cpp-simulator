@@ -42,7 +42,7 @@ void Subcore::OPC_FIFO() {
         ev_opc_pop.notify();
         // TODO: 按目前的事件顺序，若发生某ins进入OPC而立刻ready，则会有问题，后续要修改
         if (dispatch_valid) {
-            if (opc_full && doemit == false) // 相当于上一cycle dispatch_ready
+            if (!opc_in_ready()) // 相当于上一cycle dispatch_ready
             {
                 // if not ready, just wait, no need throw ERROR
                 // std::cout << "OPC ERROR: is full but receive ins from issue at " <<
@@ -216,7 +216,7 @@ void Subcore::OPC_EMIT() {
             if (findemit) {
                 break;
             }
-            if (opcfifo.tag_valid(entryidx) && opcfifo[entryidx].all_ready()) {
+            if (opcfifo.tag_valid(entryidx) && opcitem.all_ready()) {
                 emit_ins = opcfifo[entryidx].ins;
                 emitins_warpid = opcfifo[entryidx].warp_id;
 
@@ -284,7 +284,7 @@ void Subcore::OPC_EMIT() {
                     break;
 
                 case DecodeParams::LSU: {
-                    if(instr_tried_emit_to_lsu) {
+                    if (instr_tried_emit_to_lsu) {
                         break; // only one lsu_req per cycle
                     }
                     auto src1 = std::make_unique<std::array<reg_t, hw_num_thread>>(opcitem.data[0]);

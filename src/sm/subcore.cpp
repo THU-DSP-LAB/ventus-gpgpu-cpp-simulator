@@ -255,8 +255,7 @@ void Subcore::PROGRAM_COUNTER(const int warp_id) {
                 hwarp->pc = hwarp->simtstk_jumpaddr;
                 hwarp->fetch_valid = true;
             } else if (hwarp->ibuf_empty
-                       | (!hwarp->ibuf_full | (hwarp->dispatch_warp_valid && (!opc_full | doemit))
-                       )) {
+                       | (!hwarp->ibuf_full | (hwarp->dispatch_warp_valid && opc_in_ready()))) {
                 // std::cout << "pc will +1 at " << sc_time_stamp() << "," <<
                 // sc_delta_count_at_current_time() << std::endl;
                 hwarp->pc = hwarp->pc.read() + 4;
@@ -286,8 +285,7 @@ void Subcore::INSTRUCTION_REG(const int warp_id) {
                 hwarp->fetch_valid12 = false;
                 hwarp->ev_decode.notify();
             } else if (hwarp->ibuf_empty
-                       | (!hwarp->ibuf_full | (hwarp->dispatch_warp_valid && (!opc_full | doemit))
-                       )) {
+                       | (!hwarp->ibuf_full | (hwarp->dispatch_warp_valid && opc_in_ready()))) {
                 hwarp->fetch_valid12 = hwarp->fetch_valid;
 
                 // if (sm_id == 0 && warp_id == 0)
@@ -320,7 +318,7 @@ void Subcore::cycle_IBUF_ACTION(const int warp_id, I_TYPE& dispatch_ins_, I_TYPE
     if (rst_n.read() == 0)
         hwarp->ififo.clear();
     else {
-        if (hwarp->dispatch_warp_valid && (!opc_full | doemit)) {
+        if (hwarp->dispatch_warp_valid && opc_in_ready()) {
             // std::cout << "before dispatch, ififo has " << ififo.used() << " elems at " <<
             // sc_time_stamp() <<","<< sc_delta_count_at_current_time() << std::endl;
             dispatch_ins_ = hwarp->ififo.get();
@@ -396,10 +394,11 @@ void Subcore::cycle_UPDATE_SCORE(
         // " << sc_time_stamp()
         // <<","<< sc_delta_count_at_current_time() << std::endl;
         if (it == hwarp->score.end()) {
-            std::cout << "warp" << warp_id
-                      << "_wb_ena error: scoreboard can't find rd in score set, wb_ins=" << wb_ins
-                      << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time()
-                      << std::endl;
+            SPDLOG_LOGGER_ERROR(
+                m_logger, "SM {} warp {} 0x{:x} {} SCOREB: can't found this writeback instr",
+                m_sm_id, warpid_convert(m_subcore_id, warp_id), wb_ins.read().currentpc,
+                wb_ins.read()
+            );
             assert(0);
         } else {
             hwarp->score.erase(it);
@@ -420,26 +419,26 @@ void Subcore::cycle_UPDATE_SCORE(
                 << "warp" << warp_id
                 << "_scoreboard error: detect (v)branch_sig=1(from salu) while wait_bran=0 at "
                 << sc_time_stamp() << "," << sc_delta_count_at_current_time() << std::endl;
-        else if (hwarp->dispatch_warp_valid && (!opc_full | doemit))
+        else if (hwarp->dispatch_warp_valid && opc_in_ready())
             std::cout << "warp" << warp_id
                       << "_scoreboard error: detect (v)branch_sig=1(from salu) while dispatch=1 at "
                       << sc_time_stamp() << "," << sc_delta_count_at_current_time() << std::endl;
         hwarp->wait_bran = 0;
     } else if ((tmpins.ddd.branch != 0) && hwarp->dispatch_warp_valid
-               && (!opc_full | doemit)) // 表示将要dispatch
+               && opc_in_ready()) // 表示将要dispatch
     {
         // std::cout << "ibuf let wait_bran=1 at " << sc_time_stamp() <<","<<
         // sc_delta_count_at_current_time() << std::endl;
         hwarp->wait_bran = 1;
     } else if (tmpins.op == OP_TYPE::ENDPRG_ && hwarp->dispatch_warp_valid
-               && (!opc_full | doemit)) { // TODO: 权宜之计，让endprg后暂停dispatch
+               && opc_in_ready()) { // TODO: 权宜之计，让endprg后暂停dispatch
         // std::cout << "SM" << sm_id << " warp " << warp_id << " UPDATE_SCORE detect ENDPRG,
         // suspend to dispatch at "
         // << sc_time_stamp() << "," << sc_delta_count_at_current_time() << std::endl;
         hwarp->wait_bran = 1;
     }
 
-    if (hwarp->dispatch_warp_valid && (!opc_full | doemit)) { // 加入 score
+    if (hwarp->dispatch_warp_valid && opc_in_ready()) { // 加入 score
         insertscore = true;
         if (tmpins.ddd.wvd) {
             if (tmpins.ddd.wxd)
@@ -555,6 +554,19 @@ void Subcore::BEFORE_DISPATCH(int warp_id) {
             hwarp->wait_bran = false;
         }
     }
+}
+
+bool Subcore::opc_in_ready() const {
+    return !opc_full.read() || doemit.read(); // not full
+}
+bool Subcore::opc_in_ready(int warp_id) const {
+    if (!opc_in_ready()) return false;
+    for (int i = 0; i < opcfifo.get_size(); i++) {
+        if (opcfifo[i].warp_id == warp_id && opcfifo.tag_valid(i)) {
+            return false;
+        }
+    }
+    return true;
 }
 
 void Subcore::lsu_writeback(

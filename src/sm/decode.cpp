@@ -131,8 +131,8 @@ void Subcore::DECODE(int warp_id) {
                         m_logger,
                         "SM {} warp {} 0x{:x} {} REGEXT(s3,s2,s1,d)={},{},{},{} is used to set "
                         "s3,s2,s1,d={},{},{},{}",
-                        m_sm_id, warp_id, tmpins.currentpc, tmpins, ext3, ext2, ext1, extd,
-                        tmpins.s3, tmpins.s2, tmpins.s1, tmpins.d
+                        m_sm_id, warpid_convert(m_subcore_id, warp_id), tmpins.currentpc, tmpins,
+                        ext3, ext2, ext1, extd, tmpins.s3, tmpins.s2, tmpins.s1, tmpins.d
                     );
 #endif
                 }

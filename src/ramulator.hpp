@@ -5,14 +5,18 @@
 #include "parameters.h"
 #include "physical_mem.hpp"
 #include "sv39.hpp"
-#include <systemc.h>
 #include <list>
 #include <memory>
+#include <spdlog/spdlog.h>
 #include <string>
+#include <systemc.h>
 
-class RamulatorWrapper: public sc_core::sc_module {
+class RamulatorWrapper : public sc_core::sc_module {
 public:
-    RamulatorWrapper(const std::string& config_file);
+    RamulatorWrapper(
+        const std::string& config_file,
+        std::shared_ptr<spdlog::logger> logger = spdlog::default_logger()
+    );
     sc_in_clk clk { "clock" };
 
     // todo: 当前暂且采用LSU与L1D之间的接口，等将来cache接入后改为L2与DDR之间的接口
@@ -27,9 +31,7 @@ public:
     // 每周期调用这个函数
     void tick();
 
-    std::shared_ptr<PhysicalMemoryInterface> get_memory() const {
-        return m_mem;
-    }
+    std::shared_ptr<PhysicalMemoryInterface> get_memory() const { return m_mem; }
 
 private:
     // ramulator frontend
@@ -55,4 +57,5 @@ private:
     };
     std::list<request_t> m_pending_requests;
     uint64_t m_request_id = 0; // 用于生成唯一id
+    std::shared_ptr<spdlog::logger> m_logger;
 };

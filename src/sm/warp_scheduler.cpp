@@ -65,7 +65,7 @@ void Subcore::WARP_SCHEDULER() {
         // std::cout << "SM" << sm_id << " WARP SCHEDULER receive issue_list " << sc_time_stamp() <<
         // "," << sc_delta_count_at_current_time() << std::endl;
 
-        if (!opc_full | doemit) // 这是dispatch_ready，来自opc (ready-valid机制)
+        if (opc_in_ready()) // 这是dispatch_ready，来自opc (ready-valid机制)
         {
             find_dispatchwarp = false; // 是否已经确定要dispatch的warp
             for (int i = 0; i < m_hw_warps.size(); i++) {

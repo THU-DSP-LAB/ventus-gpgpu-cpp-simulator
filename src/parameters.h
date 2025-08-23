@@ -41,7 +41,7 @@ inline constexpr int ireg_size = 1 << ireg_bitsize;
 inline constexpr int INS_LENGTH = 32; // the length of per instruction
 inline constexpr double PERIOD = 10;
 inline constexpr int IFIFO_SIZE = 10;
-inline constexpr int OPCFIFO_SIZE = 4;
+inline constexpr int OPCFIFO_SIZE = SUBCORE_WARP_NUM;
 inline constexpr int BANK_NUM = 4;
 inline constexpr int NUM_SM = 2;
 inline constexpr int num_register_per_warp = 256; // 每个warp寄存器数目
@@ -1122,7 +1122,7 @@ struct opcfifo_t {
     std::array<bool, 3> banktype = { 0 };
     // int mask;
     std::array<std::array<reg_t, hw_num_thread>, 3> data;
-    bool all_ready() { return ready[0] && ready[1] && ready[2]; }
+    bool all_ready() const { return ready[0] && ready[1] && ready[2]; }
     opcfifo_t() {};
     opcfifo_t(I_TYPE ins_)
         : ins(ins_) {};

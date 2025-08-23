@@ -8,9 +8,12 @@
 #include <memory>
 #include <spdlog/spdlog.h>
 
-RamulatorWrapper::RamulatorWrapper(const std::string& config_file)
+RamulatorWrapper::RamulatorWrapper(
+    const std::string& config_file, std::shared_ptr<spdlog::logger> logger
+)
     // : sc_module(sc_core::sc_module_name("RamulatorWrapper")) {
-    : sc_module("RamulatorWrapper") {
+    : sc_module("RamulatorWrapper")
+    , m_logger(logger ? logger : spdlog::default_logger()) {
 
     YAML::Node config = Ramulator::Config::parse_config_file(config_file, {});
 
