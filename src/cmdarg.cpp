@@ -81,7 +81,7 @@ int parse_arg(
             }
         } else if (args[argid] == "--help") {
             cmdarg_help(0);
-        } else if (args[argid] == "--sim-time") {
+        } else if (args[argid] == "--sim-time-max" || args[argid] == "--sim-time") {
             if (++argid >= args.size()) {
                 cmdarg_error(std::vector<std::string>(args.begin() + argid - 1, args.end()));
             } else {
