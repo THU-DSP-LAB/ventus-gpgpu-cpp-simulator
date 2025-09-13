@@ -3,11 +3,6 @@ project(VentusSimulator
         VERSION 1.0
         LANGUAGES C CXX)
 
-# 检查 SYSTEMC_HOME 环境变量
-if(NOT DEFINED ENV{SYSTEMC_HOME})
-    message(FATAL_ERROR "Please set SYSTEMC_HOME environment variable to the path of your SystemC 2.3.4 installation.")
-endif()
-
 #
 # global settings
 #
@@ -28,7 +23,7 @@ string(REPLACE "-DNDEBUG" "" CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}")
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_compile_definitions(SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE)
 else()
-    add_compile_definitions(SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_DEBUG)
+    add_compile_definitions(SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE)
 endif()
 # export compile_commands.json
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -40,8 +35,20 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 find_package(fmt REQUIRED)
 find_package(spdlog REQUIRED)
 
-# SystemC PATH
-set(SYSTEMC_HOME $ENV{SYSTEMC_HOME})
+# Get SystemC PATH from user
+if(DEFINED SYSTEMC_HOME AND NOT SYSTEMC_HOME STREQUAL "")
+  # use cmake cmd arg -DSYSTEMC_HOME
+elseif(DEFINED ENV{SYSTEMC_HOME} AND NOT "$ENV{SYSTEMC_HOME}" STREQUAL "")
+  # use environment variable
+  set(SYSTEMC_HOME "$ENV{SYSTEMC_HOME}" CACHE PATH "SystemC install root (from environment)" FORCE)
+else() # Error
+  message(FATAL_ERROR "SYSTEMC_HOME not set."
+    "Please use -DSYSTEMC_HOME=/path/to/systemc or set SYSTEMC_HOME in the environment.")
+endif()
+file(TO_CMAKE_PATH "${SYSTEMC_HOME}" SYSTEMC_HOME) # canonicalize path
+if(NOT EXISTS "${SYSTEMC_HOME}")
+  message(FATAL_ERROR "SYSTEMC_HOME points to a non-existent directory: ${SYSTEMC_HOME}")
+endif()
 set(SYSTEMC_INCLUDE_DIR ${SYSTEMC_HOME}/include)
 set(SYSTEMC_LIBRARY_DIR ${SYSTEMC_HOME}/lib-linux64)
 
