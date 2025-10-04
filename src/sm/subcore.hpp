@@ -23,11 +23,12 @@ public:
     sc_in_clk clk { "clk" };
     sc_in<bool> rst_n { "rst_n" };
 
-    using lsu_req_interface = std::function<
-        int(bool valid, uint32_t subcore_id, uint32_t subcore_warp_id, I_TYPE instr, vaddr_t pds_base,
-            paddr_t pagetable_root, std::unique_ptr<std::array<reg_t, hw_num_thread>>& src_data1,
-            std::unique_ptr<std::array<reg_t, hw_num_thread>>& src_data2,
-            std::unique_ptr<std::array<reg_t, hw_num_thread>>& src_data3)>;
+    using lsu_req_interface = std::function<int(
+        bool valid, uint32_t subcore_id, uint32_t subcore_warp_id, I_TYPE instr, vaddr_t pds_base,
+        paddr_t pagetable_root, std::unique_ptr<std::array<reg_t, hw_num_thread>>& src_data1,
+        std::unique_ptr<std::array<reg_t, hw_num_thread>>& src_data2,
+        std::unique_ptr<std::array<reg_t, hw_num_thread>>& src_data3
+    )>;
     using warp_barrier_req_interface
         = std::function<void(int subcore_warp_id, int blk_slot_id, int warp_id_in_blk, vaddr_t pc)>;
     using warp_endprg_interface
@@ -177,8 +178,8 @@ private:
     sc_signal<int> opcfifo_elem_num { "opcfifo_elem_num" };
     bool findemit; // 轮询时，找到了全ready且执行单元也ready的entry
     sc_signal<bool> doemit { "doemit" };
-    bool opc_in_ready() const; 
-    bool opc_in_ready(int warp_id) const; 
+    bool opc_in_ready() const;
+    bool opc_in_ready(int warp_id) const;
     // regfile
     sc_signal<int> rdv1_addr { "rdv1_addr" };
     // sc_signal<reg_t> rds1_data { "rds1_data" };
@@ -365,6 +366,7 @@ private:
 public:
     bool is_warp_idle(int subcore_warp_id) const {
         return !m_hw_warps.at(subcore_warp_id)->is_warp_activated
+            && !m_hw_warps.at(subcore_warp_id)->endprg_flush_pipe
             && !m_hw_warps.at(subcore_warp_id)->will_warp_activate;
     }
     void receive_warp(

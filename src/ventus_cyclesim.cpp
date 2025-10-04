@@ -8,9 +8,10 @@ ventus_cyclesim_t* ventus_cyclesim_init(const ventus_cyclesim_config_t* config) 
 
 void ventus_cyclesim_get_default_config(ventus_cyclesim_config_t* config) {
     config->sim_time_max = ~0ull;
-    config->ramulator.config_filename = VENTUS_CYCLESIM_PROJECT_DIR "/ramulator_config.yaml";
+    config->ramulator.enable = true;
+    config->ramulator.filename = VENTUS_CYCLESIM_PROJECT_DIR "/ramulator_config.yaml";
     config->waveform.enable = false;
-    config->waveform.filename = "cyclesim.vcd";
+    config->waveform.filename = "cyclesim";
 }
 
 void ventus_cyclesim_config(ventus_cyclesim_t* sim, const ventus_cyclesim_config_t* config) {

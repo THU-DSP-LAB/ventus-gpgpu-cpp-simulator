@@ -48,11 +48,11 @@ Top_gpgpu::Top_gpgpu(const char* ramulator_config_filename, const char* vcd_file
             "@{}ns,{}", sc_time_stamp().to_default_time_units(), sc_delta_count_at_current_time()
         );
     }));
-    m_ramulator = std::make_unique<RamulatorWrapper>(ramulator_config_filename, m_logger);
 
     auto instruction_table = gen_instruction_table();
     auto decode_table = gen_decodetable();
 
+    m_ramulator = std::make_unique<RamulatorWrapper>(ramulator_config_filename, m_logger);
     m_ramulator->clk(m_clk);
     m_gmem = m_ramulator->get_memory();
     m_sv39 = std::make_unique<SV39_supervisor>(m_gmem, m_logger);

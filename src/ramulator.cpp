@@ -8,12 +8,18 @@
 #include <memory>
 #include <spdlog/spdlog.h>
 
-RamulatorWrapper::RamulatorWrapper(
-    const std::string& config_file, std::shared_ptr<spdlog::logger> logger
-)
+RamulatorWrapper::RamulatorWrapper(const char* config_file, std::shared_ptr<spdlog::logger> logger)
     // : sc_module(sc_core::sc_module_name("RamulatorWrapper")) {
     : sc_module("RamulatorWrapper")
+    , m_enable_ramulator(config_file != nullptr)
     , m_logger(logger ? logger : spdlog::default_logger()) {
+
+    m_mem = std::make_shared<PhysicalMemoryBasicSim>(1ull << 32);
+    m_mmu = std::move(std::make_unique<SV39_basic>(m_mem));
+
+    if (config_file == nullptr) {
+        return;
+    }
 
     YAML::Node config = Ramulator::Config::parse_config_file(config_file, {});
 
@@ -25,9 +31,6 @@ RamulatorWrapper::RamulatorWrapper(
 
     m_tick_frontend = m_frontend->get_clock_ratio();
     m_tick_memorysystem = m_memorysystem->get_clock_ratio();
-
-    m_mem = std::make_shared<PhysicalMemoryBasicSim>(1ull << 32);
-    m_mmu = std::move(std::make_unique<SV39_basic>(m_mem));
 
     SC_HAS_PROCESS(RamulatorWrapper);
     SC_THREAD(tick);
@@ -54,34 +57,30 @@ int RamulatorWrapper::request(
     if (cmd_->opcode == L1D_OPCODE_READ) {
         // Deal with the write request
         m_pending_requests.emplace_back();
-        auto req = m_pending_requests.end();
-        --req;
+        auto req = std::prev(m_pending_requests.end());
         req->sm_id = sm_id;
         req->cmd = std::move(cmd_);
         req->callback = callback;
-        req->id = m_request_id++;
-        uint64_t req_id = req->id;
-        // 也可直接捕获req迭代器，而不是再加一个req_id字段，因为std::list只要不删除此元素其迭代器就一直有效
-        // 但这样编译器会报warning
-        auto ramulator_callback = [this, req_id](Ramulator::Request& _) {
-            auto it = std::find_if(
-                m_pending_requests.begin(), m_pending_requests.end(),
-                [req_id](const request_t& r) { return r.id == req_id; }
-            );
-            assert(it != m_pending_requests.end());
-            assert(it->cmd->opcode == L1D_OPCODE_READ);
-            if (it->callback) {
-                it->callback(std::move(it->cmd));
+        auto ramulator_callback = [this, req](Ramulator::Request& _) {
+            assert(req->cmd->opcode == L1D_OPCODE_READ);
+            if (req->callback) {
+                req->callback(std::move(req->cmd));
             }
-            m_pending_requests.erase(it);
+            m_pending_requests.erase(req);
         };
-        if (m_frontend->receive_external_requests(0, paddr_block, sm_id, ramulator_callback)) {
+        if (!m_enable_ramulator
+            || m_frontend->receive_external_requests(0, paddr_block, sm_id, ramulator_callback)) {
             for (int i = 0; i < hw_num_thread; i++) {
                 if (req->cmd->mask[i]) {
                     uint32_t paddr = paddr_block + (req->cmd->blockOffset->at(i) << 2);
                     m_mem->read(paddr, &req->cmd->data[i], 4);
                     // 这里总load word（地址向下对齐），在LSU中按照指令lw,lh,lb来选取需要的数据
                 }
+            }
+            if (!m_enable_ramulator) {
+                // 不启用DDR时序仿真，立即回调
+                Ramulator::Request dummy_request(0, 0); // not used
+                ramulator_callback(dummy_request);
             }
             return 0;
         } else { // memory controller busy, request not accepted, try again later
@@ -92,7 +91,8 @@ int RamulatorWrapper::request(
         // Finish the read request
     } else if (cmd_->opcode == L1D_OPCODE_WRITE) {
         // Deal with the write request
-        if (m_frontend->receive_external_requests(1, paddr_block, sm_id, nullptr)) {
+        if (!m_enable_ramulator
+            || m_frontend->receive_external_requests(1, paddr_block, sm_id, nullptr)) {
             for (int threadidx = 0; threadidx < hw_num_thread; threadidx++) {
                 if (cmd_->mask[threadidx]) {
                     sc_bv<4> wordOffset1H = cmd_->wordOffset1H->at(threadidx);
@@ -131,6 +131,8 @@ int RamulatorWrapper::request(
 
 void RamulatorWrapper::tick() {
     while (true) {
+        if (!m_enable_ramulator)
+            return;
         wait(clk.posedge_event());
         if (m_tick_count % m_tick_frontend == 0) {
             m_frontend->tick();

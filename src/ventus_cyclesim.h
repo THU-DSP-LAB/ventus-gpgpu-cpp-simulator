@@ -50,42 +50,13 @@ typedef struct ventus_kernel_metadata_t { // 这个metadata是供驱动使用的
 typedef struct {
     uint64_t sim_time_max; // 最大仿真时间限制
     struct {
-        const char* config_filename;
+        bool enable;
+        const char* filename; // ramulator config json file
     } ramulator;
-    // struct {               // These log sinks can be enabled simultaneously
-    //     struct {           // Write log to a file (append to its tail)
-    //         bool enable;
-    //         const char* level; // "trace", "debug", "info", "warn", "error", "critical"
-    //         const char* filename;
-    //     } file;
-    //     struct { // console log
-    //         bool enable;
-    //         const char* level;
-    //     } console;
-    //     const char* level;
-    // } log;
-    // struct {
-    //     uint64_t pagesize; // 物理内存页大小
-    //     uint64_t auto_alloc; // 若访存到未分配的物理页，自动分配（如此则与实际硬件内存行为相同）
-    //     // 注意，自动分配的物理内存是不会释放的，除非整个仿真结束
-    // } pmem;
-    struct { // 波形输出功能，这里只设置正常仿真流程，对仿真快照回溯后的波形输出无影响
-        bool enable;         // 是否启用？仿真快照回溯后将自动启用
-        // uint64_t time_begin; // 输出波形的起始时刻
-        // uint64_t time_end;   // 输出波形的结束时刻，end > begin才有波形输出
-        // int levels;          // 波形输出的层级
-        const char* filename;
+    struct {
+        bool enable;
+        const char* filename; // .vcd suffix not needed
     } waveform;
-    // struct { // 仿真快照，当仿真出错时可回溯仿真进度到最旧快照，开启波形记录重新仿真
-    //     bool enable;
-    //     uint64_t time_interval; // 快照时间间隔
-    //     int num_max;            // 最大快照数量，超限时新快照将顶替最旧快照
-    //     const char* filename;   // 快照输出的FST波形文件名
-    // } snapshot;
-    // struct {               // verilator运行时命令行参数，以argc,argv形式传入
-    //     int argc;          // 注意argc可以为0
-    //     const char** argv; // 共有argc个char*字符串，[0]成员不是程序名，而是首个verilator参数
-    // } verilator;
 } ventus_cyclesim_config_t;
 
 typedef struct {

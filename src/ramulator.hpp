@@ -14,10 +14,11 @@
 class RamulatorWrapper : public sc_core::sc_module {
 public:
     RamulatorWrapper(
-        const std::string& config_file,
+        const char* config_filename,
         std::shared_ptr<spdlog::logger> logger = spdlog::default_logger()
     );
     sc_in_clk clk { "clock" };
+    const bool m_enable_ramulator = true;
 
     // todo: 当前暂且采用LSU与L1D之间的接口，等将来cache接入后改为L2与DDR之间的接口
     // 只支持读写，不支持flush/invalidate/atomic
@@ -53,9 +54,7 @@ private:
         int sm_id;
         std::unique_ptr<lsu_mem_cmd_t> cmd;
         std::function<void(std::unique_ptr<lsu_mem_cmd_t>)> callback;
-        uint64_t id; // 唯一标识符
     };
     std::list<request_t> m_pending_requests;
-    uint64_t m_request_id = 0; // 用于生成唯一id
     std::shared_ptr<spdlog::logger> m_logger;
 };
