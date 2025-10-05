@@ -1,4 +1,5 @@
 #include "subcore.hpp"
+#include <spdlog/spdlog.h>
 
 void Subcore::VFPU_IN() {
     vfpu_in_t new_data;
@@ -124,6 +125,16 @@ void Subcore::VFPU_CALC() {
             case DecodeParams::alu_fn_t::FN_FSGNJX: // VFSGNJX.VF, VFSGNJX.VV, FSGNJX.S
                 calc_helper([](iuf32_t op1, iuf32_t op2, iuf32_t op3) {
                     return iuf32_t { .u32 = op2.u32 ^ (op2.u32 & 0x80000000u) };
+                });
+                break;
+            case DecodeParams::alu_fn_t::FN_FMAX: // VFMAX.VF, VFMAX.VV, FMAX.S
+                calc_helper([](iuf32_t op1, iuf32_t op2, iuf32_t op3) {
+                    return iuf32_t { .f32 = (op1.f32 > op2.f32) ? op1.f32 : op2.f32 };
+                });
+                break;
+            case DecodeParams::alu_fn_t::FN_FMIN: // VFMIN.VF, VFMIN.VV, FMIN.S
+                calc_helper([](iuf32_t op1, iuf32_t op2, iuf32_t op3) {
+                    return iuf32_t { .f32 = (op1.f32 < op2.f32) ? op1.f32 : op2.f32 };
                 });
                 break;
             // case FSQRT_S_:
@@ -324,9 +335,7 @@ void Subcore::VFPU_CALC() {
             //         );
             //     break;
             default:
-                std::cout << "VFPU_CALC warning: switch to unrecognized ins" << vfputmp1.ins
-                          << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time()
-                          << "\n";
+                SPDLOG_LOGGER_ERROR(m_logger, "VFPU unrecognized ins {}", vfputmp1.ins);
                 assert(0);
                 break;
             }
