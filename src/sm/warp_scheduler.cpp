@@ -19,6 +19,7 @@ void Subcore::WARP_SCHEDULER() {
             if (hwarp->endprg_flush_pipe) { // a warp endprg && flush_pipe finished
                 hwarp->endprg_flush_pipe.write(false);
                 hwarp->will_warp_activate = false;
+                wait_barrier[warpidx].write(false);
                 // clear block_slot & callback to CTA scheduler
                 f_warp_endprg(warpidx, hwarp->blk_slot_idx, hwarp->warp_idx_in_blk);
             }
@@ -54,7 +55,12 @@ void Subcore::WARP_SCHEDULER() {
 #endif
                 break;
             default:
-                std::cout << "warp scheduler warning, receive unrecognized instruction\n";
+                SPDLOG_LOGGER_ERROR(
+                    m_logger,
+                    "SM {} warp {} 0x{:x} {} ERROR warp scheduler unrecognized instruction",
+                    m_sm_id, warpid_convert(m_subcore_id, new_ins_warpid), new_ins.currentpc,
+                    new_ins
+                );
                 assert(0);
                 break;
             }
@@ -75,7 +81,7 @@ void Subcore::WARP_SCHEDULER() {
                     && hwarp->is_warp_activated) {
                     hwarp->dispatch_warp_valid = true;
                     dispatch_valid = true;
-                    _newissueins = hwarp->ififo.front();
+                    _newissueins = *hwarp->ififo.front();
                     _newissueins.mask = hwarp->current_mask;
                     // std::cout << "SM" << sm_id << " warp" << i % hw_num_warp << " 0x" << std::hex
                     //           << _newissueins.currentpc << std::dec << _newissueins

@@ -36,7 +36,7 @@ extern std::shared_ptr<std::map<OP_TYPE, decodedat>> gen_decodetable();
 extern std::shared_ptr<std::vector<instable_t>> gen_instruction_table();
 
 Top_gpgpu::Top_gpgpu(const char* ramulator_config_filename, const char* vcd_filename)
-    : m_clk("clk", PERIOD, SC_NS, 0.5, 0, SC_NS, false)
+    : m_clk("clk", PERIOD, TIME_UNIT, 0.5, 0, TIME_UNIT, false)
     , m_rstn("rst_n") {
 
     m_logger = std::make_shared<spdlog::logger>(
@@ -63,9 +63,13 @@ Top_gpgpu::Top_gpgpu(const char* ramulator_config_filename, const char* vcd_file
                                     i](std::unique_ptr<lsu_mem_cmd_t>& cmd,
                                        std::function<void(std::unique_ptr<lsu_mem_cmd_t>)> callback
                                    ) { return m_ramulator->request(i, cmd, callback); };
+        auto ramulator_interface_icache
+            = [this, i](paddr_t addr, int sourceId, std::function<void(int)> callback) {
+                  return m_ramulator->request(i, sourceId, addr, callback);
+              };
         m_sm.push_back(new BASE(
             fmt::format("SM{}", i).c_str(), i, instruction_table, decode_table, m_gmem,
-            ramulator_interface, m_logger
+            ramulator_interface, ramulator_interface_icache, m_logger
         ));
         m_sm[i]->clk(m_clk);
         m_sm[i]->rst_n(m_rstn);
@@ -88,6 +92,8 @@ Top_gpgpu::Top_gpgpu(const char* ramulator_config_filename, const char* vcd_file
             m_sm[i]->export_vcd_trace(m_tf, fmt::format("SM{}", i));
         }
     }
+
+    sc_start(PERIOD * 5, TIME_UNIT); // run some cycles for reset
 }
 
 Top_gpgpu::~Top_gpgpu() {

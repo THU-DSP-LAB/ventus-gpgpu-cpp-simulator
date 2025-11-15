@@ -29,6 +29,9 @@ public:
         std::function<void(std::unique_ptr<lsu_mem_cmd_t>)> callback
     );
 
+    // now only for icache timing
+    int request(int sm_id, int source_id, paddr_t addr, std::function<void(int sourceId)> callback);
+
     // 每周期调用这个函数
     void tick();
 

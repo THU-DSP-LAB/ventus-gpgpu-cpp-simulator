@@ -13,12 +13,32 @@ BASE::BASE(
     const std::shared_ptr<const std::vector<instable_t>>& instruction_table,
     const std::shared_ptr<const std::map<OP_TYPE, decodedat>>& decode_table,
     std::shared_ptr<PhysicalMemoryInterface> gmem, mem_interface_t memif,
+    mem_interface_icache_t mem_interface_icache,
     std::shared_ptr<spdlog::logger> logger
 )
     : sc_module(name)
     , sm_id(_sm_id)
     , m_mmu(gmem, logger)
     , l1d_request(memif)
+    , l2_request(mem_interface_icache)
+    , m_icache(
+          fmt::format("{}_ICache", name).c_str(),
+          ICacheConfig {
+              .cachelineBytes = L1D_BLOCK_NUM_WORD * sizeof(uint32_t),
+              .numSets = L1D_NUM_SET,
+              .numWays = 4,
+              .numMshrItems = 16,
+              .replacementPolicy = "random",
+              .numFetch = 1,
+              .rspLatency = 1,
+          },
+          [this](paddr_t ptroot, vaddr_t vaddr) { return m_mmu.translate(ptroot, vaddr); },
+          [this](const ICacheRsp& rsp) {
+              // core response callback
+              this->icache_response_handler(rsp);
+          },
+          l2_request, logger, fmt::format("SM {} ICache", sm_id)
+      )
     , m_logger(logger ? logger : spdlog::default_logger()) {
 
     for (int i = 0; i < m_subcores.size(); i++) {
@@ -43,6 +63,13 @@ BASE::BASE(
             [this, i](int subcore_warp_id, int blk_slot_id, int warp_id_in_blk) {
                 warp_endprg(i, subcore_warp_id, blk_slot_id, warp_id_in_blk);
             },
+            [this, i](paddr_t ptroot, vaddr_t addr, int warp_id_in_subcore) {
+                icache_subcore_request(ptroot, addr, i, warp_id_in_subcore);
+            },
+            [this, i](int warp_id_in_subcore) {
+                auto warp_id_in_core = warpid_convert(i, warp_id_in_subcore);
+                m_icache.flushpipe(warp_id_in_core);
+            },
             m_mmu, m_logger
         );
         m_subcores[i]->clk(clk);
@@ -59,6 +86,23 @@ void BASE::export_vcd_trace(sc_core::sc_trace_file* tf, const std::string& prefi
     }
     sc_trace(tf, lsu_subcore_req_valid.to_ulong(), prefix + ".lsu_subcore_req_valid");
     sc_trace(tf, lsu_subcore_req_arbiter_last, prefix + ".lsu_subcore_req_arbiter_last");
+}
+
+// subcore call this to request icache for instruction fetch
+void BASE::icache_subcore_request(
+    paddr_t ptroot, vaddr_t addr, int subcore_id, int subcore_warp_id
+) {
+    auto warp_id = warpid_convert(subcore_id, subcore_warp_id);
+    m_icache.access(ptroot, addr, warp_id);
+}
+
+// icache call this to response subcore instruction fetch
+void BASE::icache_response_handler(const ICacheRsp& rsp) {
+    auto [subcore_id, subcore_warp_id] = warpid_convert(rsp.warpid);
+    assert(subcore_id < SUBCORE_NUM);
+    auto rsp_subcore = rsp;
+    rsp_subcore.warpid = subcore_warp_id; // convert to local warpid
+    m_subcores[subcore_id]->l1icache_response(rsp_subcore);
 }
 
 int BASE::lsu_subcore_req(
@@ -165,6 +209,7 @@ void BASE::warp_reach_barrier(
             );
             // reset barrier
             hblkslot.warp_reach_barrier.fill(false);
+            // warn: SC_MANY_WRITERS here
             for (int hwarp_idx_ = 0; hwarp_idx_ < hblkslot.hw_warp_running.size(); hwarp_idx_++) {
                 // release all hardware warps running this block
                 if (hblkslot.hw_warp_running[hwarp_idx_]) {

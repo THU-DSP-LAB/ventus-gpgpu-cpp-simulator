@@ -1,6 +1,7 @@
 #ifndef _PARAMETERS_H
 #define _PARAMETERS_H
 
+#include "sysc/kernel/sc_time.h"
 #include "ventus_cyclesim.h"
 #include <array>
 #include <fmt/ostream.h>
@@ -40,6 +41,7 @@ inline constexpr int ireg_bitsize = 10;
 inline constexpr int ireg_size = 1 << ireg_bitsize;
 inline constexpr int INS_LENGTH = 32; // the length of per instruction
 inline constexpr double PERIOD = 10;
+inline constexpr auto TIME_UNIT = SC_NS;
 inline constexpr int IFIFO_SIZE = 10;
 inline constexpr int OPCFIFO_SIZE = SUBCORE_WARP_NUM;
 inline constexpr int BANK_NUM = 4;
@@ -962,6 +964,15 @@ public:
         rl = atomic && ((instr >> 25) & 0b1);
     }
 };
+
+template <typename T>
+void sc_trace(sc_core::sc_trace_file*& tf, const std::shared_ptr<T>& v, const std::string& name) {
+    sc_trace(tf, v == nullptr, name + ".is_null");
+    if (v) {
+        sc_trace(tf, *v, name);
+    }
+}
+
 class I_TYPE // type of per instruction
 {
 public:
@@ -1045,9 +1056,9 @@ typedef struct lsu_mem_cmd_t {
     uint8_t opcode;        // tilelink opcode
     uint8_t param;         // tilelink param
     sc_bv<hw_num_thread> mask;
-    uint32_t pagetable_root; // pagetable root physical address for mmu
-    uint32_t cache_tag;
-    uint32_t cache_setIdx;
+    paddr_t pagetable_root; // pagetable root physical address for mmu
+    vaddr_t cache_tag;
+    vaddr_t cache_setIdx;
     std::shared_ptr<const std::array<uint8_t, hw_num_thread>> blockOffset;
     std::shared_ptr<const std::array<uint8_t, hw_num_thread>> wordOffset1H;
     std::shared_ptr<const std::array<uint32_t, hw_num_thread>> addr; // for debug
@@ -1195,6 +1206,32 @@ private:
     std::array<T, capacity> data;
     std::size_t size;
     std::size_t front_index;
+    // 由于建模的特殊性，有时可能需要临时溢出一个数据，此时暂时放入m_staged中
+    // 在RTL中，同一周期内可以并行地从一个已满的FIFO中push + pop（需要组合逻辑传递下游ready到上游）
+    // 但用软件建模这种行为时push & pop时无法“同时”的
+    // 如果在同一周期内先push再pop，会导致临时溢出一个数据，但在硬件上这时可行的
+    struct {
+        bool valid = false;
+        sc_core::sc_time time_stamp; // 追踪数据何时被放入暂存区，应当在同一周期内pop
+        T data;
+    } m_staged;
+
+    void push_staged(const T& value) {
+        assert(!m_staged.valid && "Already has staged data");
+        m_staged.valid = true;
+        m_staged.time_stamp = sc_core::sc_time_stamp();
+        m_staged.data = value;
+    }
+    void pop_staged() {
+        assert(m_staged.valid && "No staged data to pop");
+        assert(
+            m_staged.time_stamp == sc_core::sc_time_stamp()
+            && "Staged data can only be popped in the same cycle it was pushed"
+        );
+        m_staged.valid = false;
+        data[(front_index + size) % capacity] = std::move(m_staged.data);
+        ++size;
+    }
 
 public:
     StaticQueue()
@@ -1202,7 +1239,12 @@ public:
         , front_index(0) { }
     void push(const T& value) {
         if (size == capacity) {
-            throw std::out_of_range("StaticQueue is full");
+            if (m_staged.valid) {
+                throw std::out_of_range("StaticQueue is full");
+            } else { // 允许临时溢出，但要求同周期内pop
+                push_staged(value);
+                return;
+            }
         }
         data[(front_index + size) % capacity] = value;
         ++size;
@@ -1213,10 +1255,14 @@ public:
         }
         front_index = (front_index + 1) % capacity;
         --size;
+        if (m_staged.valid) {
+            pop_staged();
+        }
     }
     void clear() {
-        while (!isempty())
-            pop();
+        front_index = 0;
+        size = 0;
+        m_staged.valid = false;
     }
     T get() { // return front and pop
         if (size == 0) {
@@ -1225,6 +1271,9 @@ public:
         T re = data[front_index];
         front_index = (front_index + 1) % capacity;
         --size;
+        if (m_staged.valid) {
+            pop_staged();
+        }
         return re;
     }
     T& front() {
@@ -1530,22 +1579,18 @@ struct tc_out_t {
 
 class WARP_BONE {
 public:
-    int warp_id;
+    const int warp_id; // hardware warp slot id
     // sc_event ev_kernel_ret; // 当前warp已经执行完kernel
     int blk_slot_idx;
     int warp_idx_in_blk;
     std::function<void(int, int)> finish_callback; // 当前warp执行完毕后回调通知CTA Scheduler
-    uint64_t pagetable;                            // 页表基址
+    paddr_t pagetable;                             // 页表基址
     int num_thread;                                // warp内线程数
-
-    unsigned m_ctaid_in_core; // 与kernel配置有关的、绑定的core内ctaid
 
     explicit WARP_BONE(int warp_id)
         : warp_id(warp_id)
         , is_warp_activated(("is_warp_activated_Warp" + std::to_string(warp_id)).c_str())
-        , ibuf_swallow(("ibuf_swallow_warp_Warp" + std::to_string(warp_id)).c_str())
-        , fetch_valid(("fetch_valid_Warp" + std::to_string(warp_id)).c_str())
-        , fetch_valid2(("fetch_valid2_Warp" + std::to_string(warp_id)).c_str())
+        , pc_valid(("pc_valid_Warp" + std::to_string(warp_id)).c_str())
         , jump(("jump_Warp" + std::to_string(warp_id)).c_str())
         , branch_sig(("branch_sig_Warp" + std::to_string(warp_id)).c_str())
         , vbran_sig(("vbran_sig_Warp" + std::to_string(warp_id)).c_str())
@@ -1568,7 +1613,6 @@ public:
     void export_vcd_trace(sc_core::sc_trace_file* tf, const std::string& prefix) const;
 
     void initwarp() {
-        fetch_valid12 = false;
         ififo.clear();
         can_dispatch = false;
         score.clear();
@@ -1585,11 +1629,12 @@ public:
     bool will_warp_activate;
 
     // fetch
-    sc_event ev_fetchpc, ev_decode;
-    sc_signal<bool> ibuf_swallow; // 表示是否接收上一cycle fetch_valid，相当于ready
-    sc_signal<bool, SC_MANY_WRITERS> fetch_valid;
-    bool fetch_valid12;                            // 用于取指令和decode之间传递
-    sc_signal<bool, SC_MANY_WRITERS> fetch_valid2; // 2是真正的valid，直接与ibuffer沟通
+    struct regext_t {
+        bool valid;
+        int ext1, ext2, ext3, extd, extimm;
+    } regext; // decode stage regext prefix-instruction info
+
+    sc_signal<bool, SC_MANY_WRITERS> pc_valid; // PC to fetch
     sc_signal<bool, SC_MANY_WRITERS> jump, branch_sig,
         vbran_sig; // 无论是否jump，只要发生了分支判断，将branch_sig置为1。其中branch_sig是标量分支，vbran_sig是向量分支
     sc_signal<vaddr_t> jump_addr;
@@ -1599,8 +1644,8 @@ public:
     // ibuffer
     sc_event ev_ibuf_updated;
     sc_signal<bool> ibuf_empty, ibuf_full;
-    sc_signal<I_TYPE> ibuftop_ins;
-    StaticQueue<I_TYPE, IFIFO_SIZE> ififo;
+    sc_signal<std::shared_ptr<I_TYPE>> ibuftop_ins;
+    StaticQueue<std::shared_ptr<I_TYPE>, IFIFO_SIZE> ififo;
     sc_signal<int> ififo_elem_num;
     // scoreboard
     sc_event ev_judge_dispatch;

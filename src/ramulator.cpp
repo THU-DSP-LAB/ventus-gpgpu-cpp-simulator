@@ -37,6 +37,29 @@ RamulatorWrapper::RamulatorWrapper(const char* config_file, std::shared_ptr<spdl
 }
 
 int RamulatorWrapper::request(
+    int sm_id, int source_id, paddr_t addr, std::function<void(int sourceId)> callback
+) {
+    if (!m_enable_ramulator) {
+        // Ramulator disabled, respond immediately
+        if (callback) {
+            callback(source_id);
+        }
+        return 0;
+    }
+    // TODO: check paddr alignment
+    auto ramulator_callback = [callback, source_id](Ramulator::Request& _) {
+        if (callback) {
+            callback(source_id);
+        }
+    };
+    if (m_frontend->receive_external_requests(0, addr, sm_id, ramulator_callback)) {
+        return 0; // request accepted
+    } else {
+        return 1; // memory controller busy, request not accepted, try again later
+    }
+}
+
+int RamulatorWrapper::request(
     int sm_id, std::unique_ptr<lsu_mem_cmd_t>& cmd_,
     std::function<void(std::unique_ptr<lsu_mem_cmd_t>)> callback
 ) {

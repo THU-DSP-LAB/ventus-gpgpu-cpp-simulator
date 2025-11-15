@@ -1,8 +1,11 @@
 #pragma once
 
 #include "../parameters.h"
+#include "icache.hpp"
 #include "sv39.hpp"
+#include "sysc/communication/sc_writer_policy.h"
 #include <array>
+#include <bit>
 #include <cstdint>
 #include <functional>
 #include <memory>
@@ -29,6 +32,9 @@ public:
         std::unique_ptr<std::array<reg_t, hw_num_thread>>& src_data2,
         std::unique_ptr<std::array<reg_t, hw_num_thread>>& src_data3
     )>;
+    using l1icache_request_interface
+        = std::function<void(paddr_t ptroot, vaddr_t addr, int warpid)>;
+    using l1icache_flushpipe_interface = std::function<void(int warpid)>;
     using warp_barrier_req_interface
         = std::function<void(int subcore_warp_id, int blk_slot_id, int warp_id_in_blk, vaddr_t pc)>;
     using warp_endprg_interface
@@ -41,7 +47,9 @@ public:
         const std::shared_ptr<const std::map<OP_TYPE, decodedat>>& decode_table,
         const lsu_req_interface& lsu_subcore_req,
         const warp_barrier_req_interface& warp_barrier_req,
-        const warp_endprg_interface& warp_endprg, const SV39_basic& mmu,
+        const warp_endprg_interface& warp_endprg,
+        const l1icache_request_interface& l1icache_request,
+        const l1icache_flushpipe_interface& l1icache_flushpipe, const SV39_basic& mmu,
         std::shared_ptr<spdlog::logger> logger = nullptr
     );
 
@@ -66,16 +74,14 @@ private:
 
     // fetch
     void PROGRAM_COUNTER(int warp_id);
-    void INSTRUCTION_REG(int warp_id);
-    void DECODE(int warp_id);
+    void icache_access(); // sc_thread pipeline stage fetch
+    void icache_wait();   // sc_thread pipeline stage fetch2
+    void DECODE();
     // ibuffer
-    void cycle_IBUF_ACTION(int warp_id, I_TYPE& dispatch_ins_, I_TYPE& _readdata3);
+    void cycle_IBUF_ACTION(int warp_id);
     void IBUF_PARAM(int warp_id);
     // scoreboard
-    void cycle_UPDATE_SCORE(
-        int warp_id, I_TYPE& tmpins, std::set<SCORE_TYPE>::iterator& it, REG_TYPE& regtype_,
-        bool& insertscore
-    );
+    void cycle_UPDATE_SCORE(int warp_id);
     void JUDGE_DISPATCH(int warp_id);
     bool cycle_JUDGE_DISPATCH(int warp_id);
     void BEFORE_DISPATCH(int warp_id);
@@ -133,11 +139,12 @@ private:
 
     // initialize
     void hardware_warps_reset() {
+        auto invalid_instr = std::make_shared<I_TYPE>(INVALID_, 0, 0, 0);
         for (auto& warp_ : m_hw_warps) {
             warp_->pc = -1;
-            warp_->ibuftop_ins = I_TYPE(INVALID_, 0, 0, 0);
+            warp_->ibuftop_ins = invalid_instr;
         }
-        issue_ins = I_TYPE(INVALID_, 0, 0, 0);
+        issue_ins = *invalid_instr;
     }
 
     //
@@ -146,6 +153,88 @@ private:
 
     // hardware warp (slots)
     std::array<std::unique_ptr<WARP_BONE>, SUBCORE_WARP_NUM> m_hw_warps;
+
+    // fetch
+    // pc in m_hw_warp, not here
+    // L0 icache in subcore
+    inline constexpr static unsigned l0icache_line_size
+        = L1D_BLOCK_NUM_WORD * sizeof(uint32_t); // bytes
+    struct l0icache_line_t {
+        bool valid;
+        paddr_t pagetable_root;
+        vaddr_t addr_base;
+        l0icache_line_t()
+            : valid(false) {
+            assert(std::popcount(l0icache_line_size) == 1);
+        }
+    };
+    std::array<l0icache_line_t, hw_num_warp> m_l0icache;
+    // fetch status for FETCH & FETCH2 pipeline stages
+    struct fetch_t {
+        vaddr_t pc;
+        int warp_id;
+        enum FETCH_FROM { NONE, L0ICACHE, L1ICACHE } from;
+        bool success;
+        friend std::ostream& operator<<(std::ostream& os, const fetch_t& v) {
+            auto strmap = std::unordered_map<FETCH_FROM, std::string> {
+                { FETCH_FROM::NONE, "NONE" },
+                { FETCH_FROM::L0ICACHE, "L0ICACHE" },
+                { FETCH_FROM::L1ICACHE, "L1ICACHE" },
+            };
+            auto str = fmt::format(
+                "fetch_t{{pc=0x{:x}, warp_id={}, from={}, success={}}}", v.pc, v.warp_id,
+                strmap[v.from], v.success ? "true" : "false"
+            );
+            os << str;
+            return os;
+        }
+        bool operator==(const fetch_t& that) const = default;
+    };
+    sc_signal<fetch_t> fetch_reg { "fetch_reg" };   // fetch流水级末的寄存器
+    sc_signal<fetch_t> fetch2_reg { "fetch2_reg" }; // fetch2流水级末的寄存器
+    sc_signal<uint32_t> fetch2_instr { "fetch2_instr" }; // fetch2流水级末的寄存器，取回的指令
+    // l1i rsp notify and pushed into here and consumed in fetch2 stage in the same cycle
+    sc_event ev_l1icache_rsp;
+    std::queue<ICacheRsp> l1icache_rsp_queue;
+
+    // combinational logic of warp scheduler,
+    // determining which warp to fetch from icache this cycle
+    int warp_scheduler_fetch_select() const;
+    // combinational logic to check if pc needs rewind (icache miss/ibuf full)
+    bool pc_need_rewind(int warp_id) const;
+    // combinational logic to check if ibuf can accept new instructions this cycle
+    bool ibuf_in_ready(int warp_id) const;
+    bool ibuf_in_ready(const std::unique_ptr<WARP_BONE>& hwarp) const;
+    // combinational logic to check if PC/FETCH/FETCH2 pipeline stages need flush
+    // (jump/pc_rewind/endprg)
+    bool fetch_need_flush(int warp_id) const;
+
+    // interfaces to/from L0 icache and L1 icache
+    int l0icache_access(paddr_t pagetable_root, vaddr_t addr) const;
+    l1icache_request_interface f_l1icache_request;
+    l1icache_flushpipe_interface f_l1icache_flushpipe;
+
+public:
+    void l1icache_response(const ICacheRsp& rsp);
+
+private:
+    // decode
+    struct decode_t {
+        int warp_id;
+        std::shared_ptr<I_TYPE> instr; // =nullptr: no valid instruction decoded
+        bool operator==(const decode_t& that) const = default;
+        friend std::ostream& operator<<(std::ostream& os, const decode_t& v) {
+            auto str = (v.instr == nullptr)
+                ? fmt::format("decode_t{{null}}")
+                : fmt::format("decode_t{{pc=0x{:x}, warp_id={}}}", v.instr->currentpc, v.warp_id);
+            os << str;
+            return os;
+        }
+    };
+    decode_t decode_output;    // decode结果，组合逻辑输出直接传递给IBUF输入
+    sc_event ev_decode_finish; // decode完成事件，通知IBUF可以开始处理输入
+
+    // ibuffer is in WARP_BONE
 
     // issue
     sc_event_and_list ev_warp_dispatch_list;
@@ -348,7 +437,9 @@ private:
     sc_signal<bool> execpop_tc { "execpop_tc" };
 
     // warp_scheduler exec part (barrier & endprg)
-    std::array<bool, SUBCORE_WARP_NUM> wait_barrier; // warp触及barrier正在等待
+    sc_vector<sc_signal<bool, SC_MANY_WRITERS>> wait_barrier {
+        "wait_barrier_subcorewarp", SUBCORE_WARP_NUM
+    }; // warp触及barrier正在等待。最后一个到达barrier的warp的线程会解放所有其他线程，因此需要SC_MANY_WRITERS
     sc_signal<bool> emito_warpscheduler { "emito_wrpschdler" };
     warp_barrier_req_interface f_warp_barrier_req;
     warp_endprg_interface f_warp_endprg;

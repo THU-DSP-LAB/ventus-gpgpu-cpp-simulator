@@ -1,4 +1,5 @@
 #include "ventus_cyclesim_impl.hpp"
+#include "parameters.h"
 #include "sysc/kernel/sc_simcontext.h"
 #include "top_gpgpu.hpp"
 
@@ -7,7 +8,7 @@ int sc_main(int argc, char* argv[]) { return 0; }
 
 void ventus_cyclesim_t::constructor(const ventus_cyclesim_config_t* config) {
     m_config = *config;
-    sc_set_time_resolution(1, SC_NS);
+    sc_set_time_resolution(1, TIME_UNIT);
     m_dut = new Top_gpgpu(
         config->ramulator.enable ? config->ramulator.filename : nullptr,
         m_config.waveform.enable ? m_config.waveform.filename : nullptr
@@ -23,7 +24,7 @@ const ventus_cyclesim_step_result_t* ventus_cyclesim_t::step() {
     if (sc_time_stamp().value() >= m_config.sim_time_max) {
         m_result.time_exceed = true;
     } else {
-        sc_core::sc_start(PERIOD, SC_NS);
+        sc_core::sc_start(PERIOD, TIME_UNIT);
         m_result.time_exceed = false;
     }
     m_result.idle = m_dut->is_idle();

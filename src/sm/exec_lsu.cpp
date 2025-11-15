@@ -275,7 +275,7 @@ void BASE::lsu_new_req() {
         // clang-format on
     } else { // regular load/store
         _cmd_opcode = (ddd.mem_cmd == DecodeParams::M_XWR) ? L1D_OPCODE_WRITE : L1D_OPCODE_READ;
-        _cmd_param = 0;
+        _cmd_param = L1D_PARAM_NORMAL;
     }
 
     // for vector load/store, access 1 cacheline each cycle
