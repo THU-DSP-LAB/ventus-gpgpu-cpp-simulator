@@ -1,9 +1,10 @@
-#include "BASE.h"
 #include "../context_model.hpp"
+#include "BASE.h"
 #include "subcore.hpp"
 #include <algorithm>
 #include <fmt/core.h>
 #include <functional>
+#include <map>
 #include <memory>
 #include <spdlog/spdlog.h>
 #include <string>
@@ -13,8 +14,7 @@ BASE::BASE(
     const std::shared_ptr<const std::vector<instable_t>>& instruction_table,
     const std::shared_ptr<const std::map<OP_TYPE, decodedat>>& decode_table,
     std::shared_ptr<PhysicalMemoryInterface> gmem, mem_interface_t memif,
-    mem_interface_icache_t mem_interface_icache,
-    std::shared_ptr<spdlog::logger> logger
+    mem_interface_icache_t mem_interface_icache, std::shared_ptr<spdlog::logger> logger
 )
     : sc_module(name)
     , sm_id(_sm_id)

@@ -3,6 +3,7 @@
 #include "icache.hpp"
 #include "sysc/kernel/sc_simcontext.h"
 #include "sysc/kernel/sc_time.h"
+#include <algorithm>
 #include <cstdint>
 #include <memory>
 #include <spdlog/spdlog.h>
@@ -792,6 +793,7 @@ void Subcore::receive_warp(
 
     // 将软件warp(线程束)派发到硬件warp
     dim3 block_idx_3d = kernel->get_next_cta_id();
+    hwarp->CSR_reg[0x300] = 0x00001800; // WHY? CSR[mstatus] default value
     hwarp->CSR_reg[0x800] = warp_idx_in_blk * kernel->get_num_thread_per_warp();
     hwarp->CSR_reg[0x801] = kernel->get_num_warp_per_cta();
     hwarp->CSR_reg[0x802] = kernel->get_num_thread_per_warp();
@@ -805,18 +807,52 @@ void Subcore::receive_warp(
     hwarp->CSR_reg[0x808] = block_idx_3d.x;
     hwarp->CSR_reg[0x809] = block_idx_3d.y;
     hwarp->CSR_reg[0x80a] = block_idx_3d.z;
-    hwarp->CSR_reg[0x300] = 0x00001800; // WHY? CSR[mstatus] default value
+    hwarp->CSR_reg[0x80b] = 0; // printf buffer base addr, TODO
+
+    dim3 threadIdxG_base;
+    auto num_thread_per_blk = kernel->get_num_thread_local_3d();
+    threadIdxG_base.x = (block_idx_3d.x * num_thread_per_blk.x);
+    threadIdxG_base.y = (block_idx_3d.y * num_thread_per_blk.y);
+    threadIdxG_base.z = (block_idx_3d.z * num_thread_per_blk.z);
+    auto& threadIdxG_x = hwarp->CSR_vreg[0x80d];
+    auto& threadIdxG_y = hwarp->CSR_vreg[0x80e];
+    auto& threadIdxG_z = hwarp->CSR_vreg[0x80f];
+    auto& threadIdxG_1d = hwarp->CSR_vreg[0x810];
+    auto& threadIdxL_x = hwarp->CSR_vreg[0x811];
+    auto& threadIdxL_y = hwarp->CSR_vreg[0x812];
+    auto& threadIdxL_z = hwarp->CSR_vreg[0x813];
+    auto threadIdxG_offset = kernel->get_threadIdx_offset_3d();
+    auto threadIdxL_1d_base = kernel->get_num_thread_per_warp() * warp_idx_in_blk;
+    for (int i = 0; i < hw_num_thread; i++) {
+        const auto& blksz = num_thread_per_blk;
+        threadIdxL_x[i] = (threadIdxL_1d_base + i) % (blksz.x);
+        threadIdxL_y[i] = (threadIdxL_1d_base + i) % (blksz.x * blksz.y) / blksz.x;
+        threadIdxL_z[i] = (threadIdxL_1d_base + i) / (blksz.x * blksz.y);
+        threadIdxG_x[i] = threadIdxG_base.x + threadIdxL_x[i] + threadIdxG_offset.x;
+        threadIdxG_y[i] = threadIdxG_base.y + threadIdxL_y[i] + threadIdxG_offset.y;
+        threadIdxG_z[i] = threadIdxG_base.z + threadIdxL_z[i] + threadIdxG_offset.z;
+        threadIdxG_1d[i] = (threadIdxG_base.x + threadIdxL_x[i])
+            + (threadIdxG_base.y + threadIdxL_y[i]) * blksz.x
+            + (threadIdxG_base.z + threadIdxL_z[i]) * blksz.x * blksz.y;
+    }
 
     hwarp->is_warp_activated.write(true);
     hwarp->pc_valid.write(true);
     hwarp->pc.write(kernel->get_startaddr());
     hwarp->pagetable = kernel->get_pagetable();
     hwarp->num_thread = kernel->get_num_thread_per_warp();
+    auto local_num_thread_3d = kernel->get_num_thread_local_3d();
+    auto local_num_thread_1d
+        = local_num_thread_3d.x * local_num_thread_3d.y * local_num_thread_3d.z;
+    hwarp->num_thread = std::min(
+        hwarp->num_thread,
+        (int)(local_num_thread_1d - warp_idx_in_blk * kernel->get_num_thread_per_warp())
+    );
     hwarp->blk_slot_idx = blk_slot_idx;
     hwarp->warp_idx_in_blk = warp_idx_in_blk;
 
     sc_bv<hw_num_thread> _validmask = 0;
-    for (int i = 0; i < kernel->get_num_thread_per_warp(); i++) {
+    for (int i = 0; i < hwarp->num_thread; i++) {
         _validmask[i] = 1;
     }
     hwarp->current_mask.write(_validmask);

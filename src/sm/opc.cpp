@@ -392,16 +392,16 @@ void Subcore::OPC_EMIT() {
                         print_str.reserve(512);
                         if (format_char == 'f' || format_char == 'F') {
                             for (int tid = 0; tid < opcitem.data[1].size(); tid++) {
-                                iuf32_t data(opcitem.data[1][tid].to_uint());
+                                iuf32_t data(opcitem.data[1][tid]);
                                 print_str += fmt::format("{:f} ", data.f32);
                             }
                         } else if (format_char == 'd' || format_char == 'D') {
                             for (int tid = 0; tid < opcitem.data[1].size(); tid++) {
-                                print_str += fmt::format("{:d} ", opcitem.data[1][tid].to_uint());
+                                print_str += fmt::format("{:d} ", opcitem.data[1][tid]);
                             }
                         } else {
                             for (int tid = 0; tid < opcitem.data[1].size(); tid++) {
-                                print_str += fmt::format("{:x} ", opcitem.data[1][tid].to_uint());
+                                print_str += fmt::format("{:x} ", opcitem.data[1][tid]);
                             }
                         }
                         // for (int threadIdx = 0; threadIdx < opcitem.data[1].size(); threadIdx++)

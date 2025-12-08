@@ -178,7 +178,7 @@ void BASE::lsu_new_req() {
     if (ddd.mem_cmd == DecodeParams::M_XWR) {
         std::vector<uint32_t> data(isvec ? num_thread : 1, 0);
         for (int i = 0; i < data.size(); i++) {
-            data[i] = mask[i] ? src3[i].to_uint() : 0;
+            data[i] = mask[i] ? src3[i] : 0u;
         }
         SPDLOG_LOGGER_TRACE(
             m_logger, "SM {} warp {} 0x{:x} {} mask={:X} ADDR {:x}, DATA {:x}", sm_id, warp_id,
@@ -294,7 +294,7 @@ void BASE::lsu_new_req() {
         cmd->wordOffset1H = wordOffset1H_ptr;
         if (!instr.ddd.wxd && !instr.ddd.wvd) { // store instruction
             for (int i = 0; i < num_thread; i++) {
-                cmd->data[i] = mask[i] ? src3[i].to_uint() : 0;
+                cmd->data[i] = mask[i] ? src3[i] : 0u;
             }
         }
 

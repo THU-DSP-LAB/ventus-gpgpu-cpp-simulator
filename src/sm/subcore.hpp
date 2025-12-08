@@ -8,7 +8,9 @@
 #include <bit>
 #include <cstdint>
 #include <functional>
+#include <map>
 #include <memory>
+#include <queue>
 #include <spdlog/logger.h>
 #include <systemc.h>
 
@@ -272,7 +274,7 @@ private:
     // regfile
     sc_signal<int> rdv1_addr { "rdv1_addr" };
     // sc_signal<reg_t> rds1_data { "rds1_data" };
-    sc_vector<sc_signal<reg_t>> rdv1_data { "rdv1_data", hw_num_thread };
+    sc_signal<std::array<reg_t, hw_num_thread>> rdv1_data { "rdv1_data" };
 
     //
     // Backend(exec) components and signals

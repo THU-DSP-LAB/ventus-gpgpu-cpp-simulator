@@ -9,6 +9,7 @@
 #include <array>
 #include <bitset>
 #include <functional>
+#include <map>
 #include <memory>
 #include <queue>
 #define SC_INCLUDE_DYNAMIC_PROCESSES

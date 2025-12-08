@@ -42,6 +42,7 @@ void Subcore::DECODE() {
         //
 
         auto instr = std::make_shared<I_TYPE>(fetch2_instr.read(), fetch.pc);
+        decode_output.warp_id = warp_id;
 
         // decode step 1: find instruction in decode table
         bool foundBitIns = 0;
@@ -67,12 +68,12 @@ void Subcore::DECODE() {
             }
         }
         if (!foundBitIns) { // instruction not found in decode table
+            // 发现非法指令，但不能直接报错，因为这条指令可能后续不会实际发射执行
+            // 例如，可能是.text段之后的垃圾数据，在执行前就会跳转走
             instr->op = INVALID_;
-            SPDLOG_LOGGER_ERROR(
-                m_logger, "SM {} warp {} 0x{:x} {} DECODE invalid bit ins", m_sm_id,
-                warpid_convert(m_subcore_id, warp_id), instr->currentpc, *instr
-            );
-            assert(0);
+            decode_output.instr = std::move(instr);
+            ev_decode_finish.notify();
+            continue;
         } else {
             // std::cout << "warp" << warp_id << " DECODE: match ins bit=" <<
             // std::bitset<32>(instr->origin32bit) << " with " <<
@@ -82,7 +83,6 @@ void Subcore::DECODE() {
 
         // decode step 2: extract fields from instruction bits
         // firstly deal with some special instructions: regext(i) & custom_print
-        decode_output.warp_id = warp_id;
         if (instr->op == (int)REGEXT_) {
             // hwarp->decode_valid = false; // regext ends here
             decode_output.instr = nullptr; // regext ends here in decode

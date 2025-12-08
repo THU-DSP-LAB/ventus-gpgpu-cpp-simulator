@@ -40,7 +40,22 @@ public:
     uint64_t get_pdsBaseAddr() const { return m_metadata.pdsBaseAddr; }
     uint64_t get_metadata_baseaddr() const { return m_metadata.metaDataBaseAddr; }
     uint64_t get_pagetable() const { return m_metadata.pagetable; }
-    meta_data_t get_metadata() const { return m_metadata; }
+    const meta_data_t& get_metadata() const { return m_metadata; }
+    dim3 get_num_thread_local_3d() const {
+        return { static_cast<uint32_t>(m_metadata.num_thread_local[0]),
+                 static_cast<uint32_t>(m_metadata.num_thread_local[1]),
+                 static_cast<uint32_t>(m_metadata.num_thread_local[2]) };
+    }
+    dim3 get_num_thread_global_3d() const {
+        return { static_cast<uint32_t>(m_metadata.num_thread_global[0]),
+                 static_cast<uint32_t>(m_metadata.num_thread_global[1]),
+                 static_cast<uint32_t>(m_metadata.num_thread_global[2]) };
+    }
+    dim3 get_threadIdx_offset_3d() const {
+        return { static_cast<uint32_t>(m_metadata.threadIdxOffset[0]),
+                 static_cast<uint32_t>(m_metadata.threadIdxOffset[1]),
+                 static_cast<uint32_t>(m_metadata.threadIdxOffset[2]) };
+    }
 
     //
     // Dynamic: changes on GPU. Maybe they should be moved to CTA_Scheduler

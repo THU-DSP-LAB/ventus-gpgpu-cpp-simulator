@@ -3,6 +3,7 @@
 #include "../parameters.h"
 #include "sysc/kernel/sc_time.h"
 #include <memory>
+#include <queue>
 #include <spdlog/logger.h>
 #include <systemc>
 
@@ -109,7 +110,7 @@ public:
     void invalidate();
 
 private:
-    sc_core::sc_event_queue ev_rsp; // response to core event
+    sc_core::sc_event_queue ev_rsp;   // response to core event
     sc_core::sc_event ev_mshr_l2_req; // MSHR miss need to send to L2 later
 
     void process_response(); // sc_thread for response to SM

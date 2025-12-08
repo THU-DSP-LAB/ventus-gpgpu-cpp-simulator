@@ -87,11 +87,11 @@ void Subcore::WRITE_REG(int warp_id) {
                 SPDLOG_LOGGER_TRACE(
                     m_logger, "SM {} warp {} 0x{:x} {} WB x[{:03d}]=0x{:08x}", m_sm_id,
                     warpid_convert(m_subcore_id, warp_id), wb_ins.read().currentpc, wb_ins.read(),
-                    rdv1_addr.read(), rdv1_data[0].read().to_uint()
+                    rdv1_addr.read(), rdv1_data.read()[0]
                 );
 #endif
                 if (rdv1_addr != 0)
-                    hwarp->s_regfile[rdv1_addr.read()] = rdv1_data[0];
+                    hwarp->s_regfile[rdv1_addr.read()] = rdv1_data.read()[0];
                 // if (sm_id == 0 && warp_id == 2 && rdv1_addr == 2)
                 //     std::cout << "Warning! " << "SM" << m_sm_id << " warp " << warp_id << " 0x"
                 //     << std::hex << wb_ins.read().currentpc << std::dec
@@ -104,7 +104,8 @@ void Subcore::WRITE_REG(int warp_id) {
                 std::array<uint32_t, hw_num_thread> data;
                 for (int i = m_hw_warps[wb_warpid]->CSR_reg[0x802] - 1; i >= 0; i--) {
                     data[i]
-                        = (wb_ins.read().mask[i] ? rdv1_data[i] : hwarp->v_regfile[rdv1_addr][i]);
+                        = (wb_ins.read().mask[i] ? rdv1_data.read()[i]
+                                                 : hwarp->v_regfile[rdv1_addr][i]);
                 }
                 SPDLOG_LOGGER_TRACE(
                     m_logger,
@@ -127,7 +128,7 @@ void Subcore::WRITE_REG(int warp_id) {
 #endif
                 for (int i = 0; i < m_hw_warps[wb_warpid]->CSR_reg[0x802]; i++)
                     if (wb_ins.read().mask[i] == 1)
-                        hwarp->v_regfile[rdv1_addr.read()][i] = rdv1_data[i];
+                        hwarp->v_regfile[rdv1_addr.read()][i] = rdv1_data.read()[i];
             }
         }
     }
