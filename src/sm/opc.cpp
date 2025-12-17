@@ -356,10 +356,17 @@ void Subcore::OPC_EMIT() {
                         last_emit_entryid = entryidx + 1;
                         findemit = 1;
                         doemit = true;
+                    } else {
+                        // SPDLOG_LOGGER_TRACE(
+                        //     m_logger, "SM {} warp {} 0x{:x} {} LSU req refused", m_sm_id,
+                        //     warpid_convert(m_subcore_id, opcitem.warp_id), opcitem.ins.currentpc,
+                        //     opcitem.ins
+                        // );
+                    }
                     instr_tried_emit_to_lsu = true;
-                    break; 
+                } break;
 
-                case DecodeParams::CSR:
+                case DecodeParams::CSR: {
                     if (csr_ready) {
                         emit_idx = entryidx;
                         last_emit_entryid = entryidx + 1;
@@ -373,7 +380,8 @@ void Subcore::OPC_EMIT() {
                         tocsr_data2 = opcfifo[entryidx].data[1][0];
                     }
                     break;
-                case DecodeParams::MUL:
+                }
+                case DecodeParams::MUL: {
                     if (mul_ready) {
                         emit_idx = entryidx;
                         last_emit_entryid = entryidx + 1;
@@ -388,6 +396,7 @@ void Subcore::OPC_EMIT() {
                         }
                     }
                     break;
+                }
                 case DecodeParams::SFU:
                     if (sfu_ready) {
                         emit_idx = entryidx;
