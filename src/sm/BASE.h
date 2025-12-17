@@ -12,7 +12,8 @@
 #include <queue>
 #define SC_INCLUDE_DYNAMIC_PROCESSES
 #include <systemc.h>
-
+#include "../cache/interfaces.h"
+#include "L1D_Cache_System.hpp"
 class kernel_info_t;
 class CTA_Scheduler;
 
@@ -29,10 +30,10 @@ public:
     int sharedMem_request(const std::unique_ptr<lsu_mem_cmd_t>& cmd);
 
     // DDR interface
-    using mem_interface_t = std::function<
-        int(std::unique_ptr<lsu_mem_cmd_t>& cmd,
-            std::function<void(std::unique_ptr<lsu_mem_cmd_t>)> callback)>;
-    mem_interface_t l1d_request; // TODO: 接入cache后改名为l2_request
+    // using mem_interface_t = std::function<
+    //     int(std::unique_ptr<lsu_mem_cmd_t>& cmd,
+    //         std::function<void(std::unique_ptr<lsu_mem_cmd_t>)> callback)>;
+    // mem_interface_t m_l1d_cache_accept;
 
     std::array<std::unique_ptr<Subcore>, SUBCORE_NUM> m_subcores;
 
@@ -45,7 +46,7 @@ public:
         sc_core::sc_module_name name, int _sm_id,
         const std::shared_ptr<const std::vector<instable_t>>& instruction_table,
         const std::shared_ptr<const std::map<OP_TYPE, decodedat>>& decode_table,
-        std::shared_ptr<PhysicalMemoryInterface> gmem, mem_interface_t mem_interface,
+        std::shared_ptr<PhysicalMemoryInterface> gmem, 
         std::shared_ptr<spdlog::logger> logger = nullptr
     );
 
@@ -121,7 +122,7 @@ public:
     } lsu_mshr_t;
     std::array<lsu_mshr_t, LSU_MSHR_SIZE> m_lsu_mshr;
     std::queue<std::unique_ptr<lsu_mem_cmd_t>> m_lsu_mem_cmd_queue;
-
+    L1D_Cache_System* m_l1d_cache = nullptr;
     // warp scheduler barrier
 
     // CTA Scheduler interface

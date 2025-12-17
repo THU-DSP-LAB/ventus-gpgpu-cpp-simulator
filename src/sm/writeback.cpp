@@ -151,6 +151,18 @@ void Subcore::WRITE_BACK() {
             rdv1_addr = csrtop_dat.ins.d;
             rdv1_data[0] = csrtop_dat.data;
             wb_warpid = csrtop_dat.warp_id;
+            // 调试：打印 CSR 写回信息（针对 SM1 warp1 在 0x80000088-0x800000c0）
+            if (m_sm_id == 1 && csrtop_dat.warp_id == 1 && csrtop_dat.ins.currentpc >= 0x80000088 && csrtop_dat.ins.currentpc <= 0x800000c0) {
+                std::cout << "[WRITE_BACK] SM" << m_sm_id 
+                          << " csrfifo writeback: warp=" << csrtop_dat.warp_id
+                          << " (global_warp=" << warpid_convert(m_subcore_id, csrtop_dat.warp_id) << ")"
+                          << " ins=0x" << std::hex << csrtop_dat.ins.currentpc << std::dec
+                          << " op=" << static_cast<int>(csrtop_dat.ins.op)
+                          << " rd=" << csrtop_dat.ins.d
+                          << " data=0x" << std::hex << csrtop_dat.data << std::dec
+                          << " wb_warpid=" << wb_warpid
+                          << " @ " << sc_time_stamp() << std::endl;
+            }
         } else if (mulfifo_empty == false) {
             // if (sm_id == 0)
             //     std::cout << "SM" << sm_id << " WB judge popmul, at " << sc_time_stamp() << ","
@@ -208,6 +220,12 @@ void Subcore::WRITE_BACK() {
             write_s = false;
             write_v = false;
             wb_ena = false;
+            // 调试：如果所有 FIFO 都为空，但某些 warp 的 scoreboard 不为空，打印警告
+            static int no_wb_count = 0;
+            if (++no_wb_count % 10000 == 0) {
+                // 检查是否有 warp 的 scoreboard 不为空但没有写回
+                // 这个检查在 writeback 线程中，无法直接访问 warp 信息，所以暂时不打印
+            }
         }
     }
 }

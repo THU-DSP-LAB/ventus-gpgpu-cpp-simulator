@@ -3,6 +3,8 @@
 #include "parameters.h"
 #include <cstring>
 #include <functional>
+#include <iomanip>
+#include <iostream>
 #include <memory>
 #include <spdlog/common.h>
 #include <spdlog/sinks/stdout_sinks.h>
@@ -58,18 +60,28 @@ Top_gpgpu::Top_gpgpu(const char* ramulator_config_filename)
     m_sv39 = std::make_unique<SV39_supervisor>(m_gmem, m_logger);
     m_rst_gen = new BASE_sti("RST_GEN");
     m_rst_gen->rst_n(m_rstn);
+
+    // 缓存部分
+    m_l2cache = std::make_unique<L2_Cache>("L2", m_gmem);
+    m_l2cache->bind_ramulator(m_ramulator.get());
+
     for (int i = 0; i < NUM_SM; i++) {
-        auto ramulator_interface = [this,
-                                    i](std::unique_ptr<lsu_mem_cmd_t>& cmd,
-                                       std::function<void(std::unique_ptr<lsu_mem_cmd_t>)> callback
-                                   ) { return m_ramulator->request(i, cmd, callback); };
-        m_sm.push_back(new BASE(
-            fmt::format("SM{}", i).c_str(), i, instruction_table, decode_table, m_gmem,
-            ramulator_interface, m_logger
-        ));
-        m_sm[i]->clk(m_clk);
-        m_sm[i]->rst_n(m_rstn);
+        auto base = new BASE(
+            fmt::format("SM{}", i).c_str(), i, instruction_table, decode_table, m_gmem, m_logger
+        );
+        base->clk(m_clk);
+        base->rst_n(m_rstn);
+        m_sm.push_back(base); // 必须放前面，为后续 m_sm.data() 构造 cta 用
+
+        std::string l1d_name = fmt::format("L1D_Cache_System{}", i);
+        auto l1d_cache
+            = std::make_unique<L1D_Cache_System>(l1d_name.c_str(), i, *m_l2cache, m_gmem);
+
+        base->m_l1d_cache = l1d_cache.get();
+        l1d_cache->clk(m_clk);
+        l1d_Cache_Systems[i] = std::move(l1d_cache);
     }
+
     m_cta = new CTA_Scheduler("CTA_Scheduler", m_sm.data(), m_logger);
     for (int i = 0; i < NUM_SM; i++) {
         m_sm[i]->m_warp_finish_callback
@@ -94,9 +106,13 @@ void Top_gpgpu::add_kernel(
     std::function<void(const ventus_kernel_metadata_t*)> load_data_callback,
     std::function<void(const ventus_kernel_metadata_t*)> finish_callback
 ) {
+    SPDLOG_LOGGER_INFO(m_logger, "[Top_gpgpu::add_kernel] Received kernel {} with pagetable=0x{:x}", 
+        metadata.name ? metadata.name : "unknown", metadata.pagetable);
     std::shared_ptr<kernel_info_t> kernel
         = std::make_shared<kernel_info_t>(metadata, load_data_callback, finish_callback, m_logger);
     assert(kernel);
+    SPDLOG_LOGGER_INFO(m_logger, "[Top_gpgpu::add_kernel] Created kernel_info_t, kernel->get_pagetable()=0x{:x}", 
+        kernel->get_pagetable());
     kernel->activate();
     m_cta->kernel_add(kernel);
     m_kernel_cnt++;
@@ -109,7 +125,11 @@ int Top_gpgpu::pmemcpy_h2d(paddr_t dst, const void* src, size_t size) {
     return m_gmem->write(dst, src, size);
 }
 
-Top_gpgpu::pagetable_t Top_gpgpu::vmem_create() { return m_sv39->create_pagetable(); }
+Top_gpgpu::pagetable_t Top_gpgpu::vmem_create() { 
+    pagetable_t ptroot = m_sv39->create_pagetable();
+    SPDLOG_LOGGER_INFO(m_logger, "[Top_gpgpu::vmem_create] Created new pagetable_root=0x{:x}", ptroot);
+    return ptroot;
+}
 void Top_gpgpu::vmem_destroy(pagetable_t root) { m_sv39->destroy_pagetable(root); }
 
 void Top_gpgpu::vmemcpy_d2h(pagetable_t ptroot, void* dst, uint64_t src, uint64_t size) {
@@ -125,3 +145,4 @@ void Top_gpgpu::vmem_free(pagetable_t ptroot, vaddr_t vaddr, size_t size) {
     m_sv39->munmap(ptroot, vaddr, size);
 }
 bool Top_gpgpu::is_idle() const { return m_cta->is_idle(); }
+void Top_gpgpu::debug_print_kernel_status() const { m_cta->debug_print_kernel_status(); }

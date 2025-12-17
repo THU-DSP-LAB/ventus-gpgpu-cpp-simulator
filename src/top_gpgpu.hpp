@@ -28,6 +28,7 @@ class Top_gpgpu {
 
     int m_kernel_cnt = 0;
 
+    std::array<std::unique_ptr<L1D_Cache_System>, NUM_SM> l1d_Cache_Systems;
 public:
     Top_gpgpu(const char* ramulator_config_filename);
     ~Top_gpgpu();
@@ -47,4 +48,7 @@ public:
     void vmemcpy_d2h(pagetable_t pagetable_root, void* dst, uint64_t vaddr, uint64_t size);
     void vmemcpy_h2d(pagetable_t pagetable_root, uint64_t vaddr, const void* src, uint64_t size);
     bool is_idle() const;
+    void debug_print_kernel_status() const;
+    std::vector<std::unique_ptr<L1D_Cache_System>> m_l1d_caches;
+    std::unique_ptr<L2_Cache> m_l2cache;
 };

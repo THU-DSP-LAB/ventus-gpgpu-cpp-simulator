@@ -121,7 +121,12 @@ static uint8_t wordOffset1H_calc(uint32_t addr, const I_TYPE& instr) {
 }
 
 void BASE::lsu_new_req() {
+    if (m_lsu_subcore_req_queue.size() != 1 && m_lsu_subcore_req_queue.size() != 2) {
+        std::cerr << "[ERROR] lsu_new_req: m_lsu_subcore_req_queue.size()=" 
+                  << m_lsu_subcore_req_queue.size() << " (expected 1 or 2) @ " 
+                  << sc_time_stamp() << std::endl;
     assert(m_lsu_subcore_req_queue.size() == 1 || m_lsu_subcore_req_queue.size() == 2);
+    }
     auto& req = m_lsu_subcore_req_queue.front();
     int warp_id = warpid_convert(req.subcore_id, req.subcore_warp_id);
     const I_TYPE& instr = req.instr;
@@ -272,6 +277,8 @@ void BASE::lsu_new_req() {
         std::unique_ptr<lsu_mem_cmd_t> cmd = std::make_unique<lsu_mem_cmd_t>();
         cmd->instrId = mshr_idx;
         cmd->pagetable_root = req.pagetable_root;
+        SPDLOG_LOGGER_DEBUG(m_logger, "[exec_lsu::lsu_new_req] SM{} warp{} req.pagetable_root=0x{:x} -> cmd->pagetable_root=0x{:x}", 
+            sm_id, warp_id, req.pagetable_root, cmd->pagetable_root);
         cmd->warp_id = warp_id;
         cmd->instr = instr;
         cmd->opcode = _cmd_opcode;
@@ -339,7 +346,11 @@ void BASE::lsu_main() { // LSU sc_thread
                 )
                 == 1
             );
+            // Defense check: only call lsu_new_req() if queue is not empty
+            // This can happen if emito_lsu signal is still true but queue was already processed
+            if (!m_lsu_subcore_req_queue.empty()) {
             lsu_new_req();
+            }
         }
 
         //
@@ -358,13 +369,13 @@ void BASE::lsu_main() { // LSU sc_thread
                 } else { // shared_memory access ok
                     m_lsu_mem_cmd_queue.pop();
                 }
-            } else { // global memory access
+            } else { // global memory access (经由 L1D_Cache_System::accept 回调式接口)
                 std::function<void(std::unique_ptr<lsu_mem_cmd_t>)> callback = nullptr;
                 callback = (cmd->opcode == L1D_OPCODE_READ) ? read_callback
                     : (cmd->opcode == L1D_OPCODE_WRITE)     ? write_callback
                                                             : callback;
-                // TODO: ramulator以回调函数来返回，但L1D是以FIFO握手来返回，这里暂且不管
-                int failed = l1d_request(cmd, callback);
+                // L1D_Cache_System::accept 为阻塞式：写入内部 FIFO 成功后返回 0
+                int failed = m_l1d_cache->accept(cmd, callback);
                 if (!failed) { // cmd accepted
                     m_lsu_mem_cmd_queue.pop();
                 } else if (failed == -1) { // something wrong in the cmd
@@ -430,6 +441,9 @@ void BASE::lsu_l1d_read_callback(std::unique_ptr<lsu_mem_cmd_t> cmd) {
     assert(cmd && cmd->opcode == L1D_OPCODE_READ);
     assert(m_lsu_mshr.at(cmd->instrId).valid);
     auto& mshr_item = m_lsu_mshr[cmd->instrId];
+    SPDLOG_LOGGER_INFO(m_logger,
+        "L1D read callback: SM {} warp {} instrId={} pc=0x{:x}",
+        sm_id, cmd->warp_id, cmd->instrId, cmd->instr.currentpc);
     for (int i = 0; i < hw_num_thread; i++) {
         if (cmd->mask[i]) {
             assert(!mshr_item.finished_mask[i]);
@@ -448,6 +462,9 @@ void BASE::lsu_l1d_write_callback(std::unique_ptr<lsu_mem_cmd_t> cmd) {
     assert(cmd && cmd->opcode == L1D_OPCODE_WRITE);
     assert(m_lsu_mshr.at(cmd->instrId).valid);
     auto& mshr_item = m_lsu_mshr[cmd->instrId];
+     SPDLOG_LOGGER_INFO(m_logger,
+        "L1D write callback: SM {} warp {} instrId={} pc=0x{:x}",
+        sm_id, cmd->warp_id, cmd->instrId, cmd->instr.currentpc);
     // TODO: 目前Ramulator的写操作只表明成功接受，不在执行完毕后回调
     // 此回调函数实质上在Ramulator接受写操作后就被回调
     for (int i = 0; i < hw_num_thread; i++) {
@@ -456,4 +473,6 @@ void BASE::lsu_l1d_write_callback(std::unique_ptr<lsu_mem_cmd_t> cmd) {
         }
     }
     mshr_item.finished_mask |= cmd->mask;
+    SPDLOG_INFO("[L1D Callback] warp={}, pc=0x{:x} data ready", cmd->warp_id, cmd->instr.currentpc);
+
 };

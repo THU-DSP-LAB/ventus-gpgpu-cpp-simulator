@@ -12,13 +12,12 @@ BASE::BASE(
     sc_core::sc_module_name name, int _sm_id,
     const std::shared_ptr<const std::vector<instable_t>>& instruction_table,
     const std::shared_ptr<const std::map<OP_TYPE, decodedat>>& decode_table,
-    std::shared_ptr<PhysicalMemoryInterface> gmem, mem_interface_t memif,
+    std::shared_ptr<PhysicalMemoryInterface> gmem, 
     std::shared_ptr<spdlog::logger> logger
 )
     : sc_module(name)
     , sm_id(_sm_id)
-    , m_mmu(gmem, logger)
-    , l1d_request(memif)
+    , m_mmu(gmem, logger) 
     , m_logger(logger ? logger : spdlog::default_logger()) {
 
     for (int i = 0; i < m_subcores.size(); i++) {
@@ -96,6 +95,8 @@ int BASE::lsu_subcore_req(
     }
 
     if (valid && subcore_id == lsu_subcore_req_arbiter_last) { // the selected requesting subcore
+        SPDLOG_LOGGER_DEBUG(m_logger, "[BASE::lsu_subcore_req] SM{} subcore{} warp{} pagetable_root=0x{:x}", 
+            sm_id, subcore_id, subcore_warp_id, pagetable_root);
         m_lsu_subcore_req_queue.emplace(lsu_subcore_req_t { .subcore_id = subcore_id,
                                                             .subcore_warp_id = subcore_warp_id,
                                                             .instr = instr,

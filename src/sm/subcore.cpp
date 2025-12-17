@@ -166,8 +166,39 @@ void Subcore::PROGRAM_COUNTER(const int warp_id) {
                        )) {
                 // std::cout << "pc will +1 at " << sc_time_stamp() << "," <<
                 // sc_delta_count_at_current_time() << std::endl;
-                hwarp->pc = hwarp->pc.read() + 4;
+                uint32_t old_pc = hwarp->pc.read();
+                hwarp->pc = old_pc + 4;
                 hwarp->fetch_valid = true;
+                // 调试：打印 PC 前进情况（每1000次打印一次，避免日志过大）
+                static int pc_advance_count[hw_num_warp] = {0};
+                // 只在特定条件下打印，避免循环卡死
+                bool should_print_pc_advance = false;
+                if (m_sm_id == 1 && warp_id == 1 && old_pc >= 0x800000b4 && old_pc <= 0x800000c0) {
+                    // SM1 warp1 在 0x800000b4 附近，总是打印
+                    should_print_pc_advance = true;
+                } else if (++pc_advance_count[warp_id] % 1000 == 0 || old_pc == 0x800000b4) {
+                    // 其他情况按频率打印
+                    should_print_pc_advance = true;
+                }
+                if (should_print_pc_advance) {
+                    std::cout << "[FETCH_PC] SM" << m_sm_id << " warp" << warp_id 
+                              << " PC: 0x" << std::hex << old_pc << " -> 0x" << (old_pc + 4) << std::dec
+                              << " @ " << sc_time_stamp() << std::endl;
+                }
+            } else {
+                // Debug: PC cannot advance - 大幅减少输出，只在每100000次打印一次
+                static int pc_stall_count[hw_num_warp] = {0};
+                pc_stall_count[warp_id]++;
+                // 只在每100000次打印一次，避免日志爆炸
+                if (pc_stall_count[warp_id] % 100000 == 0) {
+                    std::cout << "[FETCH_PC] ⚠️ SM" << m_sm_id << " warp" << warp_id 
+                              << " PC STALLED (count=" << pc_stall_count[warp_id] << ") @ " << sc_time_stamp() 
+                              << " pc=0x" << std::hex << hwarp->pc.read() << std::dec
+                              << " ibuf_empty=" << hwarp->ibuf_empty
+                              << " ibuf_full=" << hwarp->ibuf_full
+                              << " dispatch_warp_valid=" << hwarp->dispatch_warp_valid
+                              << " opc_full=" << opc_full << " doemit=" << doemit << "\n";
+                }
             }
         }
         hwarp->ev_fetchpc.notify(); // Not used
@@ -231,6 +262,17 @@ void Subcore::cycle_IBUF_ACTION(const int warp_id, I_TYPE& dispatch_ins_, I_TYPE
             // std::cout << "before dispatch, ififo has " << ififo.used() << " elems at " <<
             // sc_time_stamp() <<","<< sc_delta_count_at_current_time() << std::endl;
             dispatch_ins_ = hwarp->ififo.get();
+            // 调试：打印 dispatch 的指令（扩展范围到 0x80000088-0x800000c0）
+            if (m_sm_id == 1 && warp_id == 1 && dispatch_ins_.currentpc >= 0x80000088 && dispatch_ins_.currentpc <= 0x800000c0) {
+                uint32_t global_warp = warpid_convert(m_subcore_id, warp_id);
+                std::cout << "[DISPATCH] SM" << m_sm_id << " subcore" << m_subcore_id
+                          << " warp" << warp_id << " (global_warp=" << global_warp << ")"
+                          << " ins=0x" << std::hex << dispatch_ins_.currentpc << std::dec
+                          << " op=" << static_cast<int>(dispatch_ins_.op)
+                          << " rd=" << static_cast<int>(dispatch_ins_.d)
+                          << " opc_full=" << opc_full << " doemit=" << doemit
+                          << " @ " << sc_time_stamp() << std::endl;
+            }
             // std::cout << "IBUF: after dispatch, ififo has " << ififo.used() << " elems at " <<
             // sc_time_stamp()
             // <<","<< sc_delta_count_at_current_time() << std::endl;
@@ -279,6 +321,20 @@ void Subcore::cycle_UPDATE_SCORE(
     bool& insertscore
 ) {
     auto& hwarp = m_hw_warps[warp_id];
+    // 调试：如果 wb_ena 为 true 但 warp_id 不匹配，打印信息（wb_ins的rd=0或1时总是打印）
+    // static int wb_mismatch_count = 0;
+    // bool should_print_mismatch = (wb_ena && wb_warpid != warp_id) && 
+    //                               ((++wb_mismatch_count <= 100) || (wb_ins.read().d == 0) || (wb_ins.read().d == 1));
+    // if (should_print_mismatch) {
+    //     std::cout << "[cycle_UPDATE_SCORE] SM" << m_sm_id << " subcore" << m_subcore_id
+    //               << " wb_ena=true but warp_id mismatch: wb_warpid=" << wb_warpid
+    //               << " (global_warp=" << warpid_convert(m_subcore_id, wb_warpid) << ")"
+    //               << " current_warp_id=" << warp_id
+    //               << " (global_warp=" << warpid_convert(m_subcore_id, warp_id) << ")"
+    //               << " wb_ins=0x" << std::hex << wb_ins.read().currentpc << std::dec
+    //               << " rd=" << static_cast<int>(wb_ins.read().d)
+    //               << " @ " << sc_time_stamp() << std::endl;
+    // }
     if (wb_ena && wb_warpid == warp_id) {
         //
         // 写回阶段，删除score
@@ -321,6 +377,11 @@ void Subcore::cycle_UPDATE_SCORE(
     // dispatch阶段，写入score
     //
     tmpins = hwarp->ibuftop_ins; // this ibuftop_ins is the old data
+    
+    // 调试：追踪 wait_bran 的变化（针对 SM1 subcore1 warp1）
+    bool should_debug_wait_bran = (m_sm_id == 1 && m_subcore_id == 1 && warp_id == 1);
+    bool wait_bran_before = hwarp->wait_bran;
+    
     if (hwarp->branch_sig || hwarp->vbran_sig) {
         if (hwarp->wait_bran == 0)
             std::cout
@@ -331,12 +392,31 @@ void Subcore::cycle_UPDATE_SCORE(
             std::cout << "warp" << warp_id
                       << "_scoreboard error: detect (v)branch_sig=1(from salu) while dispatch=1 at "
                       << sc_time_stamp() << "," << sc_delta_count_at_current_time() << std::endl;
+        
+        if (should_debug_wait_bran && wait_bran_before == 1) {
+            uint32_t global_warp = warpid_convert(m_subcore_id, warp_id);
+            std::cout << "[cycle_UPDATE_SCORE] SM" << m_sm_id << " subcore" << m_subcore_id
+                      << " warp" << warp_id << " (global_warp=" << global_warp << ")"
+                      << " CLEAR wait_bran: branch_sig=" << hwarp->branch_sig
+                      << " vbran_sig=" << hwarp->vbran_sig
+                      << " jump=" << hwarp->jump
+                      << " @ " << sc_time_stamp() << std::endl;
+        }
+        
         hwarp->wait_bran = 0;
     } else if ((tmpins.ddd.branch != 0) && hwarp->dispatch_warp_valid
                && (!opc_full | doemit)) // 表示将要dispatch
     {
-        // std::cout << "ibuf let wait_bran=1 at " << sc_time_stamp() <<","<<
-        // sc_delta_count_at_current_time() << std::endl;
+        if (should_debug_wait_bran && wait_bran_before == 0) {
+            uint32_t global_warp = warpid_convert(m_subcore_id, warp_id);
+            std::cout << "[cycle_UPDATE_SCORE] SM" << m_sm_id << " subcore" << m_subcore_id
+                      << " warp" << warp_id << " (global_warp=" << global_warp << ")"
+                      << " SET wait_bran=1: ins=0x" << std::hex << tmpins.currentpc << std::dec
+                      << " op=" << static_cast<int>(tmpins.op)
+                      << " branch=" << static_cast<int>(tmpins.ddd.branch)
+                      << " dispatch_warp_valid=" << hwarp->dispatch_warp_valid
+                      << " @ " << sc_time_stamp() << std::endl;
+        }
         hwarp->wait_bran = 1;
     } else if (tmpins.op == OP_TYPE::ENDPRG_ && hwarp->dispatch_warp_valid
                && (!opc_full | doemit)) { // TODO: 权宜之计，让endprg后暂停dispatch
@@ -364,8 +444,9 @@ void Subcore::cycle_UPDATE_SCORE(
             regtype_ = s;
         else
             insertscore = false;
-        if (insertscore)
+        if (insertscore) {
             hwarp->score.insert(SCORE_TYPE(regtype_, tmpins.d));
+        }
         // if (sm_id == 0)
         //     std::cout << "SM0 warp" << warp_id << "_scoreboard: insert " << SCORE_TYPE(regtype_,
         //     tmpins.d)
@@ -377,6 +458,25 @@ void Subcore::cycle_UPDATE_SCORE(
 bool Subcore::cycle_JUDGE_DISPATCH(int warp_id) {
     auto& hwarp = m_hw_warps[warp_id];
     if (hwarp->wait_bran | hwarp->jump) {
+        // 调试：打印为什么 can_dispatch 为 false（限制打印频率，避免日志爆炸）
+        static int judge_dispatch_wait_count[hw_num_warp] = {0};
+        bool should_print_wait = false;
+        if (m_sm_id == 1 && warp_id == 1) {
+            // SM1 warp1 只在每100000次打印一次，大幅减少输出
+            judge_dispatch_wait_count[warp_id]++;
+            if (judge_dispatch_wait_count[warp_id] % 100000 == 0) {
+                should_print_wait = true;
+            }
+        }
+        if (should_print_wait) {
+            uint32_t global_warp = warpid_convert(m_subcore_id, warp_id);
+            std::cout << "[cycle_JUDGE_DISPATCH] SM" << m_sm_id << " subcore" << m_subcore_id
+                      << " warp" << warp_id << " (global_warp=" << global_warp << ")"
+                      << " can_dispatch=false: wait_bran=" << hwarp->wait_bran
+                      << " jump=" << hwarp->jump
+                      << " (count=" << judge_dispatch_wait_count[warp_id] << ")"
+                      << " @ " << sc_time_stamp() << std::endl;
+        }
         return false;
     }
     if (hwarp->ififo.isempty()) {
@@ -387,8 +487,35 @@ bool Subcore::cycle_JUDGE_DISPATCH(int warp_id) {
 
     if (instr.op == INVALID_)
         return false;
-    if (instr.op == ENDPRG_ && !hwarp->score.empty())
+    if (instr.op == ENDPRG_ && !hwarp->score.empty()) {
+        // 调试：打印 ENDPRG 指令因为 scoreboard 不为空而无法 dispatch（限制打印频率，避免日志爆炸）
+        static int judge_dispatch_endprg_count[hw_num_warp] = {0};
+        bool should_print_endprg = false;
+        if (m_sm_id == 1 && warp_id == 1) {
+            // SM1 warp1 只在首次或每1000次打印一次（减少频率）
+            if (judge_dispatch_endprg_count[warp_id]++ % 1000 == 0) {
+                should_print_endprg = true;
+            }
+        }
+        if (should_print_endprg) {
+            uint32_t global_warp = warpid_convert(m_subcore_id, warp_id);
+            std::cout << "[cycle_JUDGE_DISPATCH] SM" << m_sm_id << " subcore" << m_subcore_id
+                      << " warp" << warp_id << " (global_warp=" << global_warp << ")"
+                      << " can_dispatch=false: ENDPRG with non-empty scoreboard"
+                      << " ins=0x" << std::hex << instr.currentpc << std::dec
+                      << " score.size()=" << hwarp->score.size()
+                      << " scoreboard=[";
+            bool first = true;
+            for (const auto& s : hwarp->score) {
+                if (!first) std::cout << ",";
+                std::cout << (s.regtype == REG_TYPE::s ? "s" : "v") << static_cast<int>(s.addr);
+                first = false;
+            }
+            std::cout << "] (count=" << judge_dispatch_endprg_count[warp_id] << ")"
+                      << " @ " << sc_time_stamp() << std::endl;
+        }
         return false;
+    }
 
     if (instr.ddd.wxd && hwarp->score.find(SCORE_TYPE(s, instr.d)) != hwarp->score.end())
         return false;
@@ -451,6 +578,7 @@ void Subcore::BEFORE_DISPATCH(int warp_id) {
         if (hwarp->is_warp_activated) {
             cycle_IBUF_ACTION(warp_id, dispatch_ins_, _readdata3);
             cycle_UPDATE_SCORE(warp_id, tmpins, it, regtype_, insertscore);
+            bool old_can_dispatch = hwarp->can_dispatch;
             hwarp->can_dispatch = cycle_JUDGE_DISPATCH(warp_id);
             hwarp->ev_warp_dispatch.notify();
         } else {
@@ -513,6 +641,8 @@ void Subcore::receive_warp(
     hwarp->fetch_valid.write(true);
     hwarp->pc.write(kernel->get_startaddr());
     hwarp->pagetable = kernel->get_pagetable();
+    SPDLOG_LOGGER_DEBUG(m_logger, "[Subcore::receive_warp] SM{} subcore{} warp{} kernel->get_pagetable()=0x{:x} -> hwarp->pagetable=0x{:x}", 
+        m_sm_id, m_subcore_id, subcore_warp_idx, kernel->get_pagetable(), hwarp->pagetable);
     hwarp->num_thread = kernel->get_num_thread_per_warp();
     hwarp->blk_slot_idx = blk_slot_idx;
     hwarp->warp_idx_in_blk = warp_idx_in_blk;

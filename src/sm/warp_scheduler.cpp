@@ -73,6 +73,19 @@ void Subcore::WARP_SCHEDULER() {
                 auto& hwarp = m_hw_warps.at(idx);
                 if (!find_dispatchwarp && hwarp->can_dispatch && !wait_barrier[idx]
                     && hwarp->is_warp_activated) {
+                    // 调试：记录 WARP_SCHEDULER 选择 warp（针对 0x8000008c）
+                    if (m_sm_id == 1 && !hwarp->ififo.isempty() && hwarp->ififo.front().currentpc == 0x8000008c) {
+                        uint32_t global_warp = warpid_convert(m_subcore_id, idx);
+                        std::cout << "[WARP_SCHEDULER] SM" << m_sm_id << " subcore" << m_subcore_id
+                                  << " selected warp" << idx << " (global_warp=" << global_warp << ")"
+                                  << " ins=0x" << std::hex << hwarp->ififo.front().currentpc << std::dec
+                                  << " op=" << static_cast<int>(hwarp->ififo.front().op)
+                                  << " can_dispatch=" << hwarp->can_dispatch
+                                  << " wait_barrier=" << wait_barrier[idx]
+                                  << " is_warp_activated=" << hwarp->is_warp_activated
+                                  << " dispatch_warp_valid=true"
+                                  << " @ " << sc_time_stamp() << std::endl;
+                    }
                     hwarp->dispatch_warp_valid = true;
                     dispatch_valid = true;
                     _newissueins = hwarp->ififo.front();
@@ -87,6 +100,17 @@ void Subcore::WARP_SCHEDULER() {
                     find_dispatchwarp = true;
                     last_dispatch_warpid = idx;
                 } else {
+                    // 调试：记录 dispatch_warp_valid 被清除（针对 0x8000008c）
+                    if (m_sm_id == 1 && idx == 1 && !hwarp->ififo.isempty() && hwarp->ififo.front().currentpc == 0x8000008c) {
+                        uint32_t global_warp = warpid_convert(m_subcore_id, idx);
+                        std::cout << "[WARP_SCHEDULER] SM" << m_sm_id << " subcore" << m_subcore_id
+                                  << " CLEAR dispatch_warp_valid: warp" << idx << " (global_warp=" << global_warp << ")"
+                                  << " ins=0x" << std::hex << hwarp->ififo.front().currentpc << std::dec
+                                  << " can_dispatch=" << hwarp->can_dispatch
+                                  << " wait_barrier=" << wait_barrier[idx]
+                                  << " is_warp_activated=" << hwarp->is_warp_activated
+                                  << " @ " << sc_time_stamp() << std::endl;
+                    }
                     hwarp->dispatch_warp_valid = false;
                     // std::cout << "ISSUE: let warp" << i % hw_num_warp << "
                     // dispatch_warp_valid=false at " << sc_time_stamp() << "," <<
@@ -95,6 +119,15 @@ void Subcore::WARP_SCHEDULER() {
             }
             if (!find_dispatchwarp)
                 dispatch_valid = false;
+        }
+        
+        // 注意：initwarp() 已经设置了 endprg_flush_pipe=true，所以这里不需要再次设置
+        // reset_endprg_flush_pipe 标志可能是用于其他目的，暂时保留但不使用
+        for (int warpidx = 0; warpidx < m_hw_warps.size(); warpidx++) {
+            if (reset_endprg_flush_pipe[warpidx]) {
+                // initwarp() 已经设置了 endprg_flush_pipe，这里只是重置标志
+                reset_endprg_flush_pipe[warpidx] = false;
+            }
         }
     }
 }

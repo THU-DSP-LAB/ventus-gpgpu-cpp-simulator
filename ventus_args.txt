@@ -1,7 +1,7 @@
 -f ./testcase/adv_matadd/ventus_args.txt
--f ./testcase/adv_vecadd/ventus_args.txt
--f ./testcase/adv_gaussian/ventus_args.txt
--f ./testcase/adv_nn/ventus_args.txt
--f ./testcase/multiblock/matadd/ventus_args.txt
+#-f ./testcase/adv_vecadd/ventus_args.txt
+#-f ./testcase/adv_gaussian/ventus_args.txt
+#-f ./testcase/adv_nn/ventus_args.txt
+#-f ./testcase/multiblock/matadd/ventus_args.txt
 #-f ./testcase/mnist/ventus_args.txt
---sim-time 100000000
+--sim-time 1000000

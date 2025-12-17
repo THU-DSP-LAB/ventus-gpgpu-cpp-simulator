@@ -1,0 +1,564 @@
+GNU gdb (Ubuntu 15.0.50.20240403-0ubuntu1) 15.0.50.20240403-git
+Copyright (C) 2024 Free Software Foundation, Inc.
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+Type "show copying" and "show warranty" for details.
+This GDB was configured as "x86_64-linux-gnu".
+Type "show configuration" for configuration details.
+For bug reporting instructions, please see:
+<https://www.gnu.org/software/gdb/bugs/>.
+Find the GDB manual and other documentation resources online at:
+    <http://www.gnu.org/software/gdb/documentation/>.
+
+For help, type "help".
+Type "apropos word" to search for commands related to "word"...
+Reading symbols from ./build/linux/x86_64/debug/main...
+Starting program: /home/shezw/ventus/cpp-sim/ventus-gpgpu-cpp-simulator/build/linux/x86_64/debug/main 
+
+This GDB supports auto-downloading debuginfo from the following URLs:
+  <https://debuginfod.ubuntu.com>
+[?2004hEnable debuginfod for this session? (y or [n]) y
+[?2004lDebuginfod has been enabled.
+To make this setting permanent, add 'set debuginfod enabled on' to .gdbinit.
+Downloading separate debug info for system-supplied DSO at 0x7ffff7fc3000...
+Downloading separate debug info for /usr/libexec/coreutils/libstdbuf.so...
+warning: could not find '.gnu_debugaltlink' file for /usr/libexec/coreutils/libstdbuf.so
+Downloading separate debug info for /usr/libexec/coreutils/libstdbuf.so...
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib/x86_64-linux-gnu/libthread_db.so.1".
+Downloading separate debug info for /home/shezw/ventus/cpp-sim/ventus-gpgpu-cpp-simulator/dependencies/ramulator2/build/libramulator.so...
+
+Warning: (W569) sc_module(const char*), sc_module(const std::string&) have been deprecated, use sc_module(const sc_module_name&): RamulatorWrapper
+In file: /home/wangyh/downloads/systemc-2.3.4/src/sysc/kernel/sc_module.cpp:248
+
+Info: (I703) tracing timescale unit set: 1 ns (l1d_cache_system.vcd)
+[Info] using default cmdline arguments: -f ventus_args.txt
+[main::f_new_kernel] Before vmem_create, kernel->pagetable=0x0 [info main.cpp:79]
+[SV_supervisor::create_pagetable] Before allocate: buddy usage=0 bytes, num_ptroots=0 @0ns,0 [info sv_supervisor.cpp:18]
+[SV_supervisor::create_pagetable] buddy.allocate(0) returned 0x1000 (page_idx=1) @0ns,0 [info sv_supervisor.cpp:21]
+[SV_supervisor::create_pagetable] Successfully created pagetable_root=0x1000 @0ns,0 [info sv_supervisor.cpp:40]
+[Top_gpgpu::vmem_create] Created new pagetable_root=0x1000 @0ns,0 [info top_gpgpu.cpp:145]
+[main::f_new_kernel] ventus_cyclesim_vmem_create returned pagetable=0x1000 [info main.cpp:81]
+[main::f_new_kernel] After assignment, kernel->pagetable=0x1000 [info main.cpp:83]
+[main::f_send_kernel_to_gpu] Sending kernel matadd to GPU, pagetable=0x1000 [info main.cpp:127]
+[SV_supervisor::mmap] CALLED: ptroot=0x1000, vaddr=0x90000000, size=0x1000 (4096 bytes, 1 pages), buddy usage BEFORE=1000 bytes
+[SV_supervisor::mmap] ptroot=0x1000, vaddr=0x90000000, size=0x1000 (4096 bytes, 1 pages) @0ns,0 [info sv_supervisor.cpp:119]
+[SV_supervisor::mmap] Found idle vaddr=0x90000000, starting to allocate 1 pages, buddy usage BEFORE=1000 bytes
+[SV_supervisor::mmap] Starting to allocate 1 pages, buddy usage before=4096 bytes @0ns,0 [info sv_supervisor.cpp:147]
+[SV_supervisor::mmap] COMPLETED: allocated 1 pages, buddy usage AFTER=4000 bytes, returning vaddr=0x90000000
+[SV_supervisor::mmap] CALLED: ptroot=0x1000, vaddr=0x90001000, size=0x1000 (4096 bytes, 1 pages), buddy usage BEFORE=4000 bytes
+[SV_supervisor::mmap] ptroot=0x1000, vaddr=0x90001000, size=0x1000 (4096 bytes, 1 pages) @0ns,0 [info sv_supervisor.cpp:119]
+[SV_supervisor::mmap] Found idle vaddr=0x90001000, starting to allocate 1 pages, buddy usage BEFORE=4000 bytes
+[SV_supervisor::mmap] Starting to allocate 1 pages, buddy usage before=16384 bytes @0ns,0 [info sv_supervisor.cpp:147]
+[SV_supervisor::mmap] COMPLETED: allocated 1 pages, buddy usage AFTER=5000 bytes, returning vaddr=0x90001000
+[SV_supervisor::mmap] CALLED: ptroot=0x1000, vaddr=0x90002000, size=0x1000 (4096 bytes, 1 pages), buddy usage BEFORE=5000 bytes
+[SV_supervisor::mmap] ptroot=0x1000, vaddr=0x90002000, size=0x1000 (4096 bytes, 1 pages) @0ns,0 [info sv_supervisor.cpp:119]
+[SV_supervisor::mmap] Found idle vaddr=0x90002000, starting to allocate 1 pages, buddy usage BEFORE=5000 bytes
+[SV_supervisor::mmap] Starting to allocate 1 pages, buddy usage before=20480 bytes @0ns,0 [info sv_supervisor.cpp:147]
+[SV_supervisor::mmap] COMPLETED: allocated 1 pages, buddy usage AFTER=6000 bytes, returning vaddr=0x90002000
+[SV_supervisor::mmap] CALLED: ptroot=0x1000, vaddr=0x90003000, size=0x1000 (4096 bytes, 1 pages), buddy usage BEFORE=6000 bytes
+[SV_supervisor::mmap] ptroot=0x1000, vaddr=0x90003000, size=0x1000 (4096 bytes, 1 pages) @0ns,0 [info sv_supervisor.cpp:119]
+[SV_supervisor::mmap] Found idle vaddr=0x90003000, starting to allocate 1 pages, buddy usage BEFORE=6000 bytes
+[SV_supervisor::mmap] Starting to allocate 1 pages, buddy usage before=24576 bytes @0ns,0 [info sv_supervisor.cpp:147]
+[SV_supervisor::mmap] COMPLETED: allocated 1 pages, buddy usage AFTER=7000 bytes, returning vaddr=0x90003000
+[SV_supervisor::mmap] CALLED: ptroot=0x1000, vaddr=0x80000000, size=0x6000 (24576 bytes, 6 pages), buddy usage BEFORE=7000 bytes
+[SV_supervisor::mmap] ptroot=0x1000, vaddr=0x80000000, size=0x6000 (24576 bytes, 6 pages) @0ns,0 [info sv_supervisor.cpp:119]
+[SV_supervisor::mmap] Found idle vaddr=0x80000000, starting to allocate 6 pages, buddy usage BEFORE=7000 bytes
+[SV_supervisor::mmap] Starting to allocate 6 pages, buddy usage before=28672 bytes @0ns,0 [info sv_supervisor.cpp:147]
+[SV_supervisor::mmap] COMPLETED: allocated 6 pages, buddy usage AFTER=e000 bytes, returning vaddr=0x80000000
+[SV_supervisor::mmap] CALLED: ptroot=0x1000, vaddr=0x90004000, size=0x10000 (65536 bytes, 16 pages), buddy usage BEFORE=e000 bytes
+[SV_supervisor::mmap] ptroot=0x1000, vaddr=0x90004000, size=0x10000 (65536 bytes, 16 pages) @0ns,0 [info sv_supervisor.cpp:119]
+[SV_supervisor::mmap] Found idle vaddr=0x90004000, starting to allocate 16 pages, buddy usage BEFORE=e000 bytes
+[SV_supervisor::mmap] Starting to allocate 16 pages, buddy usage before=57344 bytes @0ns,0 [info sv_supervisor.cpp:147]
+[SV_supervisor::mmap] COMPLETED: allocated 16 pages, buddy usage AFTER=1e000 bytes, returning vaddr=0x90004000
+[SV_supervisor::mmap] CALLED: ptroot=0x1000, vaddr=0x90014000, size=0x1000 (4096 bytes, 1 pages), buddy usage BEFORE=1e000 bytes
+[SV_supervisor::mmap] ptroot=0x1000, vaddr=0x90014000, size=0x1000 (4096 bytes, 1 pages) @0ns,0 [info sv_supervisor.cpp:119]
+[SV_supervisor::mmap] Found idle vaddr=0x90014000, starting to allocate 1 pages, buddy usage BEFORE=1e000 bytes
+[SV_supervisor::mmap] Starting to allocate 1 pages, buddy usage before=122880 bytes @0ns,0 [info sv_supervisor.cpp:147]
+[SV_supervisor::mmap] COMPLETED: allocated 1 pages, buddy usage AFTER=1f000 bytes, returning vaddr=0x90014000
+[main::f_send_kernel_to_gpu] After kernel_load_data, kernel->pagetable=0x1000 [info main.cpp:132]
+[Top_gpgpu::add_kernel] Received kernel matadd with pagetable=0x1000 @0ns,0 [info top_gpgpu.cpp:124]
+kernel 0 matadd initialized, size={1,1,1} @0ns,0 [info context_model.cpp:23]
+[Top_gpgpu::add_kernel] Created kernel_info_t, kernel->get_pagetable()=0x1000 @0ns,0 [info top_gpgpu.cpp:129]
+
+Warning: (W509) module construction not properly completed: did you forget to add a sc_module_name parameter to your module constructor?: module 'RamulatorWrapper'
+In file: /home/wangyh/downloads/systemc-2.3.4/src/sysc/kernel/sc_module.cpp:409
+[Subcore::receive_warp] SM1 subcore1 warp0 kernel->get_pagetable()=0x1000 -> hwarp->pagetable=0x1000 @15ns,1 [debug subcore.cpp:644]
+SM 1 warp 1 receive kernel 0 matadd block 0 warp 0 @15ns,1 [trace BASE.cpp:237]
+[Subcore::receive_warp] SM1 subcore0 warp1 kernel->get_pagetable()=0x1000 -> hwarp->pagetable=0x1000 @15ns,1 [debug subcore.cpp:644]
+SM 1 warp 2 receive kernel 0 matadd block 0 warp 1 @15ns,1 [trace BASE.cpp:237]
+[Subcore::receive_warp] SM1 subcore1 warp1 kernel->get_pagetable()=0x1000 -> hwarp->pagetable=0x1000 @15ns,1 [debug subcore.cpp:644]
+SM 1 warp 3 receive kernel 0 matadd block 0 warp 2 @15ns,1 [trace BASE.cpp:237]
+[Subcore::receive_warp] SM1 subcore0 warp2 kernel->get_pagetable()=0x1000 -> hwarp->pagetable=0x1000 @15ns,1 [debug subcore.cpp:644]
+SM 1 warp 4 receive kernel 0 matadd block 0 warp 3 @15ns,1 [trace BASE.cpp:237]
+SM 1 warp 2 0x80000000             AUIPC_0x00004197 WB x[003]=0x80004000 @75ns,1 [trace regfile.cpp:105]
+SM 1 warp 3 0x80000000             AUIPC_0x00004197 WB x[003]=0x80004000 @75ns,1 [trace regfile.cpp:105]
+SM 1 warp 4 0x80000000             AUIPC_0x00004197 WB x[003]=0x80004000 @95ns,1 [trace regfile.cpp:105]
+SM 1 warp 1 0x80000000             AUIPC_0x00004197 WB x[003]=0x80004000 @95ns,1 [trace regfile.cpp:105]
+SM 1 warp 2 0x80000004              ADDI_0x80818193 WB x[003]=0x80003808 @135ns,1 [trace regfile.cpp:105]
+SM 1 warp 3 0x80000004              ADDI_0x80818193 WB x[003]=0x80003808 @135ns,1 [trace regfile.cpp:105]
+SM 1 warp 2 0x80000008              ADDI_0x02000e93 WB x[029]=0x00000020 @155ns,1 [trace regfile.cpp:105]
+SM 1 warp 3 0x80000008              ADDI_0x02000e93 WB x[029]=0x00000020 @155ns,1 [trace regfile.cpp:105]
+SM 1 warp 4 0x80000004              ADDI_0x80818193 WB x[003]=0x80003808 @175ns,1 [trace regfile.cpp:105]
+SM 1 warp 1 0x80000004              ADDI_0x80818193 WB x[003]=0x80003808 @175ns,1 [trace regfile.cpp:105]
+SM 1 warp 4 0x80000008              ADDI_0x02000e93 WB x[029]=0x00000020 @195ns,1 [trace regfile.cpp:105]
+SM 1 warp 1 0x80000008              ADDI_0x02000e93 WB x[029]=0x00000020 @195ns,1 [trace regfile.cpp:105]
+SM 1 warp 3 0x8000000c           VSETVLI_0x0d0efed7 WB x[029]=0x00000004 @205ns,1 [trace regfile.cpp:105]
+SM 1 warp 2 0x8000000c           VSETVLI_0x0d0efed7 WB x[029]=0x00000004 @205ns,1 [trace regfile.cpp:105]
+SM 1 warp 3 0x80000010               LUI_0x00002eb7 WB x[029]=0x00002000 @245ns,1 [trace regfile.cpp:105]
+SM 1 warp 2 0x80000010               LUI_0x00002eb7 WB x[029]=0x00002000 @245ns,1 [trace regfile.cpp:105]
+SM 1 warp 4 0x8000000c           VSETVLI_0x0d0efed7 WB x[029]=0x00000004 @255ns,1 [trace regfile.cpp:105]
+SM 1 warp 1 0x8000000c           VSETVLI_0x0d0efed7 WB x[029]=0x00000004 @255ns,1 [trace regfile.cpp:105]
+SM 1 warp 2 0x80000014             CSRRS_0x300eaef3 CSR[0x300]=0x3800 @285ns,1 [trace exec_csr.cpp:114]
+SM 1 warp 3 0x80000014             CSRRS_0x300eaef3 CSR[0x300]=0x3800 @285ns,1 [trace exec_csr.cpp:114]
+SM 1 warp 4 0x80000010               LUI_0x00002eb7 WB x[029]=0x00002000 @295ns,1 [trace regfile.cpp:105]
+SM 1 warp 1 0x80000010               LUI_0x00002eb7 WB x[029]=0x00002000 @295ns,1 [trace regfile.cpp:105]
+SM 1 warp 3 0x80000014             CSRRS_0x300eaef3 WB x[029]=0x00001800 @305ns,1 [trace regfile.cpp:105]
+SM 1 warp 2 0x80000014             CSRRS_0x300eaef3 WB x[029]=0x00001800 @305ns,1 [trace regfile.cpp:105]
+SM 1 warp 4 0x80000014             CSRRS_0x300eaef3 CSR[0x300]=0x3800 @335ns,1 [trace exec_csr.cpp:114]
+SM 1 warp 1 0x80000014             CSRRS_0x300eaef3 CSR[0x300]=0x3800 @335ns,1 [trace exec_csr.cpp:114]
+SM 1 warp 1 0x80000014             CSRRS_0x300eaef3 WB x[029]=0x00001800 @345ns,1 [trace regfile.cpp:105]
+SM 1 warp 4 0x80000014             CSRRS_0x300eaef3 WB x[029]=0x00001800 @345ns,1 [trace regfile.cpp:105]
+SM 1 warp 2 0x8000001c             CSRRS_0x80502373 CSR[0x805]=0x1 @355ns,1 [trace exec_csr.cpp:114]
+SM 1 warp 3 0x8000001c             CSRRS_0x80502373 CSR[0x805]=0x2 @355ns,1 [trace exec_csr.cpp:114]
+SM 1 warp 3 0x80000018              ADDI_0x00000e93 WB x[029]=0x00000000 @365ns,1 [trace regfile.cpp:105]
+SM 1 warp 2 0x80000018              ADDI_0x00000e93 WB x[029]=0x00000000 @365ns,1 [trace regfile.cpp:105]
+SM 1 warp 2 0x80000020             CSRRS_0x806023f3 CSR[0x806]=0x70000000 @365ns,1 [trace exec_csr.cpp:114]
+SM 1 warp 3 0x80000020             CSRRS_0x806023f3 CSR[0x806]=0x70000000 @365ns,1 [trace exec_csr.cpp:114]
+SM 1 warp 2 0x8000001c             CSRRS_0x80502373 WB x[006]=0x00000001 @375ns,1 [trace regfile.cpp:105]
+SM 1 warp 3 0x8000001c             CSRRS_0x80502373 WB x[006]=0x00000002 @375ns,1 [trace regfile.cpp:105]
+SM 1 warp 3 0x80000020             CSRRS_0x806023f3 WB x[007]=0x70000000 @385ns,1 [trace regfile.cpp:105]
+SM 1 warp 2 0x80000020             CSRRS_0x806023f3 WB x[007]=0x70000000 @385ns,1 [trace regfile.cpp:105]
+SM 1 warp 2 0x80000024              ADDI_0x40000e13 WB x[028]=0x00000400 @395ns,1 [trace regfile.cpp:105]
+SM 1 warp 3 0x80000024              ADDI_0x40000e13 WB x[028]=0x00000400 @395ns,1 [trace regfile.cpp:105]
+SM 1 warp 4 0x8000001c             CSRRS_0x80502373 CSR[0x805]=0x3 @405ns,1 [trace exec_csr.cpp:114]
+SM 1 warp 1 0x8000001c             CSRRS_0x80502373 CSR[0x805]=0x0 @405ns,1 [trace exec_csr.cpp:114]
+SM 1 warp 4 0x80000018              ADDI_0x00000e93 WB x[029]=0x00000000 @415ns,1 [trace regfile.cpp:105]
+SM 1 warp 1 0x80000018              ADDI_0x00000e93 WB x[029]=0x00000000 @415ns,1 [trace regfile.cpp:105]
+SM 1 warp 4 0x80000020             CSRRS_0x806023f3 CSR[0x806]=0x70000000 @415ns,1 [trace exec_csr.cpp:114]
+SM 1 warp 1 0x80000020             CSRRS_0x806023f3 CSR[0x806]=0x70000000 @415ns,1 [trace exec_csr.cpp:114]
+SM 1 warp 1 0x8000001c             CSRRS_0x80502373 WB x[006]=0x00000000 @425ns,1 [trace regfile.cpp:105]
+SM 1 warp 4 0x8000001c             CSRRS_0x80502373 WB x[006]=0x00000003 @425ns,1 [trace regfile.cpp:105]
+SM 1 warp 4 0x80000020             CSRRS_0x806023f3 WB x[007]=0x70000000 @435ns,1 [trace regfile.cpp:105]
+SM 1 warp 1 0x80000020             CSRRS_0x806023f3 WB x[007]=0x70000000 @435ns,1 [trace regfile.cpp:105]
+SM 1 warp 1 0x80000024              ADDI_0x40000e13 WB x[028]=0x00000400 @445ns,1 [trace regfile.cpp:105]
+SM 1 warp 4 0x80000024              ADDI_0x40000e13 WB x[028]=0x00000400 @445ns,1 [trace regfile.cpp:105]
+SM 1 warp 2 0x80000028               MUL_0x03c30333 WB x[006]=0x00000400 @475ns,1 [trace regfile.cpp:105]
+SM 1 warp 3 0x80000028               MUL_0x03c30333 WB x[006]=0x00000800 @475ns,1 [trace regfile.cpp:105]
+SM 1 warp 1 0x80000028               MUL_0x03c30333 WB x[006]=0x00000000 @525ns,1 [trace regfile.cpp:105]
+SM 1 warp 4 0x80000028               MUL_0x03c30333 WB x[006]=0x00000c00 @525ns,1 [trace regfile.cpp:105]
+SM 1 warp 2 0x80000034             AUIPC_0x00003517 WB x[010]=0x80003034 @535ns,1 [trace regfile.cpp:105]
+SM 1 warp 3 0x80000034             AUIPC_0x00003517 WB x[010]=0x80003034 @535ns,1 [trace regfile.cpp:105]
+SM 1 warp 2 0x8000002c               ADD_0x00730133 WB x[002]=0x70000400 @555ns,1 [trace regfile.cpp:105]
+SM 1 warp 3 0x8000002c               ADD_0x00730133 WB x[002]=0x70000800 @555ns,1 [trace regfile.cpp:105]
+SM 1 warp 2 0x80000030              ADDI_0x00000213 WB x[004]=0x00000000 @575ns,1 [trace regfile.cpp:105]
+SM 1 warp 3 0x80000030              ADDI_0x00000213 WB x[004]=0x00000000 @575ns,1 [trace regfile.cpp:105]
+SM 1 warp 2 0x80000038              ADDI_0xfd450513 WB x[010]=0x80003008 @595ns,1 [trace regfile.cpp:105]
+SM 1 warp 3 0x80000038              ADDI_0xfd450513 WB x[010]=0x80003008 @595ns,1 [trace regfile.cpp:105]
+SM 1 warp 2 0x8000003c             AUIPC_0x00003617 WB x[012]=0x8000303c @615ns,1 [trace regfile.cpp:105]
+SM 1 warp 3 0x8000003c             AUIPC_0x00003617 WB x[012]=0x8000303c @615ns,1 [trace regfile.cpp:105]
+SM 1 warp 4 0x8000002c               ADD_0x00730133 WB x[002]=0x70000c00 @635ns,1 [trace regfile.cpp:105]
+SM 1 warp 1 0x8000002c               ADD_0x00730133 WB x[002]=0x70000000 @635ns,1 [trace regfile.cpp:105]
+SM 1 warp 4 0x80000030              ADDI_0x00000213 WB x[004]=0x00000000 @655ns,1 [trace regfile.cpp:105]
+SM 1 warp 1 0x80000030              ADDI_0x00000213 WB x[004]=0x00000000 @655ns,1 [trace regfile.cpp:105]
+SM 1 warp 4 0x80000034             AUIPC_0x00003517 WB x[010]=0x80003034 @675ns,1 [trace regfile.cpp:105]
+SM 1 warp 1 0x80000034             AUIPC_0x00003517 WB x[010]=0x80003034 @675ns,1 [trace regfile.cpp:105]
+SM 1 warp 2 0x80000040              ADDI_0xfcc60613 WB x[012]=0x80003008 @695ns,1 [trace regfile.cpp:105]
+SM 1 warp 3 0x80000040              ADDI_0xfcc60613 WB x[012]=0x80003008 @695ns,1 [trace regfile.cpp:105]
+[cycle_UPDATE_SCORE] SM1 subcore1 warp1 (global_warp=3) SET wait_bran=1: ins=0x80000044 op=17 branch=1 dispatch_warp_valid=1 @ 705 ns
+SM 1 warp 1 0x8000003c             AUIPC_0x00003617 WB x[012]=0x8000303c @725ns,1 [trace regfile.cpp:105]
+SM 1 warp 4 0x8000003c             AUIPC_0x00003617 WB x[012]=0x8000303c @725ns,1 [trace regfile.cpp:105]
+SM 1 warp 1 0x80000038              ADDI_0xfd450513 WB x[010]=0x80003008 @745ns,1 [trace regfile.cpp:105]
+SM 1 warp 4 0x80000038              ADDI_0xfd450513 WB x[010]=0x80003008 @745ns,1 [trace regfile.cpp:105]
+SM 1 warp 1 0x80000044               BEQ_0x00c50863 mask=F, JUMP=true, jumpTO 0x80000054 @755ns,1 [trace exec_salu.cpp:403]
+SM 1 warp 1 0x80000044               BEQ_0x00c50863 mask=F, JUMP=true, jumpTO 0x80000054 @755ns,1 [trace exec_salu.cpp:403]
+SM 1 warp 3 JUMP to 0x80000054 @765ns,1 [trace subcore.cpp:152]
+SM 1 warp 2 JUMP to 0x80000054 @765ns,1 [trace subcore.cpp:152]
+[cycle_UPDATE_SCORE] SM1 subcore1 warp1 (global_warp=3) CLEAR wait_bran: branch_sig=1 vbran_sig=0 jump=1 @ 765 ns
+SM 1 warp 1 0x80000040              ADDI_0xfcc60613 WB x[012]=0x80003008 @785ns,1 [trace regfile.cpp:105]
+SM 1 warp 4 0x80000040              ADDI_0xfcc60613 WB x[012]=0x80003008 @785ns,1 [trace regfile.cpp:105]
+SM 1 warp 2 0x80000054             CSRRS_0x803022f3 CSR[0x803]=0x90014000 @825ns,1 [trace exec_csr.cpp:114]
+SM 1 warp 3 0x80000054             CSRRS_0x803022f3 CSR[0x803]=0x90014000 @825ns,1 [trace exec_csr.cpp:114]
+SM 1 warp 2 0x80000054             CSRRS_0x803022f3 WB x[005]=0x90014000 @835ns,1 [trace regfile.cpp:105]
+SM 1 warp 3 0x80000054             CSRRS_0x803022f3 WB x[005]=0x90014000 @835ns,1 [trace regfile.cpp:105]
+SM 1 warp 2 0x80000044               BEQ_0x00c50863 mask=F, JUMP=true, jumpTO 0x80000054 @845ns,1 [trace exec_salu.cpp:403]
+SM 1 warp 0 0x80000044               BEQ_0x00c50863 mask=F, JUMP=true, jumpTO 0x80000054 @845ns,1 [trace exec_salu.cpp:403]
+SM 1 warp 4 JUMP to 0x80000054 @855ns,1 [trace subcore.cpp:152]
+SM 1 warp 1 JUMP to 0x80000054 @855ns,1 [trace subcore.cpp:152]
+[BASE::lsu_subcore_req] SM1 subcore1 warp1 pagetable_root=0x1000 @865ns,1 [debug BASE.cpp:98]
+SM 1 warp 3 0x80000058                LW_0x0002a303 mask=F MEMADDR 90014000 @875ns,1 [trace exec_lsu.cpp:183]
+[exec_lsu::lsu_new_req] SM1 warp3 req.pagetable_root=0x1000 -> cmd->pagetable_root=0x1000 @875ns,1 [debug exec_lsu.cpp:280]
+[BASE::lsu_subcore_req] SM1 subcore0 warp1 pagetable_root=0x1000 @875ns,1 [debug BASE.cpp:98]
+   88 | coreReq|  3|   | r_idx6, op=0, param=0
+SM 1 warp 2 0x80000058                LW_0x0002a303 mask=F MEMADDR 90014000 @885ns,1 [trace exec_lsu.cpp:183]
+[exec_lsu::lsu_new_req] SM1 warp2 req.pagetable_root=0x1000 -> cmd->pagetable_root=0x1000 @885ns,1 [debug exec_lsu.cpp:280]
+[BASE::lsu_subcore_req] SM1 subcore1 warp1 pagetable_root=0x1000 @885ns,1 [debug BASE.cpp:98]
+SM 1 warp 3 0x8000005c                LW_0x0042a503 mask=F MEMADDR 90014004 @895ns,1 [trace exec_lsu.cpp:183]
+[exec_lsu::lsu_new_req] SM1 warp3 req.pagetable_root=0x1000 -> cmd->pagetable_root=0x1000 @895ns,1 [debug exec_lsu.cpp:280]
+   89 | coreReq|  2|   | r_idx6, op=0, param=0
+[BASE::lsu_subcore_req] SM1 subcore0 warp1 pagetable_root=0x1000 @895ns,1 [debug BASE.cpp:98]
+   90 | coreReq|  3|   | r_idx10, op=0, param=0
+SM 1 warp 2 0x8000005c                LW_0x0042a503 mask=F MEMADDR 90014004 @905ns,1 [trace exec_lsu.cpp:183]
+[exec_lsu::lsu_new_req] SM1 warp2 req.pagetable_root=0x1000 -> cmd->pagetable_root=0x1000 @905ns,1 [debug exec_lsu.cpp:280]
+[BASE::lsu_subcore_req] SM1 subcore1 warp1 pagetable_root=0x1000 @905ns,1 [debug BASE.cpp:98]
+ 91.5 | memReq |   |  0| a_op=4
+
+Info: L2_Cache_Dispatch: 进入分支：读取 (Get)
+[L2_Cache::process_queue] LW @ pc=0x80000058: ptroot=0x1000, vaddr_block=0x90014000, paddr_block=0x1f000
+[L2_Cache::process_queue] Sending request to Ramulator: saved_pc=0x80000058, saved_source=0x0, l1id=1 @ 910 ns
+[Ramulator-READ] SM0 warp=  ptroot=0x1000 paddr_block=0x1f000
+  [READ-thread 0] blockOffset=0 -> paddr=0x1f000
+  [READ-thread 1] blockOffset=1 -> paddr=0x1f004
+  [READ-thread 2] blockOffset=2 -> paddr=0x1f008
+  [READ-thread 3] blockOffset=3 -> paddr=0x1f00c
+[L1_TLM_Adapter::nb_transport_bw] WARNING: Invalid pc=0x5555, ignoring this response. key=0x0
+SM 1 warp 3 0x80000060                LW_0x0302a383 mask=F MEMADDR 90014030 @915ns,1 [trace exec_lsu.cpp:183]
+[exec_lsu::lsu_new_req] SM1 warp3 req.pagetable_root=0x1000 -> cmd->pagetable_root=0x1000 @915ns,1 [debug exec_lsu.cpp:280]
+SM 1 warp 4 0x80000054             CSRRS_0x803022f3 CSR[0x803]=0x90014000 @915ns,1 [trace exec_csr.cpp:114]
+SM 1 warp 3 0x80000068             AUIPC_0x00003e97 WB x[029]=0x80003068 @925ns,1 [trace regfile.cpp:105]
+SM 1 warp 4 0x80000054             CSRRS_0x803022f3 WB x[005]=0x90014000 @925ns,1 [trace regfile.cpp:105]
+SM 1 warp 1 0x80000054             CSRRS_0x803022f3 CSR[0x803]=0x90014000 @925ns,1 [trace exec_csr.cpp:114]
+[BASE::lsu_subcore_req] SM1 subcore0 warp1 pagetable_root=0x1000 @925ns,1 [debug BASE.cpp:98]
+SM 1 warp 1 0x80000054             CSRRS_0x803022f3 WB x[005]=0x90014000 @935ns,1 [trace regfile.cpp:105]
+SM 1 warp 2 0x80000060                LW_0x0302a383 mask=F MEMADDR 90014030 @935ns,1 [trace exec_lsu.cpp:183]
+[exec_lsu::lsu_new_req] SM1 warp2 req.pagetable_root=0x1000 -> cmd->pagetable_root=0x1000 @935ns,1 [debug exec_lsu.cpp:280]
+[BASE::lsu_subcore_req] SM1 subcore1 warp1 pagetable_root=0x1000 @935ns,1 [debug BASE.cpp:98]
+SM 1 warp 3 0x80000064                LW_0x0342ae03 mask=F MEMADDR 90014034 @945ns,1 [trace exec_lsu.cpp:183]
+[exec_lsu::lsu_new_req] SM1 warp3 req.pagetable_root=0x1000 -> cmd->pagetable_root=0x1000 @945ns,1 [debug exec_lsu.cpp:280]
+SM 1 warp 2 0x80000068             AUIPC_0x00003e97 WB x[029]=0x80003068 @945ns,1 [trace regfile.cpp:105]
+SM 1 warp 3 0x8000006c              ADDI_0xf98e8e93 WB x[029]=0x80003000 @985ns,1 [trace regfile.cpp:105]
+[BASE::lsu_subcore_req] SM1 subcore0 warp1 pagetable_root=0x1000 @985ns,1 [debug BASE.cpp:98]
+SM 1 warp 2 0x80000064                LW_0x0342ae03 mask=F MEMADDR 90014034 @995ns,1 [trace exec_lsu.cpp:183]
+[exec_lsu::lsu_new_req] SM1 warp2 req.pagetable_root=0x1000 -> cmd->pagetable_root=0x1000 @995ns,1 [debug exec_lsu.cpp:280]
+SM 1 warp 3 0x80000070             AUIPC_0x00003f17 WB x[030]=0x80003070 @1005ns,1 [trace regfile.cpp:105]
+SM 1 warp 2 0x8000006c              ADDI_0xf98e8e93 WB x[029]=0x80003000 @1025ns,1 [trace regfile.cpp:105]
+SM 1 warp 2 0x80000070             AUIPC_0x00003f17 WB x[030]=0x80003070 @1045ns,1 [trace regfile.cpp:105]
+[L2_Cache::ramulator_callback] CALLED: saved_pc=0x80000058, saved_source=0x0, l1id=1 @ 2015 ns
+[L2_Cache::ramulator_callback] thread=0 blockOffset=0 data=0x800000a8 -> d_data[0]=0x800000a8
+[L2_Cache::ramulator_callback] thread=1 blockOffset=1 data=0x90003000 -> d_data[1]=0x90003000
+[L2_Cache::ramulator_callback] thread=2 blockOffset=2 data=0x2 -> d_data[2]=0x2
+[L2_Cache::ramulator_callback] thread=3 blockOffset=3 data=0x4 -> d_data[3]=0x4
+[L2_Cache::ramulator_callback] About to call nb_transport_bw: d_source=0x0, d_pc=0x80000058, l1id=1 @ 2015 ns
+  202 | memRsp |   |  6|
+[mshr::vec_arrange_core_rsp] LW @ pc=0x80000058: missRsp_line[0]=0x800000a8 missRsp_line[1]=0x90003000 block_offset[0]=0
+[mshr::vec_arrange_core_rsp] LW @ pc=0x80000058: lane=0 block_offset=0 coreRsp_data[0]=0x800000a8
+[mshr::vec_arrange_core_rsp] LW @ pc=0x80000058: missRsp_line[0]=0x800000a8 missRsp_line[1]=0x90003000 block_offset[0]=0
+[mshr::vec_arrange_core_rsp] LW @ pc=0x80000058: lane=0 block_offset=0 coreRsp_data[0]=0x800000a8
+L1D read callback: SM 1 warp 3 instrId=0 pc=0x80000058 @2045ns,2 [info exec_lsu.cpp:444]
+SM 1 warp 3 0x80000058                LW_0x0002a303 MEMDONE, MSHR item cleared @2055ns,1 [trace exec_lsu.cpp:417]
+  205 | coreReq|  2|   | r_idx10, op=0, param=0
+[BASE::lsu_subcore_req] SM1 subcore1 warp0 pagetable_root=0x1000 @2055ns,1 [debug BASE.cpp:98]
+L1D read callback: SM 1 warp 2 instrId=1 pc=0x80000058 @2055ns,2 [info exec_lsu.cpp:444]
+  206 | coreReq|  3|   | r_idx7, op=0, param=0
+SM 1 warp 1 0x80000060                LW_0x0302a383 mask=F MEMADDR 90014030 @2065ns,1 [trace exec_lsu.cpp:183]
+[exec_lsu::lsu_new_req] SM1 warp1 req.pagetable_root=0x1000 -> cmd->pagetable_root=0x1000 @2065ns,1 [debug exec_lsu.cpp:280]
+SM 1 warp 2 0x80000058                LW_0x0002a303 MEMDONE, MSHR item cleared @2065ns,1 [trace exec_lsu.cpp:417]
+SM 1 warp 3 0x80000058                LW_0x0002a303 WB x[006]=0x800000a8 @2065ns,1 [trace regfile.cpp:105]
+L1D read callback: SM 1 warp 3 instrId=2 pc=0x8000005c @2065ns,2 [info exec_lsu.cpp:444]
+SM 1 warp 2 0x80000058                LW_0x0002a303 WB x[006]=0x800000a8 @2075ns,1 [trace regfile.cpp:105]
+SM 1 warp 3 0x8000005c                LW_0x0042a503 MEMDONE, MSHR item cleared @2075ns,1 [trace exec_lsu.cpp:417]
+  207 | coreReq|  2|   | r_idx7, op=0, param=0
+[BASE::lsu_subcore_req] SM1 subcore0 warp2 pagetable_root=0x1000 @2075ns,1 [debug BASE.cpp:98]
+L1D read callback: SM 1 warp 2 instrId=3 pc=0x8000005c @2075ns,2 [info exec_lsu.cpp:444]
+  208 | coreReq|  3|   | r_idx28, op=0, param=0
+SM 1 warp 4 0x80000060                LW_0x0302a383 mask=F MEMADDR 90014030 @2085ns,1 [trace exec_lsu.cpp:183]
+[exec_lsu::lsu_new_req] SM1 warp4 req.pagetable_root=0x1000 -> cmd->pagetable_root=0x1000 @2085ns,1 [debug exec_lsu.cpp:280]
+SM 1 warp 2 0x8000005c                LW_0x0042a503 MEMDONE, MSHR item cleared @2085ns,1 [trace exec_lsu.cpp:417]
+SM 1 warp 3 0x8000005c                LW_0x0042a503 WB x[010]=0x90003000 @2085ns,1 [trace regfile.cpp:105]
+[BASE::lsu_subcore_req] SM1 subcore1 warp0 pagetable_root=0x1000 @2085ns,1 [debug BASE.cpp:98]
+L1D read callback: SM 1 warp 3 instrId=4 pc=0x80000060 @2085ns,2 [info exec_lsu.cpp:444]
+SM 1 warp 2 0x8000005c                LW_0x0042a503 WB x[010]=0x90003000 @2095ns,1 [trace regfile.cpp:105]
+SM 1 warp 1 0x80000068             AUIPC_0x00003e97 WB x[029]=0x80003068 @2095ns,1 [trace regfile.cpp:105]
+SM 1 warp 1 0x80000058                LW_0x0002a303 mask=F MEMADDR 90014000 @2095ns,1 [trace exec_lsu.cpp:183]
+[exec_lsu::lsu_new_req] SM1 warp1 req.pagetable_root=0x1000 -> cmd->pagetable_root=0x1000 @2095ns,1 [debug exec_lsu.cpp:280]
+SM 1 warp 3 0x80000060                LW_0x0302a383 MEMDONE, MSHR item cleared @2095ns,1 [trace exec_lsu.cpp:417]
+  209 | coreReq|  2|   | r_idx28, op=0, param=0
+[BASE::lsu_subcore_req] SM1 subcore0 warp2 pagetable_root=0x1000 @2095ns,1 [debug BASE.cpp:98]
+L1D read callback: SM 1 warp 2 instrId=5 pc=0x80000060 @2095ns,2 [info exec_lsu.cpp:444]
+  210 | coreReq|  1|   | r_idx7, op=0, param=0
+SM 1 warp 4 0x80000058                LW_0x0002a303 mask=F MEMADDR 90014000 @2105ns,1 [trace exec_lsu.cpp:183]
+[exec_lsu::lsu_new_req] SM1 warp4 req.pagetable_root=0x1000 -> cmd->pagetable_root=0x1000 @2105ns,1 [debug exec_lsu.cpp:280]
+SM 1 warp 2 0x80000060                LW_0x0302a383 MEMDONE, MSHR item cleared @2105ns,1 [trace exec_lsu.cpp:417]
+SM 1 warp 3 0x80000060                LW_0x0302a383 WB x[007]=0x00000000 @2105ns,1 [trace regfile.cpp:105]
+[BASE::lsu_subcore_req] SM1 subcore1 warp0 pagetable_root=0x1000 @2105ns,1 [debug BASE.cpp:98]
+L1D read callback: SM 1 warp 3 instrId=6 pc=0x80000064 @2105ns,2 [info exec_lsu.cpp:444]
+SM 1 warp 4 0x80000068             AUIPC_0x00003e97 WB x[029]=0x80003068 @2115ns,1 [trace regfile.cpp:105]
+SM 1 warp 1 0x8000005c                LW_0x0042a503 mask=F MEMADDR 90014004 @2115ns,1 [trace exec_lsu.cpp:183]
+[exec_lsu::lsu_new_req] SM1 warp1 req.pagetable_root=0x1000 -> cmd->pagetable_root=0x1000 @2115ns,1 [debug exec_lsu.cpp:280]
+SM 1 warp 3 0x80000064                LW_0x0342ae03 MEMDONE, MSHR item cleared @2115ns,1 [trace exec_lsu.cpp:417]
+  211 | coreReq|  4|   | r_idx7, op=0, param=0
+[BASE::lsu_subcore_req] SM1 subcore0 warp2 pagetable_root=0x1000 @2115ns,1 [debug BASE.cpp:98]
+L1D read callback: SM 1 warp 2 instrId=7 pc=0x80000064 @2115ns,2 [info exec_lsu.cpp:444]
+  212 | coreReq|  1|   | r_idx6, op=0, param=0
+SM 1 warp 4 0x8000005c                LW_0x0042a503 mask=F MEMADDR 90014004 @2125ns,1 [trace exec_lsu.cpp:183]
+[exec_lsu::lsu_new_req] SM1 warp4 req.pagetable_root=0x1000 -> cmd->pagetable_root=0x1000 @2125ns,1 [debug exec_lsu.cpp:280]
+SM 1 warp 2 0x80000064                LW_0x0342ae03 MEMDONE, MSHR item cleared @2125ns,1 [trace exec_lsu.cpp:417]
+SM 1 warp 3 0x80000074              ADDI_0xf94f0f13 WB x[030]=0x80003004 @2125ns,1 [trace regfile.cpp:105]
+SM 1 warp 2 0x80000060                LW_0x0302a383 WB x[007]=0x00000000 @2125ns,1 [trace regfile.cpp:105]
+[BASE::lsu_subcore_req] SM1 subcore1 warp0 pagetable_root=0x1000 @2125ns,1 [debug BASE.cpp:98]
+L1D read callback: SM 1 warp 1 instrId=0 pc=0x80000060 @2125ns,2 [info exec_lsu.cpp:444]
+SM 1 warp 2 0x80000064                LW_0x0342ae03 WB x[028]=0x00000000 @2135ns,1 [trace regfile.cpp:105]
+SM 1 warp 3 0x80000064                LW_0x0342ae03 WB x[028]=0x00000000 @2135ns,1 [trace regfile.cpp:105]
+SM 1 warp 1 0x80000064                LW_0x0342ae03 mask=F MEMADDR 90014034 @2135ns,1 [trace exec_lsu.cpp:183]
+[exec_lsu::lsu_new_req] SM1 warp1 req.pagetable_root=0x1000 -> cmd->pagetable_root=0x1000 @2135ns,1 [debug exec_lsu.cpp:280]
+SM 1 warp 1 0x80000060                LW_0x0302a383 MEMDONE, MSHR item cleared @2135ns,1 [trace exec_lsu.cpp:417]
+  213 | coreReq|  4|   | r_idx6, op=0, param=0
+[BASE::lsu_subcore_req] SM1 subcore0 warp2 pagetable_root=0x1000 @2135ns,1 [debug BASE.cpp:98]
+L1D read callback: SM 1 warp 4 instrId=1 pc=0x80000060 @2135ns,2 [info exec_lsu.cpp:444]
+  214 | coreReq|  1|   | r_idx10, op=0, param=0
+SM 1 warp 4 0x80000064                LW_0x0342ae03 mask=F MEMADDR 90014034 @2145ns,1 [trace exec_lsu.cpp:183]
+[exec_lsu::lsu_new_req] SM1 warp4 req.pagetable_root=0x1000 -> cmd->pagetable_root=0x1000 @2145ns,1 [debug exec_lsu.cpp:280]
+SM 1 warp 4 0x80000060                LW_0x0302a383 MEMDONE, MSHR item cleared @2145ns,1 [trace exec_lsu.cpp:417]
+SM 1 warp 1 0x80000060                LW_0x0302a383 WB x[007]=0x00000000 @2145ns,1 [trace regfile.cpp:105]
+[BASE::lsu_subcore_req] SM1 subcore1 warp1 pagetable_root=0x1000 @2145ns,1 [debug BASE.cpp:98]
+L1D read callback: SM 1 warp 1 instrId=2 pc=0x80000058 @2145ns,2 [info exec_lsu.cpp:444]
+[OPC_FIFO] dispatch_valid=1: SM1 subcore1 warp1 (global_warp=3) pc=0x80000080 op=14 opc_full=0 doemit=1 @ 2155 ns
+[OPC_FIFO::push] SM1 subcore1 warp1 (global_warp=3) pc=0x80000080 op=14 ready=[1,1,1] valid=[0,0,0] opcfifo.size()=3 @ 2155 ns
+SM 1 warp 2 0x80000074              ADDI_0xf94f0f13 WB x[030]=0x80003004 @2155ns,1 [trace regfile.cpp:105]
+SM 1 warp 3 0x80000078                SW_0x007ea023 mask=F MEMADDR 80003000 @2155ns,1 [trace exec_lsu.cpp:183]
+[exec_lsu::lsu_new_req] SM1 warp3 req.pagetable_root=0x1000 -> cmd->pagetable_root=0x1000 @2155ns,1 [debug exec_lsu.cpp:280]
+SM 1 warp 1 0x80000058                LW_0x0002a303 MEMDONE, MSHR item cleared @2155ns,1 [trace exec_lsu.cpp:417]
+  215 | coreReq|  4|   | r_idx10, op=0, param=0
+[BASE::lsu_subcore_req] SM1 subcore0 warp1 pagetable_root=0x1000 @2155ns,1 [debug BASE.cpp:98]
+L1D read callback: SM 1 warp 4 instrId=3 pc=0x80000058 @2155ns,2 [info exec_lsu.cpp:444]
+  216 | coreReq|  1|   | r_idx28, op=0, param=0
+SM 1 warp 2 0x80000078                SW_0x007ea023 mask=F MEMADDR 80003000 @2165ns,1 [trace exec_lsu.cpp:183]
+[exec_lsu::lsu_new_req] SM1 warp2 req.pagetable_root=0x1000 -> cmd->pagetable_root=0x1000 @2165ns,1 [debug exec_lsu.cpp:280]
+SM 1 warp 4 0x80000058                LW_0x0002a303 MEMDONE, MSHR item cleared @2165ns,1 [trace exec_lsu.cpp:417]
+SM 1 warp 1 0x80000070             AUIPC_0x00003f17 WB x[030]=0x80003070 @2165ns,1 [trace regfile.cpp:105]
+SM 1 warp 4 0x80000060                LW_0x0302a383 WB x[007]=0x00000000 @2165ns,1 [trace regfile.cpp:105]
+[BASE::lsu_subcore_req] SM1 subcore1 warp1 pagetable_root=0x1000 @2165ns,1 [debug BASE.cpp:98]
+L1D read callback: SM 1 warp 1 instrId=4 pc=0x8000005c @2165ns,2 [info exec_lsu.cpp:444]
+[OPC_FIFO] dispatch_valid=1: SM1 subcore0 warp1 (global_warp=2) pc=0x80000080 op=14 opc_full=0 doemit=1 @ 2175 ns
+[OPC_FIFO::push] SM1 subcore0 warp1 (global_warp=2) pc=0x80000080 op=14 ready=[1,1,1] valid=[0,0,0] opcfifo.size()=2 @ 2175 ns
+SM 1 warp 4 0x8000006c              ADDI_0xf98e8e93 WB x[029]=0x80003000 @2175ns,1 [trace regfile.cpp:105]
+SM 1 warp 1 0x80000058                LW_0x0002a303 WB x[006]=0x800000a8 @2175ns,1 [trace regfile.cpp:105]
+SM 1 warp 3 0x8000007c                SW_0x01cf2023 mask=F MEMADDR 80003004 @2175ns,1 [trace exec_lsu.cpp:183]
+[exec_lsu::lsu_new_req] SM1 warp3 req.pagetable_root=0x1000 -> cmd->pagetable_root=0x1000 @2175ns,1 [debug exec_lsu.cpp:280]
+SM 1 warp 1 0x8000005c                LW_0x0042a503 MEMDONE, MSHR item cleared @2175ns,1 [trace exec_lsu.cpp:417]
+  217 | coreReq|  4|   | r_idx28, op=0, param=0
+L1D read callback: SM 1 warp 4 instrId=5 pc=0x8000005c @2175ns,2 [info exec_lsu.cpp:444]
+[SALU_IN] SM1 subcore1 warp1 (global_warp=3) push to SALU: pc=0x80000080 op=14 @ 2185 ns
+  218 | coreReq|  3|   | r_idx0, op=1, param=0
+SM 1 warp 4 0x8000005c                LW_0x0042a503 MEMDONE, MSHR item cleared @2185ns,1 [trace exec_lsu.cpp:417]
+SM 1 warp 1 0x8000006c              ADDI_0xf98e8e93 WB x[029]=0x80003000 @2185ns,1 [trace regfile.cpp:105]
+SM 1 warp 4 0x80000058                LW_0x0002a303 WB x[006]=0x800000a8 @2185ns,1 [trace regfile.cpp:105]
+[OPC_EMIT] SM1 subcore0 emit_to_execunit=1 entryidx=0 warp1 (global_warp=2) pc=0x80000080 op=14 @ 2185 ns
+[BASE::lsu_subcore_req] SM1 subcore0 warp1 pagetable_root=0x1000 @2185ns,1 [debug BASE.cpp:98]
+L1D read callback: SM 1 warp 1 instrId=6 pc=0x80000064 @2185ns,2 [info exec_lsu.cpp:444]
+SM 1 warp 4 0x80000070             AUIPC_0x00003f17 WB x[030]=0x80003070 @2195ns,1 [trace regfile.cpp:105]
+SM 1 warp 1 0x8000005c                LW_0x0042a503 WB x[010]=0x90003000 @2195ns,1 [trace regfile.cpp:105]
+SM 1 warp 2 0x8000007c                SW_0x01cf2023 mask=F MEMADDR 80003004 @2195ns,1 [trace exec_lsu.cpp:183]
+[exec_lsu::lsu_new_req] SM1 warp2 req.pagetable_root=0x1000 -> cmd->pagetable_root=0x1000 @2195ns,1 [debug exec_lsu.cpp:280]
+SM 1 warp 1 0x80000064                LW_0x0342ae03 MEMDONE, MSHR item cleared @2195ns,1 [trace exec_lsu.cpp:417]
+  219 | coreReq|  2|   | r_idx0, op=1, param=0
+[SALU_CALC] POP SM1 subcore1 warp1 (global_warp=3) pc=0x80000080 op=14 @ 2195 ns
+[OPC_EMIT] SM1 subcore1 emit_to_execunit=1 entryidx=0 warp1 (global_warp=3) pc=0x80000080 op=14 @ 2195 ns
+L1D read callback: SM 1 warp 4 instrId=0 pc=0x80000064 @2195ns,2 [info exec_lsu.cpp:444]
+[SALU_IN] SM1 subcore0 warp1 (global_warp=2) push to SALU: pc=0x80000080 op=14 @ 2205 ns
+  220 | coreReq|  3|   | r_idx0, op=1, param=0
+SM 1 warp 4 0x80000064                LW_0x0342ae03 MEMDONE, MSHR item cleared @2205ns,1 [trace exec_lsu.cpp:417]
+SM 1 warp 3 0x80000080             AUIPC_0x00000f97 WB x[031]=0x80000080 @2205ns,1 [trace regfile.cpp:105]
+SM 1 warp 4 0x8000005c                LW_0x0042a503 WB x[010]=0x90003000 @2205ns,1 [trace regfile.cpp:105]
+221.5 | memReq |   |  1| a_op=1
+
+Info: L2_Cache_Dispatch: 进入分支：putpartialdata
+[L2_PutPartialData_RSP] Sending response: pc=0x80000078 d_source=1 d_pc=0x80000078 d_instrId= l1id=1 @ 2210 ns
+[L1_TLM_Adapter::nb_transport_bw] Store response: pc=0x80000078 d_source=0 d_instrId= key=0x1 @ 2210 ns
+[OPC_FIFO] dispatch_valid=1: SM1 subcore1 warp1 (global_warp=3) pc=0x80000084 op=2 opc_full=0 doemit=0 @ 2215 ns
+[OPC_FIFO::push] SM1 subcore1 warp1 (global_warp=3) pc=0x80000084 op=2 ready=[0,1,1] valid=[1,0,0] opcfifo.size()=2 @ 2215 ns
+SM 1 warp 4 0x80000064                LW_0x0342ae03 WB x[028]=0x00000000 @2215ns,1 [trace regfile.cpp:105]
+SM 1 warp 1 0x80000064                LW_0x0342ae03 WB x[028]=0x00000000 @2215ns,1 [trace regfile.cpp:105]
+  221 | memRsp |   |  0|
+[SALU_CALC] POP SM1 subcore0 warp1 (global_warp=2) pc=0x80000080 op=14 @ 2215 ns
+SM 1 warp 3 0x800000b0            REGEXT_0x0010200b REGEXT(s3,s2,s1,d)=0,0,0,1 @2215ns,1 [trace decode.cpp:64]
+[BASE::lsu_subcore_req] SM1 subcore1 warp0 pagetable_root=0x1000 @2215ns,1 [debug BASE.cpp:98]
+  222 | coreReq|  2|   | r_idx0, op=1, param=0
+SM 1 warp 1 0x80000078                SW_0x007ea023 mask=F MEMADDR 80003000 @2225ns,1 [trace exec_lsu.cpp:183]
+[exec_lsu::lsu_new_req] SM1 warp1 req.pagetable_root=0x1000 -> cmd->pagetable_root=0x1000 @2225ns,1 [debug exec_lsu.cpp:280]
+SM 1 warp 1 0x80000074              ADDI_0xf94f0f13 WB x[030]=0x80003004 @2225ns,1 [trace regfile.cpp:105]
+SM 1 warp 2 0x80000080             AUIPC_0x00000f97 WB x[031]=0x80000080 @2225ns,1 [trace regfile.cpp:105]
+[OPC_EMIT] SM1 subcore0 emit_to_execunit=1 entryidx=0 warp1 (global_warp=2) pc=0x80000080 op=14 @ 2225 ns
+L1D write callback: SM 1 warp 1 instrId=0 pc=0x80000078 @2225ns,2 [info exec_lsu.cpp:465]
+[L1D Callback] warp=1, pc=0x80000078 data ready [info exec_lsu.cpp:476]
+223.5 | memReq |   |  2| a_op=1
+
+Info: L2_Cache_Dispatch: 进入分支：putpartialdata
+[L2_PutPartialData_RSP] Sending response: pc=0x80000078 d_source=2 d_pc=0x80000078 d_instrId= l1id=1 @ 2230 ns
+[L1_TLM_Adapter::nb_transport_bw] Store response: pc=0x80000078 d_source=0 d_instrId= key=0x2 @ 2230 ns
+[OPC_FIFO] dispatch_valid=1: SM1 subcore0 warp1 (global_warp=2) pc=0x80000084 op=2 opc_full=0 doemit=1 @ 2235 ns
+[OPC_FIFO::push] SM1 subcore0 warp1 (global_warp=2) pc=0x80000084 op=2 ready=[0,1,1] valid=[1,0,0] opcfifo.size()=2 @ 2235 ns
+SM 1 warp 1 0x80000078                SW_0x007ea023 MEMDONE, MSHR item cleared @2235ns,1 [trace exec_lsu.cpp:417]
+  223 | memRsp |   |  0|
+SM 1 warp 2 0x800000b0            REGEXT_0x0010200b REGEXT(s3,s2,s1,d)=0,0,0,1 @2235ns,1 [trace decode.cpp:64]
+[SALU_IN] SM1 subcore1 warp1 (global_warp=3) push to SALU: pc=0x80000084 op=2 @ 2245 ns
+[OPC_FIFO] dispatch_valid=1: SM1 subcore1 warp0 (global_warp=1) pc=0x80000080 op=14 opc_full=0 doemit=1 @ 2245 ns
+[OPC_FIFO::push] SM1 subcore1 warp0 (global_warp=1) pc=0x80000080 op=14 ready=[1,1,1] valid=[0,0,0] opcfifo.size()=2 @ 2245 ns
+  224 | coreReq|  1|   | r_idx0, op=1, param=0
+[OPC_EMIT] SM1 subcore1 emit_to_execunit=1 entryidx=0 warp1 (global_warp=3) pc=0x80000084 op=2 @ 2245 ns
+L1D write callback: SM 1 warp 2 instrId=4 pc=0x8000007c @2245ns,2 [info exec_lsu.cpp:465]
+[L1D Callback] warp=2, pc=0x8000007c data ready [info exec_lsu.cpp:476]
+225.5 | memReq |   |  3| a_op=1
+
+Info: L2_Cache_Dispatch: 进入分支：putpartialdata
+[L2_PutPartialData_RSP] Sending response: pc=0x8000007c d_source=3 d_pc=0x8000007c d_instrId= l1id=1 @ 2250 ns
+[L1_TLM_Adapter::nb_transport_bw] Store response: pc=0x8000007c d_source=0 d_instrId= key=0x3 @ 2250 ns
+SM 1 warp 4 0x80000074              ADDI_0xf94f0f13 WB x[030]=0x80003004 @2255ns,1 [trace regfile.cpp:105]
+SM 1 warp 2 0x8000007c                SW_0x01cf2023 MEMDONE, MSHR item cleared @2255ns,1 [trace exec_lsu.cpp:417]
+  225 | memRsp |   |  0|
+[SALU_CALC] POP SM1 subcore1 warp1 (global_warp=3) pc=0x80000084 op=2 @ 2255 ns
+[OPC_EMIT] SM1 subcore1 emit_to_execunit=1 entryidx=1 warp0 (global_warp=1) pc=0x80000080 op=14 @ 2255 ns
+[OPC_EMIT] SM1 subcore1 emit_to_execunit=1 entryidx=0 warp0 (global_warp=1) pc=0x80000080 op=14 @ 2255 ns
+[BASE::lsu_subcore_req] SM1 subcore0 warp2 pagetable_root=0x1000 @2255ns,1 [debug BASE.cpp:98]
+[SALU_IN] SM1 subcore1 warp0 (global_warp=1) push to SALU: pc=0x80000080 op=14 @ 2265 ns
+SM 1 warp 4 0x80000078                SW_0x007ea023 mask=F MEMADDR 80003000 @2265ns,1 [trace exec_lsu.cpp:183]
+[exec_lsu::lsu_new_req] SM1 warp4 req.pagetable_root=0x1000 -> cmd->pagetable_root=0x1000 @2265ns,1 [debug exec_lsu.cpp:280]
+SM 1 warp 3 0x80000084              ADDI_0x018f8f93 WB x[031]=0x80000098 @2265ns,1 [trace regfile.cpp:105]
+[OPC_EMIT] SM1 subcore1 emit_to_execunit=1 entryidx=1 warp0 (global_warp=1) pc=0x80000080 op=14 @ 2265 ns
+L1D write callback: SM 1 warp 3 instrId=3 pc=0x8000007c @2265ns,2 [info exec_lsu.cpp:465]
+[L1D Callback] warp=3, pc=0x8000007c data ready [info exec_lsu.cpp:476]
+227.5 | memReq |   |  4| a_op=1
+
+Info: L2_Cache_Dispatch: 进入分支：putpartialdata
+[L2_PutPartialData_RSP] Sending response: pc=0x8000007c d_source=4 d_pc=0x8000007c d_instrId= l1id=1 @ 2270 ns
+[L1_TLM_Adapter::nb_transport_bw] Store response: pc=0x8000007c d_source=0 d_instrId= key=0x4 @ 2270 ns
+[OPC_FIFO] dispatch_valid=1: SM1 subcore0 warp2 (global_warp=4) pc=0x80000080 op=14 opc_full=0 doemit=0 @ 2275 ns
+[OPC_FIFO::push] SM1 subcore0 warp2 (global_warp=4) pc=0x80000080 op=14 ready=[1,1,1] valid=[0,0,0] opcfifo.size()=3 @ 2275 ns
+[FETCH_PC] SM1 warp1 PC: 0x800000b4 -> 0x800000b8 @ 2275 ns
+SM 1 warp 3 0x8000007c                SW_0x01cf2023 MEMDONE, MSHR item cleared @2275ns,1 [trace exec_lsu.cpp:417]
+  227 | memRsp |   |  0|
+[SALU_CALC] POP SM1 subcore1 warp0 (global_warp=1) pc=0x80000080 op=14 @ 2275 ns
+[DISPATCH] SM1 subcore1 warp1 (global_warp=3) ins=0x80000088 op=50 rd=0 opc_full=0 doemit=0 @ 2275 ns
+SM 1 warp 1 0x800000b4           VMV_V_X_0x5e024057 REGEXT(s3,s2,s1,d)=0,0,0,1 is used to set s3,s2,s1,d=32,0,4,32 @2275ns,1 [trace decode.cpp:130]
+[WARP_SCHEDULER] SM1 subcore1 selected warp1 (global_warp=3) ins=0x8000008c op=111 can_dispatch=1 wait_barrier=0 is_warp_activated=1 dispatch_warp_valid=true @ 2275 ns
+[SALU_IN] SM1 subcore0 warp2 (global_warp=4) push to SALU: pc=0x80000080 op=14 @ 2285 ns
+  228 | coreReq|  4|   | r_idx0, op=1, param=0
+[FETCH_PC] SM1 warp1 PC: 0x800000b8 -> 0x800000bc @ 2285 ns
+SM 1 warp 1 0x80000080             AUIPC_0x00000f97 WB x[031]=0x80000080 @2285ns,1 [trace regfile.cpp:105]
+[OPC_EMIT] SM1 subcore0 emit_to_execunit=1 entryidx=0 warp2 (global_warp=4) pc=0x80000080 op=14 @ 2285 ns
+[OPC_EMIT] SM1 subcore0 emit_to_execunit=1 entryidx=1 warp2 (global_warp=4) pc=0x80000080 op=14 @ 2285 ns
+[DISPATCH] SM1 subcore1 warp1 (global_warp=3) ins=0x8000008c op=111 rd=1 opc_full=0 doemit=0 @ 2285 ns
+[cycle_UPDATE_SCORE] SM1 subcore1 warp1 (global_warp=3) SET wait_bran=1: ins=0x8000008c op=111 branch=3 dispatch_warp_valid=1 @ 2285 ns
+[BASE::lsu_subcore_req] SM1 subcore1 warp0 pagetable_root=0x1000 @2285ns,1 [debug BASE.cpp:98]
+L1D write callback: SM 1 warp 4 instrId=0 pc=0x80000078 @2285ns,2 [info exec_lsu.cpp:465]
+[L1D Callback] warp=4, pc=0x80000078 data ready [info exec_lsu.cpp:476]
+229.5 | memReq |   |  5| a_op=1
+
+Info: L2_Cache_Dispatch: 进入分支：putpartialdata
+[L2_PutPartialData_RSP] Sending response: pc=0x80000078 d_source=5 d_pc=0x80000078 d_instrId=  l1id=1 @ 2290 ns
+[L1_TLM_Adapter::nb_transport_bw] Store response: pc=0x80000078 d_source=0 d_instrId=  key=0x5 @ 2290 ns
+[OPC_FIFO] dispatch_valid=1: SM1 subcore1 warp0 (global_warp=1) pc=0x80000084 op=2 opc_full=0 doemit=1 @ 2295 ns
+[OPC_FIFO::push] SM1 subcore1 warp0 (global_warp=1) pc=0x80000084 op=2 ready=[0,1,1] valid=[1,0,0] opcfifo.size()=1 @ 2295 ns
+[FETCH_PC] SM1 warp1 PC: 0x800000bc -> 0x800000c0 @ 2295 ns
+SM 1 warp 1 0x8000007c                SW_0x01cf2023 mask=F MEMADDR 80003004 @2295ns,1 [trace exec_lsu.cpp:183]
+[exec_lsu::lsu_new_req] SM1 warp1 req.pagetable_root=0x1000 -> cmd->pagetable_root=0x1000 @2295ns,1 [debug exec_lsu.cpp:280]
+SM 1 warp 4 0x80000078                SW_0x007ea023 MEMDONE, MSHR item cleared @2295ns,1 [trace exec_lsu.cpp:417]
+  229 | memRsp |   |  0|
+[SALU_CALC] POP SM1 subcore0 warp2 (global_warp=4) pc=0x80000080 op=14 @ 2295 ns
+SM 1 warp 1 0x800000b0            REGEXT_0x0010200b REGEXT(s3,s2,s1,d)=0,0,0,1 @2295ns,1 [trace decode.cpp:64]
+[SALU_IN] SM1 subcore0 warp1 (global_warp=2) push to SALU: pc=0x80000084 op=2 @ 2305 ns
+  230 | coreReq|  1|   | r_idx0, op=1, param=0
+SM 1 warp 4 0x80000080             AUIPC_0x00000f97 WB x[031]=0x80000080 @2305ns,1 [trace regfile.cpp:105]
+[OPC_EMIT] SM1 subcore0 emit_to_execunit=1 entryidx=1 warp1 (global_warp=2) pc=0x80000084 op=2 @ 2305 ns
+231.5 | memReq |   |  6| a_op=1
+
+Info: L2_Cache_Dispatch: 进入分支：putpartialdata
+[L2_PutPartialData_RSP] Sending response: pc=0x80000078 d_source=6 d_pc=0x80000078 d_instrId=  l1id=1 @ 2310 ns
+[L1_TLM_Adapter::nb_transport_bw] Store response: pc=0x80000078 d_source=0 d_instrId=  key=0x6 @ 2310 ns
+  231 | memRsp |   |  0|
+[SALU_CALC] POP SM1 subcore0 warp1 (global_warp=2) pc=0x80000084 op=2 @ 2315 ns
+SM 1 warp 4 0x800000b0            REGEXT_0x0010200b REGEXT(s3,s2,s1,d)=0,0,0,1 @2315ns,1 [trace decode.cpp:64]
+[SALU_IN] SM1 subcore1 warp0 (global_warp=1) push to SALU: pc=0x80000084 op=2 @ 2325 ns
+SM 1 warp 2 0x80000084              ADDI_0x018f8f93 WB x[031]=0x80000098 @2325ns,1 [trace regfile.cpp:105]
+L1D write callback: SM 1 warp 1 instrId=3 pc=0x8000007c @2325ns,2 [info exec_lsu.cpp:465]
+[L1D Callback] warp=1, pc=0x8000007c data ready [info exec_lsu.cpp:476]
+233.5 | memReq |   |  7| a_op=1
+
+Info: L2_Cache_Dispatch: 进入分支：putpartialdata
+[L2_PutPartialData_RSP] Sending response: pc=0x8000007c d_source=7 d_pc=0x8000007c d_instrId= l1id=1 @ 2330 ns
+[L1_TLM_Adapter::nb_transport_bw] Store response: pc=0x8000007c d_source=0 d_instrId= key=0x7 @ 2330 ns
+[FETCH_PC] SM1 warp1 PC: 0x800000b4 -> 0x800000b8 @ 2335 ns
+SM 1 warp 1 0x8000007c                SW_0x01cf2023 MEMDONE, MSHR item cleared @2335ns,1 [trace exec_lsu.cpp:417]
+  233 | memRsp |   |  0|
+[SALU_CALC] POP SM1 subcore1 warp0 (global_warp=1) pc=0x80000084 op=2 @ 2335 ns
+[DISPATCH] SM1 subcore0 warp1 (global_warp=2) ins=0x80000088 op=50 rd=0 opc_full=0 doemit=0 @ 2335 ns
+SM 1 warp 1 0x800000b4           VMV_V_X_0x5e024057 REGEXT(s3,s2,s1,d)=0,0,0,1 is used to set s3,s2,s1,d=32,0,4,32 @2335ns,1 [trace decode.cpp:130]
+[WARP_SCHEDULER] SM1 subcore0 selected warp1 (global_warp=2) ins=0x8000008c op=111 can_dispatch=1 wait_barrier=0 is_warp_activated=1 dispatch_warp_valid=true @ 2335 ns
+SM 1 warp 1 0x80000084              ADDI_0x018f8f93 WB x[031]=0x80000098 @2345ns,1 [trace regfile.cpp:105]
+[FETCH_PC] SM1 warp1 PC: 0x800000b8 -> 0x800000bc @ 2345 ns
+[DISPATCH] SM1 subcore0 warp1 (global_warp=2) ins=0x8000008c op=111 rd=1 opc_full=0 doemit=0 @ 2345 ns
+[OPC_FIFO] dispatch_valid=1: SM1 subcore1 warp0 (global_warp=1) pc=0x80000088 op=50 opc_full=0 doemit=0 @ 2355 ns
+[OPC_FIFO::push] SM1 subcore1 warp0 (global_warp=1) pc=0x80000088 op=50 ready=[0,1,1] valid=[1,0,0] opcfifo.size()=1 @ 2355 ns
+[FETCH_PC] SM1 warp1 PC: 0x800000bc -> 0x800000c0 @ 2355 ns
+[FETCH_PC] SM1 warp0 PC: 0x800000b4 -> 0x800000b8 @ 2355 ns
+SM 1 warp 0 0x800000b4           VMV_V_X_0x5e024057 REGEXT(s3,s2,s1,d)=0,0,0,1 is used to set s3,s2,s1,d=32,0,4,32 @2355ns,1 [trace decode.cpp:130]
+[WARP_SCHEDULER] SM1 subcore1 selected warp0 (global_warp=1) ins=0x8000008c op=111 can_dispatch=1 wait_barrier=0 is_warp_activated=1 dispatch_warp_valid=true @ 2355 ns
+[OPC_FIFO] dispatch_valid=1: SM1 subcore1 warp0 (global_warp=1) pc=0x8000008c op=111 opc_full=0 doemit=0 @ 2365 ns
+[OPC_FIFO::push] SM1 subcore1 warp0 (global_warp=1) pc=0x8000008c op=111 ready=[1,1,0] valid=[0,0,1] opcfifo.size()=2 @ 2365 ns
+[OPC_EMIT::check] SM1 subcore1 entry[1] warp0 (global_warp=1) ins=0x8000008c op=111 all_ready()=0 ready=[1,1,0] valid=[0,0,1] @ 2365 ns
+[regfile::read] JALR: bank=2 warp_id=0 reg_addr=6 value=0x800000a8 @ 2375 ns
+[OPC_EMIT::check] SM1 subcore1 entry[1] warp0 (global_warp=1) ins=0x8000008c op=111 all_ready()=0 ready=[1,1,0] valid=[0,0,1] @ 2375 ns
+[OPC_EMIT] SM1 subcore1 emit_to_execunit=1 entryidx=0 warp0 (global_warp=1) pc=0x80000084 op=2 @ 2375 ns
+SM 1 warp 1 0x80000088             CSRRW_0x305f9073 CSR[0x305]=0x80000098 @2385ns,1 [trace exec_csr.cpp:100]
+[OPC_EMIT::check] SM1 subcore1 entry[1] warp0 (global_warp=1) ins=0x8000008c op=111 all_ready()=1 ready=[1,1,1] valid=[0,0,0] @ 2385 ns
+[OPC_EMIT] SM1 subcore1 emit_to_execunit=7 entryidx=1 warp0 (global_warp=1) pc=0x80000088 op=50 @ 2385 ns
+[BASE::lsu_subcore_req] SM1 subcore0 warp2 pagetable_root=0x1000 @2385ns,1 [debug BASE.cpp:98]
+[SALU_IN] SM1 subcore1 warp0 (global_warp=1) push to SALU: pc=0x8000008c op=111 @ 2395 ns
+SM 1 warp 1 0x80000088             CSRRW_0x305f9073 WB x[000]=0x00000000 @2395ns,1 [trace regfile.cpp:105]
+SM 1 warp 4 0x8000007c                SW_0x01cf2023 mask=F MEMADDR 80003004 @2395ns,1 [trace exec_lsu.cpp:183]
+[exec_lsu::lsu_new_req] SM1 warp4 req.pagetable_root=0x1000 -> cmd->pagetable_root=0x1000 @2395ns,1 [debug exec_lsu.cpp:280]
+  240 | coreReq|  4|   | r_idx0, op=1, param=0
+[SALU_CALC] POP SM1 subcore1 warp0 (global_warp=1) pc=0x8000008c op=111 @ 2405 ns
+[salu] JALR: warp=0 pc=0x8000008c rss3_data=0x800000a8 imm=0 jump_addr_tmp=0x800000a8 @ 2405 ns
+SM 1 warp 0 0x8000008c              JALR_0x000300e7 JUMP=true, jumpTO 0x800000a8 @2405ns,1 [trace exec_salu.cpp:178]
+[SALU_CALC] SM1 subcore1 warp0 (global_warp=1) JALR SET branch_sig=1 jump=1: pc=0x8000008c jump_addr=0x800000a8 @ 2405 ns
+SM 1 warp 1 JUMP to 0x800000a8 @2415ns,1 [trace subcore.cpp:152]
+SM 1 warp 1 0x8000008c              JALR_0x000300e7 WB x[001]=0x80000090 @2415ns,1 [trace regfile.cpp:105]
+L1D write callback: SM 1 warp 4 instrId=0 pc=0x8000007c @2425ns,2 [info exec_lsu.cpp:465]
+[L1D Callback] warp=4, pc=0x8000007c data ready [info exec_lsu.cpp:476]
+243.5 | memReq |   |  8| a_op=1
+
+Info: L2_Cache_Dispatch: 进入分支：putpartialdata
+[L2_PutPartialData_RSP] Sending response: pc=0x8000007c d_source=8 d_pc=0x8000007c d_instrId=  l1id=1 @ 2430 ns
+[L1_TLM_Adapter::nb_transport_bw] Store response: pc=0x8000007c d_source=0 d_instrId=  key=0x8 @ 2430 ns
+SM 1 warp 4 0x8000007c                SW_0x01cf2023 MEMDONE, MSHR item cleared @2435ns,1 [trace exec_lsu.cpp:417]
+  243 | memRsp |   |  0|
+[OPC_FIFO] dispatch_valid=1: SM1 subcore1 warp0 (global_warp=1) pc=0x800000a8 op=2 opc_full=0 doemit=0 @ 2445 ns
+[OPC_FIFO::push] SM1 subcore1 warp0 (global_warp=1) pc=0x800000a8 op=2 ready=[0,1,1] valid=[1,0,0] opcfifo.size()=1 @ 2445 ns
+SM 1 warp 1 0x800000b0            REGEXT_0x0010200b REGEXT(s3,s2,s1,d)=0,0,0,1 @2445ns,1 [trace decode.cpp:64]
+[OPC_FIFO] dispatch_valid=1: SM1 subcore1 warp0 (global_warp=1) pc=0x800000ac op=2 opc_full=0 doemit=0 @ 2455 ns
+[OPC_FIFO::push] SM1 subcore1 warp0 (global_warp=1) pc=0x800000ac op=2 ready=[0,1,1] valid=[1,0,0] opcfifo.size()=2 @ 2455 ns
+[FETCH_PC] SM1 warp0 PC: 0x800000b4 -> 0x800000b8 @ 2455 ns
+SM 1 warp 0 0x800000b4           VMV_V_X_0x5e024057 REGEXT(s3,s2,s1,d)=0,0,0,1 is used to set s3,s2,s1,d=32,0,4,32 @2455ns,1 [trace decode.cpp:130]
+[OPC_EMIT] SM1 subcore1 emit_to_execunit=1 entryidx=0 warp0 (global_warp=1) pc=0x8000008c op=111 @ 2465 ns
+[SALU_IN] SM1 subcore1 warp0 (global_warp=1) push to SALU: pc=0x800000a8 op=2 @ 2475 ns
+[OPC_EMIT] SM1 subcore1 emit_to_execunit=1 entryidx=1 warp0 (global_warp=1) pc=0x800000a8 op=2 @ 2475 ns
+[SALU_CALC] POP SM1 subcore1 warp0 (global_warp=1) pc=0x800000a8 op=2 @ 2485 ns
+[OPC_EMIT] SM1 subcore1 emit_to_execunit=1 entryidx=1 warp0 (global_warp=1) pc=0x800000ac op=2 @ 2485 ns
+[SALU_IN] SM1 subcore1 warp0 (global_warp=1) push to SALU: pc=0x800000ac op=2 @ 2495 ns
+SM 1 warp 1 0x800000a8              ADDI_0x01010113 WB x[002]=0x70000010 @2495ns,1 [trace regfile.cpp:105]
+[SALU_CALC] POP SM1 subcore1 warp0 (global_warp=1) pc=0x800000ac op=2 @ 2505 ns
+SM 1 warp 1 0x800000ac              ADDI_0x00820213 WB x[004]=0x00000008 @2515ns,1 [trace regfile.cpp:105]
+[OPC_FIFO] dispatch_valid=1: SM1 subcore1 warp0 (global_warp=1) pc=0x800000b4 op=454 opc_full=0 doemit=0 @ 2525 ns
+[OPC_FIFO::push] SM1 subcore1 warp0 (global_warp=1) pc=0x800000b4 op=454 ready=[0,1,1] valid=[1,0,0] opcfifo.size()=1 @ 2525 ns
+[OPC_FIFO] dispatch_valid=1: SM1 subcore1 warp0 (global_warp=1) pc=0x800000b8 op=145 opc_full=0 doemit=0 @ 2535 ns
+[OPC_FIFO::push] SM1 subcore1 warp0 (global_warp=1) pc=0x800000b8 op=145 ready=[0,1,0] valid=[1,0,1] opcfifo.size()=2 @ 2535 ns
+[regfile::read] VMV_V_X: bank=0 warp_id=0 reg_addr=4 s1=4 value=0x8 @ 2535 ns
+[OPC_FIFO] dispatch_valid=1: SM1 subcore1 warp0 (global_warp=1) pc=0x800000bc op=119 opc_full=0 doemit=0 @ 2545 ns
+[OPC_FIFO::push] SM1 subcore1 warp0 (global_warp=1) pc=0x800000bc op=119 ready=[0,1,1] valid=[1,0,0] opcfifo.size()=3 @ 2545 ns
+[OPC_EMIT] SM1 subcore1 emit_to_execunit=1 entryidx=0 warp0 (global_warp=1) pc=0x800000ac op=2 @ 2545 ns
+[OPC_EMIT] SM1 subcore1 emit_to_execunit=3 entryidx=1 warp0 (global_warp=1) pc=0x800000b4 op=454 @ 2555 ns
+SM 1 warp 1 0x800000dc            REGEXT_0x0010200b REGEXT(s3,s2,s1,d)=0,0,0,1 @2555ns,1 [trace decode.cpp:64]
+SM 1 warp 0 0x800000e0           VADD_VX_0x020040d7 REGEXT(s3,s2,s1,d)=0,0,0,1 is used to set s3,s2,s1,d=33,0,0,33 @2565ns,1 [trace decode.cpp:130]
+[VALU_CALC::FN_A2ZERO] VMV_V_X: warp=0 pc=0x800000b4 s1=4 rsv1_data[0]=0x8 src1[0].i32=0x8 num_thread=4 @ 2585 ns
+[VALU_CALC::FN_A2ZERO] VMV_V_X result: warp=0 pc=0x800000b4 dst[0]=0x8 dst[1]=0x8 dst[2]=0x8 dst[3]=0x8 @ 2585 ns
+SM 1 warp 1 0x800000b4           VMV_V_X_0x5e024057 mask=F WB v[032]={00000008 00000008 00000008 00000008 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000}; s1=4 s2=0 s3=32 @2595ns,1 [trace regfile.cpp:127]
+[FETCH_PC] ⚠️ SM1 warp1 PC STALLED (count=100000) @ 500585 ns pc=0x800000c0 ibuf_empty=0 ibuf_full=1 dispatch_warp_valid=0 opc_full=0 doemit=0
+[cycle_JUDGE_DISPATCH] SM1 subcore1 warp1 (global_warp=3) can_dispatch=false: wait_bran=1 jump=0 (count=100000) @ 502235 ns
+
+Info: /OSCI/SystemC: Simulation stopped by user.
+Simulation finished at time 1000000
+[Inferior 1 (process 2279791) exited normally]
+[?2004h(gdb) q
+[?2004l

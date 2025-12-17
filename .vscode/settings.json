@@ -68,9 +68,15 @@
         "stop_token": "cpp",
         "thread": "cpp",
         "cfenv": "cpp",
-        "variant": "cpp"
+        "variant": "cpp",
+        "charconv": "cpp",
+        "format": "cpp",
+        "ranges": "cpp",
+        "regex": "cpp",
+        "span": "cpp",
+        "valarray": "cpp"
     },
-    "C_Cpp.errorSquiggles": "enabled",
+    "C_Cpp.errorSquiggles": "disabled",
     "C_Cpp.default.cppStandard": "c++20",
     "files.watcherExclude": {
         "**/target": true

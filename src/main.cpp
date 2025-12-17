@@ -73,11 +73,15 @@ int main(int argc, char* argv[]) {
             }
             auto task = tasks.back();
             kernel->pagetable = task->m_pagetable;
+            SPDLOG_INFO("[main::f_new_kernel] Kernel {} added to task, pagetable=0x{:x}", name, kernel->pagetable);
             task->add_kernel(kernel);
         } else {
-            kernel->pagetable = ventus_cyclesim_vmem_create(sim);
+            SPDLOG_INFO("[main::f_new_kernel] Before vmem_create, kernel->pagetable=0x{:x}", kernel->pagetable);
+            auto new_ptroot = ventus_cyclesim_vmem_create(sim);
+            SPDLOG_INFO("[main::f_new_kernel] ventus_cyclesim_vmem_create returned pagetable=0x{:x}", new_ptroot);
+            kernel->pagetable = new_ptroot;
+            SPDLOG_INFO("[main::f_new_kernel] After assignment, kernel->pagetable=0x{:x}", kernel->pagetable);
             kernels.push_back(kernel);
-            SPDLOG_TRACE("Create new vmem for kernel {}, ptroot=0x{:x}", name, kernel->pagetable);
         }
         return 0;
     };
@@ -120,9 +124,12 @@ int main(int argc, char* argv[]) {
                                     std::function<void()> finish_callback,
                                     std::map<uint64_t, size_t>* vmem_allocated = nullptr
                                 ) {
+        SPDLOG_INFO("[main::f_send_kernel_to_gpu] Sending kernel {} to GPU, pagetable=0x{:x}", 
+            kernel->name ? kernel->name : "unknown", kernel->pagetable);
         kernel_callback_t* cb_data = static_cast<kernel_callback_t*>(kernel->data);
         cb_data->finish_callback = finish_callback;
         kernel_load_data(sim, kernel, cb_data->datafile, vmem_allocated);
+        SPDLOG_INFO("[main::f_send_kernel_to_gpu] After kernel_load_data, kernel->pagetable=0x{:x}", kernel->pagetable);
         ventus_cyclesim_add_kernel(sim, kernel.get(), kernel_finish);
     };
 

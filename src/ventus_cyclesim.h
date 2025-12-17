@@ -108,6 +108,8 @@ DLL_PUBLIC void ventus_cyclesim_get_default_config(ventus_cyclesim_config_t* con
 DLL_PUBLIC uint64_t ventus_cyclesim_get_time(const ventus_cyclesim_t* sim);
 // Check if the simulated GPU is idle (no kernel is running).
 DLL_PUBLIC bool ventus_cyclesim_is_idle(const ventus_cyclesim_t* sim);
+// Debug: Print kernel status (waiting/running/finished kernels).
+DLL_PUBLIC void ventus_cyclesim_debug_print_kernel_status(const ventus_cyclesim_t* sim);
 
 //
 // Init, calculate, and finish

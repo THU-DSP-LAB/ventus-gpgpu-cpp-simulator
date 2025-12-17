@@ -1724,5 +1724,5 @@ private:
         }
     }
 };
-
+constexpr static uint32_t NLANE = 4;
 #endif

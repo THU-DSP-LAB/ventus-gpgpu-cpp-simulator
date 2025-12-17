@@ -29,6 +29,7 @@ void ventus_cyclesim_finish(ventus_cyclesim_t* sim, bool snapshot_rollback_forci
 
 uint64_t ventus_cyclesim_get_time(const ventus_cyclesim_t* sim) { return sc_time_stamp().value(); }
 bool ventus_cyclesim_is_idle(const ventus_cyclesim_t* sim) { return sim->m_dut->is_idle(); }
+void ventus_cyclesim_debug_print_kernel_status(const ventus_cyclesim_t* sim) { sim->m_dut->debug_print_kernel_status(); }
 
 void ventus_cyclesim_add_kernel__delay_data_loading(
     ventus_cyclesim_t* sim, const ventus_kernel_metadata_t* metadata,

@@ -92,6 +92,8 @@ public:
     // Interface between this and driver
     bool kernel_add(std::shared_ptr<kernel_info_t> kernel);
     bool is_idle() const { return m_waiting_kernels.empty() && m_running_kernels.empty(); };
+    // Debug function to get kernel status
+    void debug_print_kernel_status() const;
 
 private:
     // Helpers

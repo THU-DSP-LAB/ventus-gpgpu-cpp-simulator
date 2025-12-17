@@ -21,6 +21,18 @@ target("VentusCycleSim")
     -- add_includedirs("dependencies/membox/src")
     add_deps("SV")
     add_packages("ramulator2")
+    --  加入 build 路径用于链接 libramulator.so
+    add_linkdirs(path.join(os.scriptdir(), "dependencies/ramulator2/build"))
+    add_includedirs("dependencies/ramulator2/src")
+    add_includedirs("src/cache")
+    --  添加运行时 rpath，避免找不到 .so
+    add_rpathdirs(path.join(os.scriptdir(), "dependencies/ramulator2/build"))
+
+    --  链接名称：libramulator.so → -lramulator
+    add_links("ramulator")
+    add_files("src/cache/*.cpp")
+    remove_files("src/cache/compile*.cpp")
+
     add_rpathdirs(path.join(os.scriptdir(), "dependencies/ramulator2")) -- TODO: why xmake doesn't add rpath build/.packages/...
     add_includedirs("dependencies/ramulator2/src")
     add_linkdirs(path.join(os.scriptdir(), "dependencies/ramulator2"))
@@ -47,3 +59,8 @@ target("main")
     add_defines("VENTUS_CYCLESIM_PROJECT_DIR=\"" .. os.scriptdir() .. "\"")
 
     set_rundir(".")
+     -- ② Debug 模式下启用调试符号，禁用优化
+    if is_mode("debug") then
+        set_symbols("debug")       -- 启用调试信息
+        set_optimize("none")       -- 禁用优化，方便 GDB 调试
+    end
