@@ -3,11 +3,6 @@ project(VentusSimulator
         VERSION 1.0
         LANGUAGES C CXX)
 
-# 检查 SYSTEMC_HOME 环境变量
-if(NOT DEFINED ENV{SYSTEMC_HOME})
-    message(FATAL_ERROR "请设置 SYSTEMC_HOME 环境变量！")
-endif()
-
 #
 # global settings
 #
@@ -21,14 +16,18 @@ set(CMAKE_CXX_COMPILER_LAUNCHER "ccache")
 # use -O2 & enable assert & LTO for release build
 set(CMAKE_CXX_FLAGS_RELEASE "-O2")
 set(CMAKE_C_FLAGS_RELEASE "-O2")
-string(REPLACE "-DNDEBUG" "" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
-string(REPLACE "-DNDEBUG" "" CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}")
+add_compile_options(
+  $<$<AND:$<CONFIG:Release>,$<NOT:$<CXX_COMPILER_ID:MSVC>>>:-UNDEBUG>
+  $<$<AND:$<CONFIG:RelWithDebInfo>,$<NOT:$<CXX_COMPILER_ID:MSVC>>>:-UNDEBUG>
+  $<$<AND:$<CONFIG:Release>,$<CXX_COMPILER_ID:MSVC>>:/U"NDEBUG">
+  $<$<AND:$<CONFIG:RelWithDebInfo>,$<CXX_COMPILER_ID:MSVC>>:/U"NDEBUG">
+)
 # set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
 # use spdlog trace level for debug build
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_compile_definitions(SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE)
 else()
-    add_compile_definitions(SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_DEBUG)
+    add_compile_definitions(SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE)
 endif()
 # export compile_commands.json
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -40,8 +39,20 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 find_package(fmt REQUIRED)
 find_package(spdlog REQUIRED)
 
-# SystemC PATH
-set(SYSTEMC_HOME $ENV{SYSTEMC_HOME})
+# Get SystemC PATH from user
+if(DEFINED SYSTEMC_HOME AND NOT SYSTEMC_HOME STREQUAL "")
+  # use cmake cmd arg -DSYSTEMC_HOME
+elseif(DEFINED ENV{SYSTEMC_HOME} AND NOT "$ENV{SYSTEMC_HOME}" STREQUAL "")
+  # use environment variable
+  set(SYSTEMC_HOME "$ENV{SYSTEMC_HOME}" CACHE PATH "SystemC install root (from environment)" FORCE)
+else() # Error
+  message(FATAL_ERROR "SYSTEMC_HOME not set."
+    "Please use -DSYSTEMC_HOME=/path/to/systemc or set SYSTEMC_HOME in the environment.")
+endif()
+file(TO_CMAKE_PATH "${SYSTEMC_HOME}" SYSTEMC_HOME) # canonicalize path
+if(NOT EXISTS "${SYSTEMC_HOME}")
+  message(FATAL_ERROR "SYSTEMC_HOME points to a non-existent directory: ${SYSTEMC_HOME}")
+endif()
 set(SYSTEMC_INCLUDE_DIR ${SYSTEMC_HOME}/include)
 set(SYSTEMC_LIBRARY_DIR ${SYSTEMC_HOME}/lib-linux64)
 
@@ -55,8 +66,10 @@ add_subdirectory(dependencies/ramulator2)
 # target libVentusCycleSim.so
 #
 file(GLOB_RECURSE SM_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/sm/*.cpp")
+file(GLOB_RECURSE CACHE_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/cache/*.cpp")
 add_library(VentusCycleSim SHARED
     ${SM_SOURCES}
+    ${CACHE_SOURCES}
     src/context_model.cpp 
     src/CTA_Scheduler.cpp 
     src/parameters.cpp 
@@ -79,8 +92,9 @@ target_link_libraries(VentusCycleSim
     PRIVATE fmt
 )
 set_target_properties(VentusCycleSim PROPERTIES
-    INSTALL_RPATH "${SYSTEMC_LIBRARY_DIR};${RAMULATOR2_SRC_DIR}"
-    PUBLIC_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/ventus_cyclesim.h"
+    # libramulator.so will be installed together, use $ORIGIN
+    INSTALL_RPATH "${SYSTEMC_LIBRARY_DIR};$ORIGIN"
+    PUBLIC_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/src/ventus_cyclesim.h"
 )
 target_compile_definitions(VentusCycleSim PRIVATE
     VENTUS_CYCLESIM_PROJECT_DIR="${CMAKE_CURRENT_SOURCE_DIR}"

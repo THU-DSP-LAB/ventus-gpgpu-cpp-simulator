@@ -108,9 +108,9 @@ void Subcore::VALU_CALC() {
         auto& hwarp = m_hw_warps[valutmp1.warp_id];
         if (valutmp1.ins.ddd.wxd | valutmp1.ins.ddd.wvd) {
             for (int i = 0; i < hw_num_thread; i++) {
-                src1[i].i32 = valutmp1.rsv1_data[i].to_int();
-                src2[i].i32 = valutmp1.rsv2_data[i].to_int();
-                src3[i].i32 = valutmp1.rsv3_data[i].to_int();
+                src1[i].i32 = valutmp1.rsv1_data[i];
+                src2[i].i32 = valutmp1.rsv2_data[i];
+                src3[i].i32 = valutmp1.rsv3_data[i];
             }
             auto calc_helper
                 = [ins = valutmp1.ins, num_thread = hwarp->CSR_reg[0x802], &src1, &src2, &src3,

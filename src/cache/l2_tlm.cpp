@@ -74,9 +74,9 @@ void L2_Cache::process_queue()
                 uint32_t vaddr_block = reqExt->req.a_address;
                 uint32_t paddr_block = m_mmu->translate(reqExt->req.a_pagetable_root, vaddr_block);
                 
-                // Debug: Check translation for LW instruction at 0x80000058
-                if (reqExt->req.a_pc == 0x80000058) {
-                    std::cout << "[L2_Cache::process_queue] LW @ pc=0x80000058: ptroot=0x" << std::hex 
+                // Debug: Check translation for LW instruction at 0x800002c0
+                if (reqExt->req.a_pc == 0x800002c0) {
+                    std::cout << "[L2_Cache::process_queue] LW @ pc=0x800002c0: ptroot=0x" << std::hex 
                               << reqExt->req.a_pagetable_root << ", vaddr_block=0x" << vaddr_block 
                               << ", paddr_block=0x" << paddr_block << std::dec << std::endl;
                 }

@@ -37,10 +37,9 @@ private:
 extern std::shared_ptr<std::map<OP_TYPE, decodedat>> gen_decodetable();
 extern std::shared_ptr<std::vector<instable_t>> gen_instruction_table();
 
-Top_gpgpu::Top_gpgpu(const char* ramulator_config_filename)
-    : m_clk("clk", PERIOD, SC_NS, 0.5, 0, SC_NS, false)
-    , m_rstn("rst_n")
-    , m_ramulator(std::make_unique<RamulatorWrapper>(ramulator_config_filename)) {
+Top_gpgpu::Top_gpgpu(const char* ramulator_config_filename, const char* vcd_filename)
+    : m_clk("clk", PERIOD, TIME_UNIT, 0.5, 0, TIME_UNIT, false)
+    , m_rstn("rst_n") {
 
     m_logger = std::make_shared<spdlog::logger>(
         "Ventus-CycleSim-spdlogger", std::make_shared<spdlog::sinks::stdout_sink_mt>()
@@ -55,6 +54,7 @@ Top_gpgpu::Top_gpgpu(const char* ramulator_config_filename)
     auto instruction_table = gen_instruction_table();
     auto decode_table = gen_decodetable();
 
+    m_ramulator = std::make_unique<RamulatorWrapper>(ramulator_config_filename, m_logger);
     m_ramulator->clk(m_clk);
     m_gmem = m_ramulator->get_memory();
     m_sv39 = std::make_unique<SV39_supervisor>(m_gmem, m_logger);
@@ -66,18 +66,21 @@ Top_gpgpu::Top_gpgpu(const char* ramulator_config_filename)
     m_l2cache->bind_ramulator(m_ramulator.get());
 
     for (int i = 0; i < NUM_SM; i++) {
-        auto base = new BASE(
-            fmt::format("SM{}", i).c_str(), i, instruction_table, decode_table, m_gmem, m_logger
-        );
-        base->clk(m_clk);
-        base->rst_n(m_rstn);
-        m_sm.push_back(base); // 必须放前面，为后续 m_sm.data() 构造 cta 用
-
+        auto ramulator_interface_icache
+            = [this, i](paddr_t addr, int sourceId, std::function<void(int)> callback) {
+                  return m_ramulator->request(i, sourceId, addr, callback);
+              };
+        m_sm.push_back(new BASE(
+            fmt::format("SM{}", i).c_str(), i, instruction_table, decode_table, m_gmem,
+            ramulator_interface_icache, m_logger
+        ));
+        m_sm[i]->clk(m_clk);
+        m_sm[i]->rst_n(m_rstn);
         std::string l1d_name = fmt::format("L1D_Cache_System{}", i);
         auto l1d_cache
             = std::make_unique<L1D_Cache_System>(l1d_name.c_str(), i, *m_l2cache, m_gmem);
 
-        base->m_l1d_cache = l1d_cache.get();
+        m_sm[i]->m_l1d_cache = l1d_cache.get();
         l1d_cache->clk(m_clk);
         l1d_Cache_Systems[i] = std::move(l1d_cache);
     }
@@ -91,6 +94,17 @@ Top_gpgpu::Top_gpgpu(const char* ramulator_config_filename)
     }
     m_cta->clk(m_clk);
     m_cta->rst_n(m_rstn);
+
+    if (vcd_filename != nullptr) {
+        m_tf = sc_core::sc_create_vcd_trace_file(vcd_filename);
+        m_clk.trace(m_tf);
+        m_rstn.trace(m_tf);
+        for (int i = 0; i < NUM_SM; i++) {
+            m_sm[i]->export_vcd_trace(m_tf, fmt::format("SM{}", i));
+        }
+    }
+
+    sc_start(PERIOD * 5, TIME_UNIT); // run some cycles for reset
 }
 
 Top_gpgpu::~Top_gpgpu() {
@@ -99,6 +113,9 @@ Top_gpgpu::~Top_gpgpu() {
     }
     delete m_cta;
     delete m_rst_gen;
+    if (m_tf) {
+        sc_core::sc_close_vcd_trace_file(m_tf);
+    }
 }
 
 void Top_gpgpu::add_kernel(
@@ -132,10 +149,10 @@ Top_gpgpu::pagetable_t Top_gpgpu::vmem_create() {
 }
 void Top_gpgpu::vmem_destroy(pagetable_t root) { m_sv39->destroy_pagetable(root); }
 
-void Top_gpgpu::vmemcpy_d2h(pagetable_t ptroot, void* dst, uint64_t src, uint64_t size) {
+void Top_gpgpu::vmemcpy_d2h(pagetable_t ptroot, void* dst, vaddr_t src, size_t size) {
     m_sv39->memcpy(ptroot, dst, src, size);
 }
-void Top_gpgpu::vmemcpy_h2d(pagetable_t ptroot, uint64_t dst, const void* src, uint64_t size) {
+void Top_gpgpu::vmemcpy_h2d(pagetable_t ptroot, vaddr_t dst, const void* src, size_t size) {
     m_sv39->memcpy(ptroot, dst, src, size);
 }
 Top_gpgpu::vaddr_t Top_gpgpu::vmem_alloc(pagetable_t ptroot, vaddr_t vaddr, size_t size) {

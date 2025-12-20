@@ -1,10 +1,10 @@
 #ifndef L1D_CACHE_SYSTEM_HPP
 #define L1D_CACHE_SYSTEM_HPP
 
-#include "l1_tlm_adapter.hpp"
-#include "interfaces.h" 
-#include "l2_tlm.hpp"
-#include "sc_l1cache.hpp"
+#include "../cache/l1_tlm_adapter.hpp"
+#include "../cache/interfaces.h" 
+#include "../cache/l2_tlm.hpp"
+#include "../cache/sc_l1cache.hpp"
 #include "physical_mem.hpp"
 #include <systemc>
 #include <array>

@@ -38,6 +38,9 @@ typedef struct ventus_kernel_metadata_t { // 这个metadata是供驱动使用的
     uint64_t vgprUsage;        // 每个wavefront(warp)(also thread)使用的向量寄存器数目
     uint64_t
         pdsBaseAddr; // private memory的基址，要转成每个workgroup的基地址， wf_size*wg_size*pdsSize
+    uint64_t num_thread_global[3]; // 全局三维thread数目
+    uint64_t num_thread_local[3];  // 线程块内三维thread数目
+    uint64_t threadIdxOffset[3];   // global threadIdx偏移量
     uint64_t num_buffer;   // buffer的数目，包括pc
     uint64_t* buffer_base; // 各buffer的基址。第一块buffer是给硬件用的metadata
     uint64_t* buffer_size; // 各buffer的size，以Bytes为单位。实际使用的大小，用于初始化.data
@@ -50,42 +53,13 @@ typedef struct ventus_kernel_metadata_t { // 这个metadata是供驱动使用的
 typedef struct {
     uint64_t sim_time_max; // 最大仿真时间限制
     struct {
-        const char* config_filename;
+        bool enable;
+        const char* filename; // ramulator config json file
     } ramulator;
-    // struct {               // These log sinks can be enabled simultaneously
-    //     struct {           // Write log to a file (append to its tail)
-    //         bool enable;
-    //         const char* level; // "trace", "debug", "info", "warn", "error", "critical"
-    //         const char* filename;
-    //     } file;
-    //     struct { // console log
-    //         bool enable;
-    //         const char* level;
-    //     } console;
-    //     const char* level;
-    // } log;
-    // struct {
-    //     uint64_t pagesize; // 物理内存页大小
-    //     uint64_t auto_alloc; // 若访存到未分配的物理页，自动分配（如此则与实际硬件内存行为相同）
-    //     // 注意，自动分配的物理内存是不会释放的，除非整个仿真结束
-    // } pmem;
-    // struct { // 波形输出功能，这里只设置正常仿真流程，对仿真快照回溯后的波形输出无影响
-    //     bool enable;         // 是否启用？仿真快照回溯后将自动启用
-    //     uint64_t time_begin; // 输出波形的起始时刻
-    //     uint64_t time_end;   // 输出波形的结束时刻，end > begin才有波形输出
-    //     int levels;          // 波形输出的层级
-    //     const char* filename;
-    // } waveform;
-    // struct { // 仿真快照，当仿真出错时可回溯仿真进度到最旧快照，开启波形记录重新仿真
-    //     bool enable;
-    //     uint64_t time_interval; // 快照时间间隔
-    //     int num_max;            // 最大快照数量，超限时新快照将顶替最旧快照
-    //     const char* filename;   // 快照输出的FST波形文件名
-    // } snapshot;
-    // struct {               // verilator运行时命令行参数，以argc,argv形式传入
-    //     int argc;          // 注意argc可以为0
-    //     const char** argv; // 共有argc个char*字符串，[0]成员不是程序名，而是首个verilator参数
-    // } verilator;
+    struct {
+        bool enable;
+        const char* filename; // .vcd suffix not needed
+    } waveform;
 } ventus_cyclesim_config_t;
 
 typedef struct {
@@ -178,17 +152,17 @@ DLL_PUBLIC int ventus_cyclesim_pmemcpy_d2h(
 
 DLL_PUBLIC paddr_t ventus_cyclesim_vmem_create(ventus_cyclesim_t* sim);
 DLL_PUBLIC void ventus_cyclesim_vmem_destroy(ventus_cyclesim_t* sim, paddr_t pagetable_root);
-DLL_PUBLIC uint64_t ventus_cyclesim_vmem_alloc(
-    ventus_cyclesim_t* sim, paddr_t pagetable_root, uint64_t vaddr, uint64_t size
+DLL_PUBLIC vaddr_t ventus_cyclesim_vmem_alloc(
+    ventus_cyclesim_t* sim, paddr_t pagetable_root, vaddr_t vaddr, size_t size
 );
 DLL_PUBLIC void ventus_cyclesim_vmem_free(
-    ventus_cyclesim_t* sim, paddr_t pagetable_root, uint64_t vaddr, uint64_t size
+    ventus_cyclesim_t* sim, paddr_t pagetable_root, vaddr_t vaddr, size_t size
 );
 DLL_PUBLIC void ventus_cyclesim_vmemcpy_h2d(
-    ventus_cyclesim_t* sim, paddr_t pagetable_root, uint64_t dst, const void* src, uint64_t size
+    ventus_cyclesim_t* sim, paddr_t pagetable_root, vaddr_t dst, const void* src, size_t size
 );
 DLL_PUBLIC void ventus_cyclesim_vmemcpy_d2h(
-    ventus_cyclesim_t* sim, paddr_t pagetable_root, void* dst, uint64_t src, uint64_t size
+    ventus_cyclesim_t* sim, paddr_t pagetable_root, void* dst, vaddr_t src, size_t size
 );
 
 #undef DLL_PUBLIC

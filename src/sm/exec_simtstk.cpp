@@ -81,7 +81,7 @@ void Subcore::SIMT_STACK(int warp_id) {
                     m_logger,
                     "SM {} warp {} 0x{:x} {} goto elsepath(jump) mask={:X} jumpTO 0x{:x}, "
                     "stack-size={}",
-                    m_sm_id, warpid_convert(m_sm_id, warp_id), readins.currentpc, readins,
+                    m_sm_id, warpid_convert(m_subcore_id, warp_id), readins.currentpc, readins,
                     branch_elsemask.read().to_uint(), branch_elsepc, hwarp->IPDOM_stack.size()
                 );
 #endif
@@ -140,7 +140,8 @@ void Subcore::SIMT_STACK(int warp_id) {
                         "SM {} warp {} 0x{:x} {} goto elsepath(jump) mask={:X} jumpTO 0x{:x}, "
                         "stack-size={}",
                         m_sm_id, warpid_convert(m_subcore_id, warp_id), readins.currentpc, readins,
-                        branch_elsemask.read().to_uint(), branch_elsepc.read(), hwarp->IPDOM_stack.size()
+                        branch_elsemask.read().to_uint(), branch_elsepc.read(),
+                        hwarp->IPDOM_stack.size()
                     );
 #endif
                 }
@@ -169,8 +170,8 @@ void Subcore::SIMT_STACK(int warp_id) {
                         "SM {} warp {} 0x{:x} {} SIMTSTK jump=true, jumpTO 0x{:x}, "
                         "mask change from {:X} to {:X}, stack-size={}",
                         m_sm_id, warpid_convert(m_subcore_id, warp_id), emit_ins.read().currentpc,
-                        emit_ins.read(), tmpstkelem.nextpc, hwarp->current_mask.read().to_uint(), tmpstkelem.nextmask.to_uint(),
-                        hwarp->IPDOM_stack.size()
+                        emit_ins.read(), tmpstkelem.nextpc, hwarp->current_mask.read().to_uint(),
+                        tmpstkelem.nextmask.to_uint(), hwarp->IPDOM_stack.size()
                     );
 #endif
                     hwarp->simtstk_jumpaddr = tmpstkelem.nextpc;

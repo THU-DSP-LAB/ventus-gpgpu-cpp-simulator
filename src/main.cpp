@@ -81,6 +81,17 @@ int main(int argc, char* argv[]) {
             SPDLOG_INFO("[main::f_new_kernel] ventus_cyclesim_vmem_create returned pagetable=0x{:x}", new_ptroot);
             kernel->pagetable = new_ptroot;
             SPDLOG_INFO("[main::f_new_kernel] After assignment, kernel->pagetable=0x{:x}", kernel->pagetable);
+            // TODO: only for matadd kernel test
+            // metadata + data file do not provide these info
+            kernel->num_thread_global[0] = 4;
+            kernel->num_thread_global[1] = 4;
+            kernel->num_thread_global[2] = 1;
+            kernel->num_thread_local[0] = 4;
+            kernel->num_thread_local[1] = 4;
+            kernel->num_thread_local[2] = 1;
+            kernel->threadIdxOffset[0] = 0;
+            kernel->threadIdxOffset[1] = 0;
+            kernel->threadIdxOffset[2] = 0;
             kernels.push_back(kernel);
         }
         return 0;

@@ -66,7 +66,7 @@ void Subcore::WRITE_BACK() {
         execpop_mul = false;
         execpop_sfu = false;
         execpop_tc = false;
-
+        
         if (salufifo_empty == false) {
             // if (sm_id == 0)
             //     std::cout << "SM" << sm_id << " WB judge popsalu, write_s=true, salutop.ins=" <<
@@ -78,7 +78,7 @@ void Subcore::WRITE_BACK() {
             execpop_salu = true;
             wb_ins = salutop_dat.ins;
             rdv1_addr = salutop_dat.ins.d;
-            rdv1_data[0] = salutop_dat.data;
+            rdv1_data = {salutop_dat.data};
             wb_warpid = salutop_dat.warp_id;
         } else if (valufifo_empty == false) {
             // if (sm_id == 0)
@@ -90,8 +90,7 @@ void Subcore::WRITE_BACK() {
             execpop_valu = true;
             wb_ins = valutop_dat.ins;
             rdv1_addr = valutop_dat.ins.d;
-            for (int i = 0; i < hw_num_thread; i++)
-                rdv1_data[i] = valutop_dat.rdv1_data[i];
+            rdv1_data = valutop_dat.rdv1_data;
             wb_warpid = valutop_dat.warp_id;
         } else if (vfpufifo_empty == false) {
             wb_ena = true;
@@ -105,7 +104,7 @@ void Subcore::WRITE_BACK() {
                 write_s = true;
                 write_v = false;
                 rdv1_addr = vfputop_dat.ins.d;
-                rdv1_data[0] = vfputop_dat.rds1_data;
+                rdv1_data.write({vfputop_dat.rds1_data});
             } else {
                 // if (sm_id == 0)
                 //     std::cout << "SM" << sm_id << " WB judge popvfpu, write_v=true at " <<
@@ -115,8 +114,7 @@ void Subcore::WRITE_BACK() {
                 rdv1_addr = vfputop_dat.ins.d;
                 // std::cout << "WB: let wb_ins=" << vfputop_dat.ins << "warp" <<
                 // vfputop_dat.warp_id << ", rdf1_data={";
-                for (int i = 0; i < hw_num_thread; i++)
-                    rdv1_data[i].write(vfputop_dat.rdf1_data[i]);
+                rdv1_data = vfputop_dat.rdf1_data;
             }
             wb_warpid = vfputop_dat.warp_id;
             // std::cout << "} at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() <<
@@ -135,21 +133,20 @@ void Subcore::WRITE_BACK() {
             wb_ena = true;
             wb_ins = lsutop_dat.ins;
             rdv1_addr = lsutop_dat.ins.d;
-            for (int i = 0; i < lsutop_dat.rdv1_data->size(); i++)
-                rdv1_data[i] = (*lsutop_dat.rdv1_data)[i];
+            rdv1_data = *lsutop_dat.rdv1_data;
             wb_warpid = lsutop_dat.warp_id;
         } else if (csrfifo_empty == false) {
             // if (sm_id == 0)
             //     std::cout << "SM" << sm_id << " WB judge popcsr, write_s=true, csrtop.ins=" <<
             //     csrtop_dat.ins << " at " << sc_time_stamp() << "," <<
             //     sc_delta_count_at_current_time() << "\n";
-            write_s = true;
-            write_v = false;
+            write_s = csrtop_dat.ins.ddd.wxd;
+            write_v = csrtop_dat.ins.ddd.wvd;
             wb_ena = true;
             execpop_csr = true;
             wb_ins = csrtop_dat.ins;
             rdv1_addr = csrtop_dat.ins.d;
-            rdv1_data[0] = csrtop_dat.data;
+            rdv1_data = csrtop_dat.data;
             wb_warpid = csrtop_dat.warp_id;
             // 调试：打印 CSR 写回信息（针对 SM1 warp1 在 0x80000088-0x800000c0）
             if (m_sm_id == 1 && csrtop_dat.warp_id == 1 && csrtop_dat.ins.currentpc >= 0x80000088 && csrtop_dat.ins.currentpc <= 0x800000c0) {
@@ -175,13 +172,12 @@ void Subcore::WRITE_BACK() {
                 write_s = true;
                 write_v = false;
                 rdv1_addr = multop_dat.ins.d;
-                rdv1_data[0] = multop_dat.rdv1_data[0];
+                rdv1_data = {multop_dat.rdv1_data[0]};
             } else if (multop_dat.ins.ddd.wvd) {
                 write_s = false;
                 write_v = true;
                 rdv1_addr = multop_dat.ins.d;
-                for (int i = 0; i < hw_num_thread; i++)
-                    rdv1_data[i] = multop_dat.rdv1_data[i];
+                rdv1_data = multop_dat.rdv1_data;
             }
         } else if (sfufifo_empty == false) {
             // if (sm_id == 0)
@@ -195,13 +191,12 @@ void Subcore::WRITE_BACK() {
                 write_s = true;
                 write_v = false;
                 rdv1_addr = sfutop_dat.ins.d;
-                rdv1_data[0] = sfutop_dat.rdv1_data[0];
+                rdv1_data = {sfutop_dat.rdv1_data[0]};
             } else if (sfutop_dat.ins.ddd.wvd) {
                 write_s = false;
                 write_v = true;
                 rdv1_addr = sfutop_dat.ins.d;
-                for (int i = 0; i < hw_num_thread; i++)
-                    rdv1_data[i] = sfutop_dat.rdv1_data[i];
+                rdv1_data = sfutop_dat.rdv1_data;
             }
         } else if (tcfifo_empty == false) {
             write_s = false;
@@ -210,8 +205,7 @@ void Subcore::WRITE_BACK() {
             execpop_tc = true;
             wb_ins = tctop_dat.ins;
             rdv1_addr = tctop_dat.ins.d;
-            for (int i = 0; i < hw_num_thread; i++)
-                rdv1_data[i] = tctop_dat.rdv1_data[i];
+            rdv1_data = tctop_dat.rdv1_data;
             wb_warpid = tctop_dat.warp_id;
         } else {
             // if (sm_id == 0)

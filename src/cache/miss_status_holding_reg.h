@@ -186,9 +186,9 @@ public:
             assert(!pipe_reg.is_valid());
             auto& current_sub = current_main.front();
             vec_nlane_t coreRsp_data;
-            // Debug: Check data for LW instruction at 0x80000058
-            if (current_sub.m_pc == 0x80000058) {
-                std::cout << "[mshr::vec_arrange_core_rsp] LW @ pc=0x80000058: "
+            // Debug: Check data for LW instruction at 0x800002c0
+            if (current_sub.m_pc == 0x800002c0) {
+                std::cout << "[mshr::vec_arrange_core_rsp] LW @ pc=0x800002c0: "
                           << "missRsp_line[0]=0x" << std::hex << missRsp_line[0]
                           << " missRsp_line[1]=0x" << missRsp_line[1]
                           << " block_offset[0]=" << std::dec << static_cast<int>(current_sub.m_block_offset[0])
@@ -198,8 +198,8 @@ public:
                 if(current_sub.m_mask[i]==true){//mem order to core order crossbar
                     coreRsp_data[i] = missRsp_line[current_sub.m_block_offset[i]];
                     // Debug: Check data assignment
-                    if (current_sub.m_pc == 0x80000058) {
-                        std::cout << "[mshr::vec_arrange_core_rsp] LW @ pc=0x80000058: "
+                    if (current_sub.m_pc == 0x800002c0) {
+                        std::cout << "[mshr::vec_arrange_core_rsp] LW @ pc=0x800002c0: "
                                   << "lane=" << i << " block_offset=" << static_cast<int>(current_sub.m_block_offset[i])
                                   << " coreRsp_data[" << i << "]=0x" << std::hex << coreRsp_data[i] << std::dec << std::endl;
                     }

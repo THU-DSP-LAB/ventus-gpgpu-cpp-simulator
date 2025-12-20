@@ -35,7 +35,7 @@ public:
     constexpr static uint32_t WORDSIZE = 4;//in bytes
     constexpr static uint32_t ADDR_LENGTH = 32;
 
-    constexpr static uint32_t NLANE = 4;//32;
+    constexpr static uint32_t NLANE = 32;//32;
 
     // 注意：NSET 和 LINEWORDS 用于定义缓存内部结构大小（如 tag_array 的数组大小），不用于地址计算
     // 地址计算应使用 L1D_NUM_SET 和 L1D_BLOCK_NUM_WORD（定义在 src/parameters.h）

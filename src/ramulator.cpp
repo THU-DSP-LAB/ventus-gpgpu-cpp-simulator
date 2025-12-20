@@ -8,9 +8,18 @@
 #include <memory>
 #include <spdlog/spdlog.h>
 
-RamulatorWrapper::RamulatorWrapper(const std::string& config_file)
+RamulatorWrapper::RamulatorWrapper(const char* config_file, std::shared_ptr<spdlog::logger> logger)
     // : sc_module(sc_core::sc_module_name("RamulatorWrapper")) {
-    : sc_module("RamulatorWrapper") {
+    : sc_module("RamulatorWrapper")
+    , m_enable_ramulator(config_file != nullptr)
+    , m_logger(logger ? logger : spdlog::default_logger()) {
+
+    m_mem = std::make_shared<PhysicalMemoryBasicSim>(1ull << 32);
+    m_mmu = std::move(std::make_unique<SV39_basic>(m_mem));
+
+    if (config_file == nullptr) {
+        return;
+    }
 
     YAML::Node config = Ramulator::Config::parse_config_file(config_file, {});
 
@@ -23,11 +32,31 @@ RamulatorWrapper::RamulatorWrapper(const std::string& config_file)
     m_tick_frontend = m_frontend->get_clock_ratio();
     m_tick_memorysystem = m_memorysystem->get_clock_ratio();
 
-    m_mem = std::make_shared<PhysicalMemoryBasicSim>(1ull << 32);
-    m_mmu = std::move(std::make_unique<SV39_basic>(m_mem));
-
     SC_HAS_PROCESS(RamulatorWrapper);
     SC_THREAD(tick);
+}
+
+int RamulatorWrapper::request(
+    int sm_id, int source_id, paddr_t addr, std::function<void(int sourceId)> callback
+) {
+    if (!m_enable_ramulator) {
+        // Ramulator disabled, respond immediately
+        if (callback) {
+            callback(source_id);
+        }
+        return 0;
+    }
+    // TODO: check paddr alignment
+    auto ramulator_callback = [callback, source_id](Ramulator::Request& _) {
+        if (callback) {
+            callback(source_id);
+        }
+    };
+    if (m_frontend->receive_external_requests(0, addr, sm_id, ramulator_callback)) {
+        return 0; // request accepted
+    } else {
+        return 1; // memory controller busy, request not accepted, try again later
+    }
 }
 
 int RamulatorWrapper::request(
@@ -64,45 +93,36 @@ for (int i = 0; i < hw_num_thread; ++i) {
 }
         // Deal with the write request
         m_pending_requests.emplace_back();
-        auto req = m_pending_requests.end();
-        --req;
+        auto req = std::prev(m_pending_requests.end());
         req->sm_id = sm_id;
         req->cmd = std::move(cmd_);
         req->callback = callback;
-        req->id = m_request_id++;
-        uint64_t req_id = req->id;
-        // 也可直接捕获req迭代器，而不是再加一个req_id字段，因为std::list只要不删除此元素其迭代器就一直有效
-        // 但这样编译器会报warning
-        auto ramulator_callback = [this, req_id, paddr_block](Ramulator::Request& _) {
-            auto it = std::find_if(
-                m_pending_requests.begin(), m_pending_requests.end(),
-                [req_id](const request_t& r) { return r.id == req_id; }
-            );
-            assert(it != m_pending_requests.end());
-            assert(it->cmd->opcode == L1D_OPCODE_READ);
-            if (it->cmd->data[0] == 0 && it->cmd->instr.currentpc == 0x80000058) {
-                std::cout << "[ramulator::read] SM" << it->sm_id << " warp" << it->cmd->warp_id 
-                            << " LW @ pc=0x80000058: paddr_block=0x" << std::hex << paddr_block
-                            << " blockOffset=" << static_cast<int>(it->cmd->blockOffset->at(0))
+        auto ramulator_callback = [this, req, paddr_block](Ramulator::Request& _) {
+            assert(req->cmd->opcode == L1D_OPCODE_READ);
+            if (req->cmd->data[0] == 0 && req->cmd->instr.currentpc == 0x800002c0) {
+                std::cout << "[ramulator::read] SM" << req->sm_id << " warp" << req->cmd->warp_id 
+                            << " LW @ pc=0x800002c0: paddr_block=0x" << std::hex << paddr_block
+                            << " blockOffset=" << static_cast<int>(req->cmd->blockOffset->at(0))
                             << std::dec
-                            << " data_read=0x" << std::hex << it->cmd->data[0] << std::dec
+                            << " data_read=0x" << std::hex << req->cmd->data[0] << std::dec
                             << " @ " << sc_time_stamp() << "\n";
             }
-            if (it->callback) {
-                it->callback(std::move(it->cmd));
+            if (req->callback) {
+                req->callback(std::move(req->cmd));
             }
-            m_pending_requests.erase(it);
+            m_pending_requests.erase(req);
         };
-        if (m_frontend->receive_external_requests(0, paddr_block, sm_id, ramulator_callback)) {
+        if (!m_enable_ramulator
+            || m_frontend->receive_external_requests(0, paddr_block, sm_id, ramulator_callback)) {
             for (int i = 0; i < hw_num_thread; i++) {
                 if (req->cmd->mask[i]) {
                     uint32_t paddr = paddr_block + (req->cmd->blockOffset->at(i) << 2);
                     uint32_t data_before = req->cmd->data[i];
                     m_mem->read(paddr, &req->cmd->data[i], 4);
                     // Debug: Check if we're reading 0 when we shouldn't
-                    if (req->cmd->data[i] == 0 && req->cmd->instr.currentpc == 0x80000058) {
+                    if (req->cmd->data[i] == 0 && req->cmd->instr.currentpc == 0x800002c0) {
                         std::cout << "[ramulator::read] SM" << sm_id << " warp" << req->cmd->warp_id 
-                                  << " LW @ pc=0x80000058: paddr_block=0x" << std::hex << paddr_block
+                                  << " LW @ pc=0x800002c0: paddr_block=0x" << std::hex << paddr_block
                                   << " blockOffset=" << static_cast<int>(req->cmd->blockOffset->at(i))
                                   << " paddr=0x" << paddr << std::dec
                                   << " data_read=0x" << std::hex << req->cmd->data[i] << std::dec
@@ -110,6 +130,11 @@ for (int i = 0; i < hw_num_thread; ++i) {
                     }
                     // 这里总load word（地址向下对齐），在LSU中按照指令lw,lh,lb来选取需要的数据
                 }
+            }
+            if (!m_enable_ramulator) {
+                // 不启用DDR时序仿真，立即回调
+                Ramulator::Request dummy_request(0, 0); // not used
+                ramulator_callback(dummy_request);
             }
             return 0;
         } else { // memory controller busy, request not accepted, try again later
@@ -120,7 +145,8 @@ for (int i = 0; i < hw_num_thread; ++i) {
         // Finish the read request
     } else if (cmd_->opcode == L1D_OPCODE_WRITE) {
         // Deal with the write request
-        if (m_frontend->receive_external_requests(1, paddr_block, sm_id, nullptr)) {
+        if (!m_enable_ramulator
+            || m_frontend->receive_external_requests(1, paddr_block, sm_id, nullptr)) {
             std::cout << "[Ramulator-WRITE] SM" << sm_id
           << " warp=" << cmd_->warp_id
           << " ptroot=0x" << std::hex << cmd_->pagetable_root
@@ -176,6 +202,8 @@ for (int threadidx = 0; threadidx < hw_num_thread; threadidx++) {
 
 void RamulatorWrapper::tick() {
     while (true) {
+        if (!m_enable_ramulator)
+            return;
         wait(clk.posedge_event());
         if (m_tick_count % m_tick_frontend == 0) {
             m_frontend->tick();

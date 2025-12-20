@@ -1,28 +1,25 @@
 #ifndef _PARAMETERS_H
 #define _PARAMETERS_H
-
+#include "magic_enum.hpp"
 #include "ventus_cyclesim.h"
 #include <array>
-#include <fmt/ostream.h>
-#include <memory>
-#define SC_INCLUDE_DYNAMIC_PROCESSES
-#define SPIKE_OUTPUT
-#include "systemc.h"
-// #include "tlm.h"
-// #include "tlm_core/tlm_1/tlm_req_rsp/tlm_channels/tlm_fifo/tlm_fifo.h"
-#include "magic_enum.hpp"
-#include <bit>
 #include <bitset>
+#include <fmt/ostream.h>
 #include <iomanip>
 #include <iostream>
-#include <map>
 #include <math.h>
-#include <queue>
+#include <memory>
 #include <set>
 #include <sstream>
 #include <stack>
 #include <stdexcept> // For std::out_of_range
 #include <unordered_map>
+
+#include "utils_print.hpp"
+#define SC_INCLUDE_DYNAMIC_PROCESSES
+#define SPIKE_OUTPUT
+#include <sysc/kernel/sc_time.h>
+#include <systemc.h>
 
 // #include <format>  // gcc13支持std::format
 
@@ -40,8 +37,9 @@ inline constexpr int ireg_bitsize = 10;
 inline constexpr int ireg_size = 1 << ireg_bitsize;
 inline constexpr int INS_LENGTH = 32; // the length of per instruction
 inline constexpr double PERIOD = 10;
+inline constexpr auto TIME_UNIT = SC_NS;
 inline constexpr int IFIFO_SIZE = 10;
-inline constexpr int OPCFIFO_SIZE = 4;
+inline constexpr int OPCFIFO_SIZE = SUBCORE_WARP_NUM;
 inline constexpr int BANK_NUM = 4;
 inline constexpr int NUM_SM = 2;
 inline constexpr int num_register_per_warp = 256; // 每个warp寄存器数目
@@ -98,7 +96,8 @@ union i32_u32_f32_t {
     float f32;
 };
 using iuf32_t = i32_u32_f32_t;
-using reg_t = sc_int<32>;
+using reg_t = uint32_t;
+
 using v_regfile_t = std::array<reg_t, hw_num_thread>;
 struct vector_t : std::array<reg_t, hw_num_thread> {
     friend std::ostream& operator<<(std::ostream& os, const v_regfile_t& arr) {
@@ -125,626 +124,8 @@ struct vector_t : std::array<reg_t, hw_num_thread> {
 
 enum OP_TYPE {
     INVALID_,
-    ADD_,
-    ADDI_,
-    AMOADD_W_,
-    AMOAND_W_,
-    AMOMAX_W_,
-    AMOMAXU_W_,
-    AMOMIN_W_,
-    AMOMINU_W_,
-    AMOOR_W_,
-    AMOSWAP_W_,
-    AMOXOR_W_,
-    AND_,
-    ANDI_,
-    AUIPC_,
-    BARRIER_,
-    BARRIERSUB_,
-    BEQ_,
-    BGE_,
-    BGEU_,
-    BLT_,
-    BLTU_,
-    BNE_,
-    C_ADD_,
-    C_ADDI_,
-    C_ADDI16SP_,
-    C_ADDI4SPN_,
-    C_AND_,
-    C_ANDI_,
-    C_BEQZ_,
-    C_BNEZ_,
-    C_EBREAK_,
-    C_J_,
-    C_JALR_,
-    C_JR_,
-    C_LI_,
-    C_LUI_,
-    C_LW_,
-    C_LWSP_,
-    C_MV_,
-    C_NOP_,
-    C_OR_,
-    C_SUB_,
-    C_SW_,
-    C_SWSP_,
-    C_XOR_,
-    CSRRC_,
-    CSRRCI_,
-    CSRRS_,
-    CSRRSI_,
-    CSRRW_,
-    CSRRWI_,
-    DIV_,
-    DIVU_,
-    EBREAK_,
-    ECALL_,
-    ENDPRG_,
-    FADD_D_,
-    FADD_S_,
-    FCLASS_D_,
-    FCLASS_S_,
-    FCVT_D_S_,
-    FCVT_D_W_,
-    FCVT_D_WU_,
-    FCVT_S_D_,
-    FCVT_S_W_,
-    FCVT_S_WU_,
-    FCVT_W_D_,
-    FCVT_W_S_,
-    FCVT_WU_D_,
-    FCVT_WU_S_,
-    FDIV_D_,
-    FDIV_S_,
-    FENCE_,
-    FEQ_D_,
-    FEQ_S_,
-    FLD_,
-    FLE_D_,
-    FLE_S_,
-    FLT_D_,
-    FLT_S_,
-    FLW_,
-    FMADD_D_,
-    FMADD_S_,
-    FMAX_D_,
-    FMAX_S_,
-    FMIN_D_,
-    FMIN_S_,
-    FMSUB_D_,
-    FMSUB_S_,
-    FMUL_D_,
-    FMUL_S_,
-    FMV_W_X_,
-    FMV_X_W_,
-    FNMADD_D_,
-    FNMADD_S_,
-    FNMSUB_D_,
-    FNMSUB_S_,
-    FSD_,
-    FSGNJ_D_,
-    FSGNJ_S_,
-    FSGNJN_D_,
-    FSGNJN_S_,
-    FSGNJX_D_,
-    FSGNJX_S_,
-    FSQRT_D_,
-    FSQRT_S_,
-    FSUB_D_,
-    FSUB_S_,
-    FSW_,
-    JAL_,
-    JALR_,
-    JOIN_,
-    LB_,
-    LBU_,
-    LH_,
-    LHU_,
-    LR_W_,
-    LUI_,
-    LW_,
-    MUL_,
-    MULH_,
-    MULHSU_,
-    MULHU_,
-    OR_,
-    ORI_,
-    REGEXT_,
-    REGEXTI_,
-    REM_,
-    REMU_,
-    SB_,
-    SC_W_,
-    SETRPC_,
-    SH_,
-    SLL_,
-    SLLI_,
-    SLT_,
-    SLTI_,
-    SLTIU_,
-    SLTU_,
-    SRA_,
-    SRAI_,
-    SRL_,
-    SRLI_,
-    SUB_,
-    SW_,
-    VAADD_VV_,
-    VAADD_VX_,
-    VAADDU_VV_,
-    VAADDU_VX_,
-    VADC_VIM_,
-    VADC_VVM_,
-    VADC_VXM_,
-    VADD12_VI_,
-    VADD_VI_,
-    VADD_VV_,
-    VADD_VX_,
-    VAMOADDEI16_V_,
-    VAMOADDEI32_V_,
-    VAMOADDEI64_V_,
-    VAMOADDEI8_V_,
-    VAMOANDEI16_V_,
-    VAMOANDEI32_V_,
-    VAMOANDEI64_V_,
-    VAMOANDEI8_V_,
-    VAMOMAXEI16_V_,
-    VAMOMAXEI32_V_,
-    VAMOMAXEI64_V_,
-    VAMOMAXEI8_V_,
-    VAMOMAXUEI16_V_,
-    VAMOMAXUEI32_V_,
-    VAMOMAXUEI64_V_,
-    VAMOMAXUEI8_V_,
-    VAMOMINEI16_V_,
-    VAMOMINEI32_V_,
-    VAMOMINEI64_V_,
-    VAMOMINEI8_V_,
-    VAMOMINUEI16_V_,
-    VAMOMINUEI32_V_,
-    VAMOMINUEI64_V_,
-    VAMOMINUEI8_V_,
-    VAMOOREI16_V_,
-    VAMOOREI32_V_,
-    VAMOOREI64_V_,
-    VAMOOREI8_V_,
-    VAMOSWAPEI16_V_,
-    VAMOSWAPEI32_V_,
-    VAMOSWAPEI64_V_,
-    VAMOSWAPEI8_V_,
-    VAMOXOREI16_V_,
-    VAMOXOREI32_V_,
-    VAMOXOREI64_V_,
-    VAMOXOREI8_V_,
-    VAND_VI_,
-    VAND_VV_,
-    VAND_VX_,
-    VASUB_VV_,
-    VASUB_VX_,
-    VASUBU_VV_,
-    VASUBU_VX_,
-    VBEQ_,
-    VBGE_,
-    VBGEU_,
-    VBLT_,
-    VBLTU_,
-    VBNE_,
-    VCOMPRESS_VM_,
-    VCPOP_M_,
-    VDIV_VV_,
-    VDIV_VX_,
-    VDIVU_VV_,
-    VDIVU_VX_,
-    VFADD_VF_,
-    VFADD_VV_,
-    VFCLASS_V_,
-    VFCVT_F_X_V_,
-    VFCVT_F_XU_V_,
-    VFCVT_RTZ_X_F_V_,
-    VFCVT_RTZ_XU_F_V_,
-    VFCVT_X_F_V_,
-    VFCVT_XU_F_V_,
-    VFDIV_VF_,
-    VFDIV_VV_,
-    VFEXP_V_,
-    VFIRST_M_,
-    VFMACC_VF_,
-    VFMACC_VV_,
-    VFMADD_VF_,
-    VFMADD_VV_,
-    VFMAX_VF_,
-    VFMAX_VV_,
-    VFMERGE_VFM_,
-    VFMIN_VF_,
-    VFMIN_VV_,
-    VFMSAC_VF_,
-    VFMSAC_VV_,
-    VFMSUB_VF_,
-    VFMSUB_VV_,
-    VFMUL_VF_,
-    VFMUL_VV_,
-    VFMV_F_S_,
-    VFMV_S_F_,
-    VFMV_V_F_,
-    VFNCVT_F_F_W_,
-    VFNCVT_F_X_W_,
-    VFNCVT_F_XU_W_,
-    VFNCVT_ROD_F_F_W_,
-    VFNCVT_RTZ_X_F_W_,
-    VFNCVT_RTZ_XU_F_W_,
-    VFNCVT_X_F_W_,
-    VFNCVT_XU_F_W_,
-    VFNMACC_VF_,
-    VFNMACC_VV_,
-    VFNMADD_VF_,
-    VFNMADD_VV_,
-    VFNMSAC_VF_,
-    VFNMSAC_VV_,
-    VFNMSUB_VF_,
-    VFNMSUB_VV_,
-    VFRDIV_VF_,
-    VFREC7_V_,
-    VFREDMAX_VS_,
-    VFREDMIN_VS_,
-    VFREDOSUM_VS_,
-    VFREDUSUM_VS_,
-    VFRSQRT7_V_,
-    VFRSUB_VF_,
-    VFSGNJ_VF_,
-    VFSGNJ_VV_,
-    VFSGNJN_VF_,
-    VFSGNJN_VV_,
-    VFSGNJX_VF_,
-    VFSGNJX_VV_,
-    VFSLIDE1DOWN_VF_,
-    VFSLIDE1UP_VF_,
-    VFSQRT_V_,
-    VFSUB_VF_,
-    VFSUB_VV_,
-    VFTTA_VV_,
-    VFWADD_VF_,
-    VFWADD_VV_,
-    VFWADD_WF_,
-    VFWADD_WV_,
-    VFWCVT_F_F_V_,
-    VFWCVT_F_X_V_,
-    VFWCVT_F_XU_V_,
-    VFWCVT_RTZ_X_F_V_,
-    VFWCVT_RTZ_XU_F_V_,
-    VFWCVT_X_F_V_,
-    VFWCVT_XU_F_V_,
-    VFWMACC_VF_,
-    VFWMACC_VV_,
-    VFWMSAC_VF_,
-    VFWMSAC_VV_,
-    VFWMUL_VF_,
-    VFWMUL_VV_,
-    VFWNMACC_VF_,
-    VFWNMACC_VV_,
-    VFWNMSAC_VF_,
-    VFWNMSAC_VV_,
-    VFWREDOSUM_VS_,
-    VFWREDUSUM_VS_,
-    VFWSUB_VF_,
-    VFWSUB_VV_,
-    VFWSUB_WF_,
-    VFWSUB_WV_,
-    VID_V_,
-    VIOTA_M_,
-    VL1RE16_V_,
-    VL1RE32_V_,
-    VL1RE64_V_,
-    VL1RE8_V_,
-    VL2RE16_V_,
-    VL2RE32_V_,
-    VL2RE64_V_,
-    VL2RE8_V_,
-    VL4RE16_V_,
-    VL4RE32_V_,
-    VL4RE64_V_,
-    VL4RE8_V_,
-    VL8RE16_V_,
-    VL8RE32_V_,
-    VL8RE64_V_,
-    VL8RE8_V_,
-    VLB12_V_,
-    VLB_V_,
-    VLBU12_V_,
-    VLBU_V_,
-    VLE1024_V_,
-    VLE1024FF_V_,
-    VLE128_V_,
-    VLE128FF_V_,
-    VLE16_V_,
-    VLE16FF_V_,
-    VLE256_V_,
-    VLE256FF_V_,
-    VLE32_V_,
-    VLE32FF_V_,
-    VLE512_V_,
-    VLE512FF_V_,
-    VLE64_V_,
-    VLE64FF_V_,
-    VLE8_V_,
-    VLE8FF_V_,
-    VLH12_V_,
-    VLH_V_,
-    VLHU12_V_,
-    VLHU_V_,
-    VLM_V_,
-    VLOXEI1024_V_,
-    VLOXEI128_V_,
-    VLOXEI16_V_,
-    VLOXEI256_V_,
-    VLOXEI32_V_,
-    VLOXEI512_V_,
-    VLOXEI64_V_,
-    VLOXEI8_V_,
-    VLSE1024_V_,
-    VLSE128_V_,
-    VLSE16_V_,
-    VLSE256_V_,
-    VLSE32_V_,
-    VLSE512_V_,
-    VLSE64_V_,
-    VLSE8_V_,
-    VLUXEI1024_V_,
-    VLUXEI128_V_,
-    VLUXEI16_V_,
-    VLUXEI256_V_,
-    VLUXEI32_V_,
-    VLUXEI512_V_,
-    VLUXEI64_V_,
-    VLUXEI8_V_,
-    VLW12_V_,
-    VLW_V_,
-    VMACC_VV_,
-    VMACC_VX_,
-    VMADC_VI_,
-    VMADC_VIM_,
-    VMADC_VV_,
-    VMADC_VVM_,
-    VMADC_VX_,
-    VMADC_VXM_,
-    VMADD_VV_,
-    VMADD_VX_,
-    VMAND_MM_,
-    VMANDN_MM_,
-    VMAX_VV_,
-    VMAX_VX_,
-    VMAXU_VV_,
-    VMAXU_VX_,
-    VMERGE_VIM_,
-    VMERGE_VVM_,
-    VMERGE_VXM_,
-    VMFEQ_VF_,
-    VMFEQ_VV_,
-    VMFGE_VF_,
-    VMFGT_VF_,
-    VMFLE_VF_,
-    VMFLE_VV_,
-    VMFLT_VF_,
-    VMFLT_VV_,
-    VMFNE_VF_,
-    VMFNE_VV_,
-    VMIN_VV_,
-    VMIN_VX_,
-    VMINU_VV_,
-    VMINU_VX_,
-    VMNAND_MM_,
-    VMNOR_MM_,
-    VMOR_MM_,
-    VMORN_MM_,
-    VMSBC_VV_,
-    VMSBC_VVM_,
-    VMSBC_VX_,
-    VMSBC_VXM_,
-    VMSBF_M_,
-    VMSEQ_VI_,
-    VMSEQ_VV_,
-    VMSEQ_VX_,
-    VMSGT_VI_,
-    VMSGT_VX_,
-    VMSGTU_VI_,
-    VMSGTU_VX_,
-    VMSIF_M_,
-    VMSLE_VI_,
-    VMSLE_VV_,
-    VMSLE_VX_,
-    VMSLEU_VI_,
-    VMSLEU_VV_,
-    VMSLEU_VX_,
-    VMSLT_VV_,
-    VMSLT_VX_,
-    VMSLTU_VV_,
-    VMSLTU_VX_,
-    VMSNE_VI_,
-    VMSNE_VV_,
-    VMSNE_VX_,
-    VMSOF_M_,
-    VMUL_VV_,
-    VMUL_VX_,
-    VMULH_VV_,
-    VMULH_VX_,
-    VMULHSU_VV_,
-    VMULHSU_VX_,
-    VMULHU_VV_,
-    VMULHU_VX_,
-    VMV1R_V_,
-    VMV2R_V_,
-    VMV4R_V_,
-    VMV8R_V_,
-    VMV_S_X_,
-    VMV_V_I_,
-    VMV_V_V_,
-    VMV_V_X_,
-    VMV_X_S_,
-    VMXNOR_MM_,
-    VMXOR_MM_,
-    VNCLIP_WI_,
-    VNCLIP_WV_,
-    VNCLIP_WX_,
-    VNCLIPU_WI_,
-    VNCLIPU_WV_,
-    VNCLIPU_WX_,
-    VNMSAC_VV_,
-    VNMSAC_VX_,
-    VNMSUB_VV_,
-    VNMSUB_VX_,
-    VNSRA_WI_,
-    VNSRA_WV_,
-    VNSRA_WX_,
-    VNSRL_WI_,
-    VNSRL_WV_,
-    VNSRL_WX_,
-    VOR_VI_,
-    VOR_VV_,
-    VOR_VX_,
-    VREDAND_VS_,
-    VREDMAX_VS_,
-    VREDMAXU_VS_,
-    VREDMIN_VS_,
-    VREDMINU_VS_,
-    VREDOR_VS_,
-    VREDSUM_VS_,
-    VREDXOR_VS_,
-    VREM_VV_,
-    VREM_VX_,
-    VREMU_VV_,
-    VREMU_VX_,
-    VRGATHER_VI_,
-    VRGATHER_VV_,
-    VRGATHER_VX_,
-    VRGATHEREI16_VV_,
-    VRSUB_VI_,
-    VRSUB_VX_,
-    VS1R_V_,
-    VS2R_V_,
-    VS4R_V_,
-    VS8R_V_,
-    VSADD_VI_,
-    VSADD_VV_,
-    VSADD_VX_,
-    VSADDU_VI_,
-    VSADDU_VV_,
-    VSADDU_VX_,
-    VSB12_V_,
-    VSB_V_,
-    VSBC_VVM_,
-    VSBC_VXM_,
-    VSE1024_V_,
-    VSE128_V_,
-    VSE16_V_,
-    VSE256_V_,
-    VSE32_V_,
-    VSE512_V_,
-    VSE64_V_,
-    VSE8_V_,
-    VSETIVLI_,
-    VSETVL_,
-    VSETVLI_,
-    VSEXT_VF2_,
-    VSEXT_VF4_,
-    VSEXT_VF8_,
-    VSH12_V_,
-    VSH_V_,
-    VSLIDE1DOWN_VX_,
-    VSLIDE1UP_VX_,
-    VSLIDEDOWN_VI_,
-    VSLIDEDOWN_VX_,
-    VSLIDEUP_VI_,
-    VSLIDEUP_VX_,
-    VSLL_VI_,
-    VSLL_VV_,
-    VSLL_VX_,
-    VSM_V_,
-    VSMUL_VV_,
-    VSMUL_VX_,
-    VSOXEI1024_V_,
-    VSOXEI128_V_,
-    VSOXEI16_V_,
-    VSOXEI256_V_,
-    VSOXEI32_V_,
-    VSOXEI512_V_,
-    VSOXEI64_V_,
-    VSOXEI8_V_,
-    VSRA_VI_,
-    VSRA_VV_,
-    VSRA_VX_,
-    VSRL_VI_,
-    VSRL_VV_,
-    VSRL_VX_,
-    VSSE1024_V_,
-    VSSE128_V_,
-    VSSE16_V_,
-    VSSE256_V_,
-    VSSE32_V_,
-    VSSE512_V_,
-    VSSE64_V_,
-    VSSE8_V_,
-    VSSRA_VI_,
-    VSSRA_VV_,
-    VSSRA_VX_,
-    VSSRL_VI_,
-    VSSRL_VV_,
-    VSSRL_VX_,
-    VSSUB_VV_,
-    VSSUB_VX_,
-    VSSUBU_VV_,
-    VSSUBU_VX_,
-    VSUB12_VI_,
-    VSUB_VV_,
-    VSUB_VX_,
-    VSUXEI1024_V_,
-    VSUXEI128_V_,
-    VSUXEI16_V_,
-    VSUXEI256_V_,
-    VSUXEI32_V_,
-    VSUXEI512_V_,
-    VSUXEI64_V_,
-    VSUXEI8_V_,
-    VSW12_V_,
-    VSW_V_,
-    VWADD_VV_,
-    VWADD_VX_,
-    VWADD_WV_,
-    VWADD_WX_,
-    VWADDU_VV_,
-    VWADDU_VX_,
-    VWADDU_WV_,
-    VWADDU_WX_,
-    VWMACC_VV_,
-    VWMACC_VX_,
-    VWMACCSU_VV_,
-    VWMACCSU_VX_,
-    VWMACCU_VV_,
-    VWMACCU_VX_,
-    VWMACCUS_VX_,
-    VWMUL_VV_,
-    VWMUL_VX_,
-    VWMULSU_VV_,
-    VWMULSU_VX_,
-    VWMULU_VV_,
-    VWMULU_VX_,
-    VWREDSUM_VS_,
-    VWREDSUMU_VS_,
-    VWSUB_VV_,
-    VWSUB_VX_,
-    VWSUB_WV_,
-    VWSUB_WX_,
-    VWSUBU_VV_,
-    VWSUBU_VX_,
-    VWSUBU_WV_,
-    VWSUBU_WX_,
-    VXOR_VI_,
-    VXOR_VV_,
-    VXOR_VX_,
-    VZEXT_VF2_,
-    VZEXT_VF4_,
-    VZEXT_VF8_,
-    XOR_,
-    XORI_,
+    CUSTOM_PRINT_, // only supported in this simulator for debug
+#include "sm/all_instructions.txt"
 };
 struct instable_t {
     std::bitset<32> mask;
@@ -961,6 +342,15 @@ public:
         rl = atomic && ((instr >> 25) & 0b1);
     }
 };
+
+template <typename T>
+void sc_trace(sc_core::sc_trace_file*& tf, const std::shared_ptr<T>& v, const std::string& name) {
+    sc_trace(tf, v == nullptr, name + ".is_null");
+    if (v) {
+        sc_trace(tf, *v, name);
+    }
+}
+
 class I_TYPE // type of per instruction
 {
 public:
@@ -1044,9 +434,9 @@ typedef struct lsu_mem_cmd_t {
     uint8_t opcode;        // tilelink opcode
     uint8_t param;         // tilelink param
     sc_bv<hw_num_thread> mask;
-    uint32_t pagetable_root; // pagetable root physical address for mmu
-    uint32_t cache_tag;
-    uint32_t cache_setIdx;
+    paddr_t pagetable_root; // pagetable root physical address for mmu
+    vaddr_t cache_tag;
+    vaddr_t cache_setIdx;
     std::shared_ptr<const std::array<uint8_t, hw_num_thread>> blockOffset;
     std::shared_ptr<const std::array<uint8_t, hw_num_thread>> wordOffset1H;
     std::shared_ptr<const std::array<uint32_t, hw_num_thread>> addr; // for debug
@@ -1122,7 +512,7 @@ struct opcfifo_t {
     std::array<bool, 3> banktype = { 0 };
     // int mask;
     std::array<std::array<reg_t, hw_num_thread>, 3> data;
-    bool all_ready() { return ready[0] && ready[1] && ready[2]; }
+    bool all_ready() const { return ready[0] && ready[1] && ready[2]; }
     opcfifo_t() {};
     opcfifo_t(I_TYPE ins_)
         : ins(ins_) {};
@@ -1194,6 +584,32 @@ private:
     std::array<T, capacity> data;
     std::size_t size;
     std::size_t front_index;
+    // 由于建模的特殊性，有时可能需要临时溢出一个数据，此时暂时放入m_staged中
+    // 在RTL中，同一周期内可以并行地从一个已满的FIFO中push + pop（需要组合逻辑传递下游ready到上游）
+    // 但用软件建模这种行为时push & pop时无法“同时”的
+    // 如果在同一周期内先push再pop，会导致临时溢出一个数据，但在硬件上这时可行的
+    struct {
+        bool valid = false;
+        sc_core::sc_time time_stamp; // 追踪数据何时被放入暂存区，应当在同一周期内pop
+        T data;
+    } m_staged;
+
+    void push_staged(const T& value) {
+        assert(!m_staged.valid && "Already has staged data");
+        m_staged.valid = true;
+        m_staged.time_stamp = sc_core::sc_time_stamp();
+        m_staged.data = value;
+    }
+    void pop_staged() {
+        assert(m_staged.valid && "No staged data to pop");
+        assert(
+            m_staged.time_stamp == sc_core::sc_time_stamp()
+            && "Staged data can only be popped in the same cycle it was pushed"
+        );
+        m_staged.valid = false;
+        data[(front_index + size) % capacity] = std::move(m_staged.data);
+        ++size;
+    }
 
 public:
     StaticQueue()
@@ -1201,7 +617,12 @@ public:
         , front_index(0) { }
     void push(const T& value) {
         if (size == capacity) {
-            throw std::out_of_range("StaticQueue is full");
+            if (m_staged.valid) {
+                throw std::out_of_range("StaticQueue is full");
+            } else { // 允许临时溢出，但要求同周期内pop
+                push_staged(value);
+                return;
+            }
         }
         data[(front_index + size) % capacity] = value;
         ++size;
@@ -1212,10 +633,14 @@ public:
         }
         front_index = (front_index + 1) % capacity;
         --size;
+        if (m_staged.valid) {
+            pop_staged();
+        }
     }
     void clear() {
-        while (!isempty())
-            pop();
+        front_index = 0;
+        size = 0;
+        m_staged.valid = false;
     }
     T get() { // return front and pop
         if (size == 0) {
@@ -1224,6 +649,9 @@ public:
         T re = data[front_index];
         front_index = (front_index + 1) % capacity;
         --size;
+        if (m_staged.valid) {
+            pop_staged();
+        }
         return re;
     }
     T& front() {
@@ -1329,12 +757,12 @@ struct valu_out_t {
 struct vfpu_in_t {
     I_TYPE ins;
     int warp_id;
-    std::array<int, hw_num_thread> vfpuSdata1, vfpuSdata2, vfpuSdata3;
+    std::array<reg_t, hw_num_thread> vfpuSdata1, vfpuSdata2, vfpuSdata3;
 };
 struct vfpu_out_t {
     I_TYPE ins;
     int warp_id;
-    std::array<int, hw_num_thread> rdf1_data;
+    std::array<reg_t, hw_num_thread> rdf1_data;
     reg_t rds1_data; // FCVT_W_S等指令使用
     bool operator==(const vfpu_out_t& rhs) const {
         return rhs.ins == ins && rhs.rdf1_data == rdf1_data;
@@ -1395,11 +823,12 @@ struct csr_in_t {
     int warp_id;
     reg_t csrSdata1;
     reg_t csrSdata2;
+    // do not need vector csrSdata currently
 };
 struct csr_out_t {
     I_TYPE ins;
     int warp_id;
-    reg_t data; // 计算出的数据
+    std::array<reg_t, hw_num_thread> data;
     bool operator==(const csr_out_t& rhs) const { return rhs.ins == ins && rhs.data == data; }
     csr_out_t& operator=(const csr_out_t& rhs) {
         ins = rhs.ins;
@@ -1408,13 +837,16 @@ struct csr_out_t {
         return *this;
     }
     friend ostream& operator<<(ostream& os, csr_out_t const& v) {
-        os << "(" << v.ins << "," << v.data << ")";
+        // os << "(" << v.ins << "," << v.data << ")";
+        assert(0); // todo
         return os;
     }
     friend void sc_trace(sc_trace_file* tf, const csr_out_t& v, const std::string& NAME) {
         sc_trace(tf, v.ins, NAME + ".ins");
         sc_trace(tf, v.warp_id, NAME + ".warp_id");
-        sc_trace(tf, v.data, NAME + ".data");
+        for (int i = 0; i < v.data.size(); i++) {
+            sc_trace(tf, v.data[i], NAME + ".data(" + std::to_string(i) + ")");
+        }
     }
 };
 
@@ -1494,12 +926,12 @@ struct sfu_out_t {
 struct tc_in_t {
     I_TYPE ins;
     int warp_id;
-    std::array<int, hw_num_thread> tcSdata1, tcSdata2, tcSdata3;
+    std::array<reg_t, hw_num_thread> tcSdata1, tcSdata2, tcSdata3;
 };
 struct tc_out_t {
     I_TYPE ins;
     int warp_id;
-    std::array<int, hw_num_thread> rdv1_data;
+    std::array<reg_t, hw_num_thread> rdv1_data;
     bool operator==(const tc_out_t& rhs) const {
         return rhs.ins == ins && rhs.rdv1_data == rdv1_data;
     }
@@ -1529,22 +961,18 @@ struct tc_out_t {
 
 class WARP_BONE {
 public:
-    int warp_id;
+    const int warp_id; // hardware warp slot id
     // sc_event ev_kernel_ret; // 当前warp已经执行完kernel
     int blk_slot_idx;
     int warp_idx_in_blk;
     std::function<void(int, int)> finish_callback; // 当前warp执行完毕后回调通知CTA Scheduler
-    uint64_t pagetable;                            // 页表基址
+    paddr_t pagetable;                             // 页表基址
     int num_thread;                                // warp内线程数
-
-    unsigned m_ctaid_in_core; // 与kernel配置有关的、绑定的core内ctaid
 
     explicit WARP_BONE(int warp_id)
         : warp_id(warp_id)
         , is_warp_activated(("is_warp_activated_Warp" + std::to_string(warp_id)).c_str())
-        , ibuf_swallow(("ibuf_swallow_warp_Warp" + std::to_string(warp_id)).c_str())
-        , fetch_valid(("fetch_valid_Warp" + std::to_string(warp_id)).c_str())
-        , fetch_valid2(("fetch_valid2_Warp" + std::to_string(warp_id)).c_str())
+        , pc_valid(("pc_valid_Warp" + std::to_string(warp_id)).c_str())
         , jump(("jump_Warp" + std::to_string(warp_id)).c_str())
         , branch_sig(("branch_sig_Warp" + std::to_string(warp_id)).c_str())
         , vbran_sig(("vbran_sig_Warp" + std::to_string(warp_id)).c_str())
@@ -1564,15 +992,16 @@ public:
         will_warp_activate = false;
     }
 
+    void export_vcd_trace(sc_core::sc_trace_file* tf, const std::string& prefix) const;
+
     void initwarp() {
-        fetch_valid12 = false;
         ififo.clear();
         can_dispatch = false;
         score.clear();
         s_regfile.fill(0);
         for (auto& subarray : v_regfile)
             subarray.fill(0);
-        CSR_reg.fill(0);
+        CSR_reg.clear();
         std::stack<simtstack_t>().swap(IPDOM_stack);
 
         endprg_flush_pipe.write(true);
@@ -1582,11 +1011,12 @@ public:
     bool will_warp_activate;
 
     // fetch
-    sc_event ev_fetchpc, ev_decode;
-    sc_signal<bool> ibuf_swallow; // 表示是否接收上一cycle fetch_valid，相当于ready
-    sc_signal<bool, SC_MANY_WRITERS> fetch_valid;
-    bool fetch_valid12;                            // 用于取指令和decode之间传递
-    sc_signal<bool, SC_MANY_WRITERS> fetch_valid2; // 2是真正的valid，直接与ibuffer沟通
+    struct regext_t {
+        bool valid;
+        int ext1, ext2, ext3, extd, extimm;
+    } regext; // decode stage regext prefix-instruction info
+
+    sc_signal<bool, SC_MANY_WRITERS> pc_valid; // PC to fetch
     sc_signal<bool, SC_MANY_WRITERS> jump, branch_sig,
         vbran_sig; // 无论是否jump，只要发生了分支判断，将branch_sig置为1。其中branch_sig是标量分支，vbran_sig是向量分支
     sc_signal<vaddr_t> jump_addr;
@@ -1596,8 +1026,8 @@ public:
     // ibuffer
     sc_event ev_ibuf_updated;
     sc_signal<bool> ibuf_empty, ibuf_full;
-    sc_signal<I_TYPE> ibuftop_ins;
-    StaticQueue<I_TYPE, IFIFO_SIZE> ififo;
+    sc_signal<std::shared_ptr<I_TYPE>> ibuftop_ins;
+    StaticQueue<std::shared_ptr<I_TYPE>, IFIFO_SIZE> ififo;
     sc_signal<int> ififo_elem_num;
     // scoreboard
     sc_event ev_judge_dispatch;
@@ -1611,7 +1041,8 @@ public:
     // regfile
     std::array<reg_t, num_register_per_warp> s_regfile;
     std::array<v_regfile_t, num_register_per_warp> v_regfile;
-    std::array<int, 0x820> CSR_reg;
+    std::unordered_map<int, reg_t> CSR_reg; // 标量CSR
+    std::unordered_map<int, std::array<reg_t, hw_num_thread>> CSR_vreg; // 向量CSR
     // simt-stack
     std::stack<simtstack_t> IPDOM_stack;
     sc_signal<sc_bv<hw_num_thread>, SC_MANY_WRITERS> current_mask; // 在dispatch时随指令存入OPC
@@ -1724,5 +1155,5 @@ private:
         }
     }
 };
-constexpr static uint32_t NLANE = 4;
+constexpr static uint32_t NLANE = hw_num_thread;
 #endif

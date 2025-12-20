@@ -60,6 +60,9 @@ void coreReq_pipe0_cycle(cycle_t time){
                     std::cout << ", op=" << coreReq_opcode;
                     std::cout << ", param=" << m_coreReq.m_type << std::endl;
                 }
+                if (m_coreReq.m_pc == 0x800002c0) {
+                    std::cout << "[L1_cache::coreReq_pipe0_cycle] LW @ pc=0x800002c0 @ " << sc_time_stamp() << std::endl;
+                }
                 if (coreReq_opcode==Read || coreReq_opcode==Write || coreReq_opcode==Amo){
                     if(m_coreReq.m_type == 1 || coreReq_opcode==Amo){//LR/SC
                         m_mshr.probe_spe_in(coreReq_opcode==Write);//输入是“is_store_conditional”
@@ -128,9 +131,9 @@ void coreReq_pipe1_cycle(cycle_t time){
                             m_data_array.write_hit(set_idx,way_idx,pipe1_r.m_data,pipe1_r.m_block_offset,pipe1_r.m_mask);
                         }else{
                             auto data_from_array = m_data_array.read(set_idx,way_idx);
-                            // Debug: Check cache hit data for LW instruction at 0x80000058
-                            // if (pipe1_r.m_pc == 0x80000058) {
-                            //     std::cout << "[L1_cache::coreReq_pipe1_cycle] HIT pc=0x80000058: "
+                            // Debug: Check cache hit data for LW instruction at 0x800002c0
+                            // if (pipe1_r.m_pc == 0x800002c0) {
+                            //     std::cout << "[L1_cache::coreReq_pipe1_cycle] HIT pc=0x800002c0: "
                             //               << "data_from_array[" << static_cast<int>(pipe1_r.m_block_offset[0]) << "]=0x"
                             //               << std::hex << data_from_array[pipe1_r.m_block_offset[0]] << std::dec
                             //               << " @ " << sc_time_stamp() << std::endl;
@@ -139,12 +142,12 @@ void coreReq_pipe1_cycle(cycle_t time){
                                 if(pipe1_r.m_mask[i]==true){//mem order to core order crossbar
                                     data[i] = data_from_array[pipe1_r.m_block_offset[i]];
                                     // Debug: Check data assignment for LW
-                                    // if (pipe1_r.m_pc == 0x80000058) {
-                                    //     std::cout << "[L1_cache::coreReq_pipe1_cycle] HIT pc=0x80000058: "
-                                    //               << "lane=" << i << " block_offset=" << static_cast<int>(pipe1_r.m_block_offset[i])
-                                    //               << " data[" << i << "]=0x" << std::hex << data[i] << std::dec
-                                    //               << " @ " << sc_time_stamp() << std::endl;
-                                    // }
+                                    if (pipe1_r.m_pc == 0x800002c0) {
+                                        std::cout << "[L1_cache::coreReq_pipe1_cycle] HIT pc=0x800002c0: "
+                                                  << "lane=" << i << " block_offset=" << static_cast<int>(pipe1_r.m_block_offset[i])
+                                                  << " data[" << i << "]=0x" << std::hex << data[i] << std::dec
+                                                  << " @ " << sc_time_stamp() << std::endl;
+                                    }
                                 }
                             }
                         }
@@ -541,14 +544,14 @@ void memRsp_pipe1_cycle(cycle_t time){
                     auto& cReq_st1_r = m_coreReq_pipe1_reg;
                     auto& mRsp_st1_r = m_memRsp_pipe1_reg;
                     vec_nlane_t data;
-                    // Debug: Check data for LW instruction at 0x80000058
-                    // if (cReq_st1_r.m_pc == 0x80000058) {
-                    //     std::cout << "[L1_cache::memRsp_pipe1_cycle] LW @ pc=0x80000058: "
-                    //               << "m_fill_data[0]=0x" << std::hex << mRsp_st1_r.m_fill_data[0]
-                    //               << " m_fill_data[1]=0x" << mRsp_st1_r.m_fill_data[1]
-                    //               << " block_offset[0]=" << std::dec << static_cast<int>(cReq_st1_r.m_block_offset[0])
-                    //               << std::endl;
-                    // }
+                    // Debug: Check data for LW instruction at 0x800002c0
+                    if (cReq_st1_r.m_pc == 0x800002c0) {
+                        std::cout << "[L1_cache::memRsp_pipe1_cycle] LW @ pc=0x800002c0: "
+                                  << "m_fill_data[0]=0x" << std::hex << mRsp_st1_r.m_fill_data[0]
+                                  << " m_fill_data[1]=0x" << mRsp_st1_r.m_fill_data[1]
+                                  << " block_offset[0]=" << std::dec << static_cast<int>(cReq_st1_r.m_block_offset[0])
+                                  << std::endl;
+                    }
                     for(int i = 0;i<NLANE;++i){
                         if(cReq_st1_r.m_mask[i]==true){//mem order to core order crossbar
                             data[i] = mRsp_st1_r.m_fill_data[cReq_st1_r.m_block_offset[i]];

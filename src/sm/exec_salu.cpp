@@ -145,9 +145,9 @@ void Subcore::SALU_CALC() {
                 {
 #ifdef SPIKE_OUTPUT
                     SPDLOG_LOGGER_TRACE(
-                        m_logger, "SM {} warp {} 0x{:x} {} JUMP=true, jumpTO 0x{:x}",
-                        m_sm_id, salutmp1.warp_id, salutmp1.ins.currentpc, salutmp1.ins,
-                        salutmp1.rss3_data
+                        m_logger, "SM {} warp {} 0x{:x} {} JUMP=true, jumpTO 0x{:x}", m_sm_id,
+                        warpid_convert(m_subcore_id, salutmp1.warp_id), salutmp1.ins.currentpc,
+                        salutmp1.ins, salutmp1.rss3_data
                     );
 #endif
                     hwarp->branch_sig = true;
@@ -176,9 +176,9 @@ void Subcore::SALU_CALC() {
                     
 #ifdef SPIKE_OUTPUT
                     SPDLOG_LOGGER_TRACE(
-                        m_logger, "SM {} warp {} 0x{:x} {} JUMP=true, jumpTO 0x{:x}",
-                        m_sm_id, salutmp1.warp_id, salutmp1.ins.currentpc, salutmp1.ins,
-                        jump_addr_tmp
+                        m_logger, "SM {} warp {} 0x{:x} {} JUMP=true, jumpTO 0x{:x}", m_sm_id,
+                        warpid_convert(m_subcore_id, salutmp1.warp_id), salutmp1.ins.currentpc,
+                        salutmp1.ins, jump_addr_tmp
                     );
 #endif
                     hwarp->branch_sig = true;
@@ -206,8 +206,10 @@ void Subcore::SALU_CALC() {
                     //     std::cout << "↑currently, rs1_addr=" << salutmp1.ins.s1
                     //               << ",rs2_addr=" << salutmp1.ins.s2
                     //               << ",rd_addr=" << salutmp1.ins.d
-                    //               << ", s_regfile[rs1_addr]=" << hwarp->s_regfile[salutmp1.ins.s1]
-                    //               << ", s_regfile[rs2_addr]=" << hwarp->s_regfile[salutmp1.ins.s2]
+                    //               << ", s_regfile[rs1_addr]=" <<
+                    //               hwarp->s_regfile[salutmp1.ins.s1]
+                    //               << ", s_regfile[rs2_addr]=" <<
+                    //               hwarp->s_regfile[salutmp1.ins.s2]
                     //               << std::endl;
                     // }
 #endif
@@ -291,8 +293,9 @@ void Subcore::SALU_CALC() {
         } else { // for branch instructions
 #ifdef SPIKE_OUTPUT
             std::string log_str = fmt::format(
-                "SM {} warp {} 0x{:x} {} mask={:X}, JUMP=", m_sm_id, salutmp1.warp_id,
-                salutmp1.ins.currentpc, salutmp1.ins, salutmp1.ins.mask.to_uint64()
+                "SM {} warp {} 0x{:x} {} mask={:X}, JUMP=", m_sm_id,
+                warpid_convert(m_subcore_id, salutmp1.warp_id), salutmp1.ins.currentpc,
+                salutmp1.ins, salutmp1.ins.mask.to_uint64()
             );
 #endif
             switch (salutmp1.ins.ddd.alu_fn) {
@@ -303,7 +306,7 @@ void Subcore::SALU_CALC() {
                     hwarp->jump = 1;
                     hwarp->jump_addr = salutmp1.rss3_data;
 #ifdef SPIKE_OUTPUT
-                    log_str += fmt::format("true, jumpTO 0x{:x}", salutmp1.rss3_data.to_uint());
+                    log_str += fmt::format("true, jumpTO 0x{:x}", salutmp1.rss3_data);
 #endif
                 } else {
 #ifdef SPIKE_OUTPUT
@@ -319,7 +322,7 @@ void Subcore::SALU_CALC() {
                     hwarp->jump = 1;
                     hwarp->jump_addr = salutmp1.rss3_data;
 #ifdef SPIKE_OUTPUT
-                    log_str += fmt::format("true, jumpTO 0x{:x}", salutmp1.rss3_data.to_uint());
+                    log_str += fmt::format("true, jumpTO 0x{:x}", salutmp1.rss3_data);
 #endif
                 } else {
 #ifdef SPIKE_OUTPUT
@@ -335,7 +338,7 @@ void Subcore::SALU_CALC() {
                     hwarp->jump = 1;
                     hwarp->jump_addr = salutmp1.rss3_data;
 #ifdef SPIKE_OUTPUT
-                    log_str += fmt::format("true, jumpTO 0x{:x}", salutmp1.rss3_data.to_uint());
+                    log_str += fmt::format("true, jumpTO 0x{:x}", salutmp1.rss3_data);
 #endif
                 } else {
 #ifdef SPIKE_OUTPUT
@@ -350,7 +353,7 @@ void Subcore::SALU_CALC() {
                     hwarp->jump = 1;
                     hwarp->jump_addr = salutmp1.rss3_data;
 #ifdef SPIKE_OUTPUT
-                    log_str += fmt::format("true, jumpTO 0x{:x}", salutmp1.rss3_data.to_uint());
+                    log_str += fmt::format("true, jumpTO 0x{:x}", salutmp1.rss3_data);
 #endif
                 } else {
 #ifdef SPIKE_OUTPUT
@@ -366,7 +369,7 @@ void Subcore::SALU_CALC() {
                     hwarp->jump = 1;
                     hwarp->jump_addr = salutmp1.rss3_data;
 #ifdef SPIKE_OUTPUT
-                    log_str += fmt::format("true, jumpTO 0x{:x}", salutmp1.rss3_data.to_uint());
+                    log_str += fmt::format("true, jumpTO 0x{:x}", salutmp1.rss3_data);
 #endif
                 } else {
 #ifdef SPIKE_OUTPUT
@@ -382,7 +385,7 @@ void Subcore::SALU_CALC() {
                     hwarp->jump = 1;
                     hwarp->jump_addr = salutmp1.rss3_data;
 #ifdef SPIKE_OUTPUT
-                    log_str += fmt::format("true, jumpTO 0x{:x}", salutmp1.rss3_data.to_uint());
+                    log_str += fmt::format("true, jumpTO 0x{:x}", salutmp1.rss3_data);
 #endif
                 } else {
 #ifdef SPIKE_OUTPUT

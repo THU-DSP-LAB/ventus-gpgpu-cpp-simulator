@@ -2,12 +2,14 @@
 #define BASE_H_
 
 #include "../parameters.h"
+#include "icache.hpp"
 #include "physical_mem.hpp"
-#include "sv39.hpp"
 #include "subcore.hpp"
+#include "sv39.hpp"
 #include <array>
 #include <bitset>
 #include <functional>
+#include <map>
 #include <memory>
 #include <queue>
 #define SC_INCLUDE_DYNAMIC_PROCESSES
@@ -35,20 +37,31 @@ public:
     //         std::function<void(std::unique_ptr<lsu_mem_cmd_t>)> callback)>;
     // mem_interface_t m_l1d_cache_accept;
 
-    std::array<std::unique_ptr<Subcore>, SUBCORE_NUM> m_subcores;
+    // TODO: 目前仅仅给l1 icache使用，且仅处理时序仿真不返回数据
+    // TODO: 目前未处理l1 icache/dcache request的仲裁逻辑
+    using mem_interface_icache_t
+        = std::function<int(paddr_t addr, int sourceId, std::function<void(int)> callback)>;
+    mem_interface_icache_t l2_request;
 
-    void lsu_main();
-    void lsu_l1d_read_callback(std::unique_ptr<lsu_mem_cmd_t> cmd);
-    void lsu_l1d_write_callback(std::unique_ptr<lsu_mem_cmd_t> cmd);
-    void lsu_new_req();
+    std::array<std::unique_ptr<Subcore>, SUBCORE_NUM> m_subcores;
+    ICache m_icache;
+
+    // LSU sc_thread and its helpers
+    void lsu_main();                                                 // lsu sc_thread
+    void lsu_l1d_read_callback(std::unique_ptr<lsu_mem_cmd_t> cmd);  // callback for L1D response
+    void lsu_l1d_write_callback(std::unique_ptr<lsu_mem_cmd_t> cmd); // callback for L1D response
+    void lsu_new_req(); // launch new lsu request to L1 Dcache
 
     BASE(
         sc_core::sc_module_name name, int _sm_id,
         const std::shared_ptr<const std::vector<instable_t>>& instruction_table,
         const std::shared_ptr<const std::map<OP_TYPE, decodedat>>& decode_table,
         std::shared_ptr<PhysicalMemoryInterface> gmem, 
+        mem_interface_icache_t mem_interface_icache,
         std::shared_ptr<spdlog::logger> logger = nullptr
     );
+
+    void export_vcd_trace(sc_core::sc_trace_file* tf, const std::string& prefix) const;
 
 public:
     // shared components of subcore's warp_scheduler
@@ -82,6 +95,21 @@ public:
     void warp_endprg(int subcore_id, int subcore_warp_id, int blk_slot_id, int warp_id_in_blk);
 
     //
+    // icache instruction fetch
+    //
+
+    // subcore call this to request instruction fetch
+    void icache_subcore_request(
+        paddr_t pagetable_root, vaddr_t addr, int subcore_id, int subcore_warp_id
+    );
+    // icache call this to response instruction fetch
+    void icache_response_handler(const ICacheRsp& rsp);
+    // icache call this to launch request to L2 cache
+    int icache_l2_request(paddr_t ptroot, vaddr_t addr, unsigned sourceId);
+    // L2 cache call this to response icache
+    void icache_l2_response_callback(std::unique_ptr<lsu_mem_cmd_t> cmd);
+
+    //
     // exec
     //
 
@@ -90,6 +118,7 @@ public:
     uint8_t lsu_subcore_req_arbiter_last = 0; // round-robin arbiter
     std::bitset<SUBCORE_NUM> lsu_subcore_req_updated;
     sc_event ev_lsu_subcore_req_all_updated;
+    // subcore call this to request lsu. Only 1 request accepted per cycle (Arbiter inside)
     // 指令成功发射到lsu则返回0并将data unique_ptr转移，否则返回-1
     int lsu_subcore_req(
         bool valid, uint32_t subcore_id, uint32_t subcore_warp_id, I_TYPE instr, vaddr_t pds_base,

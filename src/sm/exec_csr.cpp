@@ -94,7 +94,7 @@ void Subcore::CSR_CALC() {
             switch (csrtmp1.ins.op) {
             case CSRRW_:
                 t = hwarp->CSR_reg[csr_addr];
-                csrtmp2.data = t;
+                csrtmp2.data[0] = t;
                 hwarp->CSR_reg[csr_addr] = csrtmp1.csrSdata1;
 #ifdef SPIKE_OUTPUT
                 SPDLOG_LOGGER_TRACE(
@@ -106,7 +106,7 @@ void Subcore::CSR_CALC() {
                 break;
             case CSRRS_:
                 t = hwarp->CSR_reg[csr_addr];
-                csrtmp2.data = t;
+                csrtmp2.data[0] = t;
                 hwarp->CSR_reg[csr_addr] = t | csrtmp1.csrSdata1;
 // std::cout << "CSRRS, t=" << std::hex << t << ", csrSdata1=" << csrtmp1.csrSdata1 << std::dec <<
 // ", ins.s1=" << csrtmp1.ins.s1 << "\n";
@@ -118,9 +118,17 @@ void Subcore::CSR_CALC() {
                 );
 #endif
                 break;
+            case CSRRSV_: {
+                auto& vcsr = hwarp->CSR_vreg[csr_addr];
+                csrtmp2.data = hwarp->CSR_vreg[csr_addr];
+                for (int i = 0; i < hw_num_thread; i++) {
+                    vcsr[i] = vcsr[i] | csrtmp1.csrSdata1;
+                }
+                break;
+            }
             case CSRRC_:
                 t = hwarp->CSR_reg[csr_addr];
-                csrtmp2.data = t;
+                csrtmp2.data[0] = t;
                 hwarp->CSR_reg[csr_addr] = t & ~csrtmp1.csrSdata1;
 #ifdef SPIKE_OUTPUT
                 SPDLOG_LOGGER_TRACE(
@@ -131,7 +139,7 @@ void Subcore::CSR_CALC() {
 #endif
                 break;
             case CSRRWI_:
-                csrtmp2.data = hwarp->CSR_reg[csr_addr];
+                csrtmp2.data[0] = hwarp->CSR_reg[csr_addr];
                 hwarp->CSR_reg[csr_addr] = csrtmp1.ins.s1;
 #ifdef SPIKE_OUTPUT
                 SPDLOG_LOGGER_TRACE(
@@ -143,7 +151,7 @@ void Subcore::CSR_CALC() {
                 break;
             case CSRRSI_:
                 t = hwarp->CSR_reg[csr_addr];
-                csrtmp2.data = t;
+                csrtmp2.data[0] = t;
                 hwarp->CSR_reg[csr_addr] = csrtmp1.ins.s1;
 #ifdef SPIKE_OUTPUT
                 SPDLOG_LOGGER_TRACE(
@@ -155,7 +163,7 @@ void Subcore::CSR_CALC() {
                 break;
             case CSRRCI_:
                 t = hwarp->CSR_reg[csr_addr];
-                csrtmp2.data = t;
+                csrtmp2.data[0] = t;
                 hwarp->CSR_reg[csr_addr] = t & ~csrtmp1.ins.s1;
 #ifdef SPIKE_OUTPUT
                 SPDLOG_LOGGER_TRACE(
@@ -166,11 +174,11 @@ void Subcore::CSR_CALC() {
 #endif
                 break;
             case VSETVLI_:
-                csrtmp2.data = hwarp->num_thread;
+                csrtmp2.data[0] = hwarp->num_thread;
                 break;
             case SETRPC_:
                 hwarp->CSR_reg[0x80c] = csrtmp1.csrSdata1 + csrtmp1.csrSdata2;
-                csrtmp2.data = 0;
+                csrtmp2.data[0] = 0;
 #ifdef SPIKE_OUTPUT
                 SPDLOG_LOGGER_TRACE(
                     m_logger, "SM {} warp {} 0x{:x} {} CSR[0x{:x}]=0x{:x}", m_sm_id,

@@ -19,6 +19,7 @@ void Subcore::WARP_SCHEDULER() {
             if (hwarp->endprg_flush_pipe) { // a warp endprg && flush_pipe finished
                 hwarp->endprg_flush_pipe.write(false);
                 hwarp->will_warp_activate = false;
+                wait_barrier[warpidx].write(false);
                 // clear block_slot & callback to CTA scheduler
                 f_warp_endprg(warpidx, hwarp->blk_slot_idx, hwarp->warp_idx_in_blk);
             }
@@ -54,7 +55,12 @@ void Subcore::WARP_SCHEDULER() {
 #endif
                 break;
             default:
-                std::cout << "warp scheduler warning, receive unrecognized instruction\n";
+                SPDLOG_LOGGER_ERROR(
+                    m_logger,
+                    "SM {} warp {} 0x{:x} {} ERROR warp scheduler unrecognized instruction",
+                    m_sm_id, warpid_convert(m_subcore_id, new_ins_warpid), new_ins.currentpc,
+                    new_ins
+                );
                 assert(0);
                 break;
             }
@@ -65,7 +71,7 @@ void Subcore::WARP_SCHEDULER() {
         // std::cout << "SM" << sm_id << " WARP SCHEDULER receive issue_list " << sc_time_stamp() <<
         // "," << sc_delta_count_at_current_time() << std::endl;
 
-        if (!opc_full | doemit) // 这是dispatch_ready，来自opc (ready-valid机制)
+        if (opc_in_ready()) // 这是dispatch_ready，来自opc (ready-valid机制)
         {
             find_dispatchwarp = false; // 是否已经确定要dispatch的warp
             for (int i = 0; i < m_hw_warps.size(); i++) {
@@ -74,12 +80,12 @@ void Subcore::WARP_SCHEDULER() {
                 if (!find_dispatchwarp && hwarp->can_dispatch && !wait_barrier[idx]
                     && hwarp->is_warp_activated) {
                     // 调试：记录 WARP_SCHEDULER 选择 warp（针对 0x8000008c）
-                    if (m_sm_id == 1 && !hwarp->ififo.isempty() && hwarp->ififo.front().currentpc == 0x8000008c) {
+                    if (m_sm_id == 1 && !hwarp->ififo.isempty() && hwarp->ififo.front()->currentpc == 0x8000008c) {
                         uint32_t global_warp = warpid_convert(m_subcore_id, idx);
                         std::cout << "[WARP_SCHEDULER] SM" << m_sm_id << " subcore" << m_subcore_id
                                   << " selected warp" << idx << " (global_warp=" << global_warp << ")"
-                                  << " ins=0x" << std::hex << hwarp->ififo.front().currentpc << std::dec
-                                  << " op=" << static_cast<int>(hwarp->ififo.front().op)
+                                  << " ins=0x" << std::hex << hwarp->ififo.front()->currentpc << std::dec
+                                  << " op=" << static_cast<int>(hwarp->ififo.front()->op)
                                   << " can_dispatch=" << hwarp->can_dispatch
                                   << " wait_barrier=" << wait_barrier[idx]
                                   << " is_warp_activated=" << hwarp->is_warp_activated
@@ -88,7 +94,7 @@ void Subcore::WARP_SCHEDULER() {
                     }
                     hwarp->dispatch_warp_valid = true;
                     dispatch_valid = true;
-                    _newissueins = hwarp->ififo.front();
+                    _newissueins = *hwarp->ififo.front();
                     _newissueins.mask = hwarp->current_mask;
                     // std::cout << "SM" << sm_id << " warp" << i % hw_num_warp << " 0x" << std::hex
                     //           << _newissueins.currentpc << std::dec << _newissueins
@@ -101,11 +107,11 @@ void Subcore::WARP_SCHEDULER() {
                     last_dispatch_warpid = idx;
                 } else {
                     // 调试：记录 dispatch_warp_valid 被清除（针对 0x8000008c）
-                    if (m_sm_id == 1 && idx == 1 && !hwarp->ififo.isempty() && hwarp->ififo.front().currentpc == 0x8000008c) {
+                    if (m_sm_id == 1 && idx == 1 && !hwarp->ififo.isempty() && hwarp->ififo.front()->currentpc == 0x8000008c) {
                         uint32_t global_warp = warpid_convert(m_subcore_id, idx);
                         std::cout << "[WARP_SCHEDULER] SM" << m_sm_id << " subcore" << m_subcore_id
                                   << " CLEAR dispatch_warp_valid: warp" << idx << " (global_warp=" << global_warp << ")"
-                                  << " ins=0x" << std::hex << hwarp->ififo.front().currentpc << std::dec
+                                  << " ins=0x" << std::hex << hwarp->ififo.front()->currentpc << std::dec
                                   << " can_dispatch=" << hwarp->can_dispatch
                                   << " wait_barrier=" << wait_barrier[idx]
                                   << " is_warp_activated=" << hwarp->is_warp_activated
