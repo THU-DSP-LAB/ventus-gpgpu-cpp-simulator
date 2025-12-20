@@ -73,13 +73,21 @@ for (int i = 0; i < hw_num_thread; ++i) {
         uint64_t req_id = req->id;
         // 也可直接捕获req迭代器，而不是再加一个req_id字段，因为std::list只要不删除此元素其迭代器就一直有效
         // 但这样编译器会报warning
-        auto ramulator_callback = [this, req_id](Ramulator::Request& _) {
+        auto ramulator_callback = [this, req_id, paddr_block](Ramulator::Request& _) {
             auto it = std::find_if(
                 m_pending_requests.begin(), m_pending_requests.end(),
                 [req_id](const request_t& r) { return r.id == req_id; }
             );
             assert(it != m_pending_requests.end());
             assert(it->cmd->opcode == L1D_OPCODE_READ);
+            if (it->cmd->data[0] == 0 && it->cmd->instr.currentpc == 0x80000058) {
+                std::cout << "[ramulator::read] SM" << it->sm_id << " warp" << it->cmd->warp_id 
+                            << " LW @ pc=0x80000058: paddr_block=0x" << std::hex << paddr_block
+                            << " blockOffset=" << static_cast<int>(it->cmd->blockOffset->at(0))
+                            << std::dec
+                            << " data_read=0x" << std::hex << it->cmd->data[0] << std::dec
+                            << " @ " << sc_time_stamp() << "\n";
+            }
             if (it->callback) {
                 it->callback(std::move(it->cmd));
             }

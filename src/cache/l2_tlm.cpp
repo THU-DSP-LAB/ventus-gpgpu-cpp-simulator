@@ -179,6 +179,7 @@ void L2_Cache::process_queue()
                 );
 
                 return_mask.fill(true);//原来的代码
+                continue; // 等待下级回调，在回调函数内部响应L1
             } 
             else if (reqExt->req.a_opcode == TL_UH_A_opcode::PutFullData) 
             {
