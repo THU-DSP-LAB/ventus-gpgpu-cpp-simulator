@@ -13,9 +13,9 @@
 #include <memory>
 #include <queue>
 #define SC_INCLUDE_DYNAMIC_PROCESSES
-#include <systemc.h>
 #include "../cache/interfaces.h"
 #include "L1D_Cache_System.hpp"
+#include <systemc.h>
 class kernel_info_t;
 class CTA_Scheduler;
 
@@ -56,8 +56,7 @@ public:
         sc_core::sc_module_name name, int _sm_id,
         const std::shared_ptr<const std::vector<instable_t>>& instruction_table,
         const std::shared_ptr<const std::map<OP_TYPE, decodedat>>& decode_table,
-        std::shared_ptr<PhysicalMemoryInterface> gmem, 
-        mem_interface_icache_t mem_interface_icache,
+        std::shared_ptr<PhysicalMemoryInterface> gmem, mem_interface_icache_t mem_interface_icache,
         std::shared_ptr<spdlog::logger> logger = nullptr
     );
 

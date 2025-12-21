@@ -42,7 +42,7 @@ inline constexpr int IFIFO_SIZE = 10;
 inline constexpr int OPCFIFO_SIZE = SUBCORE_WARP_NUM;
 inline constexpr int BANK_NUM = 4;
 inline constexpr int NUM_SM = 2;
-inline constexpr int num_register_per_warp = 256; // 每个warp寄存器数目
+inline constexpr int num_register_per_warp = 256;    // 每个warp寄存器数目
 inline constexpr int NUM_MAX_KERNEL = 8;
 inline constexpr unsigned max_concurrent_kernel = 4; // 正在运行的kernel的最大数量
 inline constexpr unsigned hw_lds_size = 0x10000000;  // core的总localmem大小
@@ -429,10 +429,10 @@ private:
 template <> struct fmt::formatter<I_TYPE> : fmt::ostream_formatter { };
 
 typedef struct lsu_mem_cmd_t {
-    bool is_shared_memory; // 访问的是shared_memory(LDS)还是global memory
-    uint8_t instrId;       // mshr index
-    uint8_t opcode;        // tilelink opcode
-    uint8_t param;         // tilelink param
+    bool is_shared_memory;  // 访问的是shared_memory(LDS)还是global memory
+    uint8_t instrId;        // mshr index
+    uint8_t opcode;         // tilelink opcode
+    uint8_t param;          // tilelink param
     sc_bv<hw_num_thread> mask;
     paddr_t pagetable_root; // pagetable root physical address for mmu
     vaddr_t cache_tag;
@@ -441,8 +441,8 @@ typedef struct lsu_mem_cmd_t {
     std::shared_ptr<const std::array<uint8_t, hw_num_thread>> wordOffset1H;
     std::shared_ptr<const std::array<uint32_t, hw_num_thread>> addr; // for debug
     std::array<uint32_t, hw_num_thread> data;
-    uint8_t warp_id; // only for debug
-    I_TYPE instr;    // only for debug
+    uint8_t warp_id;                                                 // only for debug
+    I_TYPE instr;                                                    // only for debug
 } lsu_mem_cmd_t;
 
 class event_if : virtual public sc_interface // "if" means interface
@@ -1014,7 +1014,7 @@ public:
     struct regext_t {
         bool valid;
         int ext1, ext2, ext3, extd, extimm;
-    } regext; // decode stage regext prefix-instruction info
+    } regext;                                  // decode stage regext prefix-instruction info
 
     sc_signal<bool, SC_MANY_WRITERS> pc_valid; // PC to fetch
     sc_signal<bool, SC_MANY_WRITERS> jump, branch_sig,
@@ -1041,7 +1041,7 @@ public:
     // regfile
     std::array<reg_t, num_register_per_warp> s_regfile;
     std::array<v_regfile_t, num_register_per_warp> v_regfile;
-    std::unordered_map<int, reg_t> CSR_reg; // 标量CSR
+    std::unordered_map<int, reg_t> CSR_reg;                             // 标量CSR
     std::unordered_map<int, std::array<reg_t, hw_num_thread>> CSR_vreg; // 向量CSR
     // simt-stack
     std::stack<simtstack_t> IPDOM_stack;

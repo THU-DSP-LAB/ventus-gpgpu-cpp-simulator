@@ -154,8 +154,8 @@ void Subcore::VFPU_CALC() {
             //     vfputmp2.rdf1_data[0] = std::bit_cast<int>((float)vfputmp1.vfpuSdata1[0]);
             //     break;
             // case FCVT_S_WU_:
-            //     vfputmp2.rdf1_data[0] = std::bit_cast<int>((float)(unsigned)vfputmp1.vfpuSdata1[0]);
-            //     break;
+            //     vfputmp2.rdf1_data[0] =
+            //     std::bit_cast<int>((float)(unsigned)vfputmp1.vfpuSdata1[0]); break;
             // case FMADD_S_:
             //     source_f1 = std::bit_cast<float>(vfputmp1.vfpuSdata1[0]);
             //     source_f2 = std::bit_cast<float>(vfputmp1.vfpuSdata2[0]);
@@ -202,7 +202,8 @@ void Subcore::VFPU_CALC() {
             //     break;
             // case FSGNJ_S_:
             //     vfputmp2.rdf1_data[0]
-            //         = (vfputmp1.vfpuSdata1[0] & 0x7fffffff) | (vfputmp1.vfpuSdata2[0] & 0x80000000);
+            //         = (vfputmp1.vfpuSdata1[0] & 0x7fffffff) | (vfputmp1.vfpuSdata2[0] &
+            //         0x80000000);
             //     break;
             // case FSGNJN_S_:
             //     vfputmp2.rdf1_data[0] = (vfputmp1.vfpuSdata1[0] & 0x7fffffff)
@@ -210,7 +211,8 @@ void Subcore::VFPU_CALC() {
             //     break;
             // case FSGNJX_S_:
             //     vfputmp2.rdf1_data[0] = (vfputmp1.vfpuSdata1[0] & 0x7fffffff)
-            //         | ((vfputmp1.vfpuSdata2[0] & 0x80000000) ^ (vfputmp1.vfpuSdata2[0] & 0x80000000)
+            //         | ((vfputmp1.vfpuSdata2[0] & 0x80000000) ^ (vfputmp1.vfpuSdata2[0] &
+            //         0x80000000)
             //         );
             //     break;
             // case FMIN_S_:

@@ -20,14 +20,14 @@ void Subcore::CSR_IN() {
 
             csr_dq.push(new_data);
             // 调试：打印 CSR_IN 接收的指令（针对 SM1 warp1 在 0x80000088-0x800000c0）
-            if (m_sm_id == 1 && emitins_warpid == 1 && emit_ins.read().currentpc >= 0x80000088 && emit_ins.read().currentpc <= 0x800000c0) {
+            if (m_sm_id == 1 && emitins_warpid == 1 && emit_ins.read().currentpc >= 0x80000088
+                && emit_ins.read().currentpc <= 0x800000c0) {
                 uint32_t global_warp = warpid_convert(m_subcore_id, emitins_warpid);
-                std::cout << "[CSR_IN] SM" << m_sm_id << " subcore" << m_subcore_id
-                          << " warp" << emitins_warpid << " (global_warp=" << global_warp << ")"
+                std::cout << "[CSR_IN] SM" << m_sm_id << " subcore" << m_subcore_id << " warp"
+                          << emitins_warpid << " (global_warp=" << global_warp << ")"
                           << " ins=0x" << std::hex << emit_ins.read().currentpc << std::dec
                           << " op=" << static_cast<int>(emit_ins.read().op)
-                          << " tocsr_data1=" << tocsr_data1
-                          << " tocsr_data2=" << tocsr_data2
+                          << " tocsr_data1=" << tocsr_data1 << " tocsr_data2=" << tocsr_data2
                           << " @ " << sc_time_stamp() << std::endl;
             }
             // if (sm_id == 0)
@@ -78,14 +78,15 @@ void Subcore::CSR_CALC() {
         csr_dq.pop();
         auto& hwarp = m_hw_warps[csrtmp1.warp_id];
         // 调试：打印 CSR_CALC 处理的指令（针对 SM1 warp1 在 0x80000088-0x800000c0）
-        if (m_sm_id == 1 && csrtmp1.warp_id == 1 && csrtmp1.ins.currentpc >= 0x80000088 && csrtmp1.ins.currentpc <= 0x800000c0) {
+        if (m_sm_id == 1 && csrtmp1.warp_id == 1 && csrtmp1.ins.currentpc >= 0x80000088
+            && csrtmp1.ins.currentpc <= 0x800000c0) {
             uint32_t global_warp = warpid_convert(m_subcore_id, csrtmp1.warp_id);
-            std::cout << "[CSR_CALC] SM" << m_sm_id << " subcore" << m_subcore_id
-                      << " warp" << csrtmp1.warp_id << " (global_warp=" << global_warp << ")"
+            std::cout << "[CSR_CALC] SM" << m_sm_id << " subcore" << m_subcore_id << " warp"
+                      << csrtmp1.warp_id << " (global_warp=" << global_warp << ")"
                       << " ins=0x" << std::hex << csrtmp1.ins.currentpc << std::dec
                       << " op=" << static_cast<int>(csrtmp1.ins.op)
-                      << " csrSdata1=" << csrtmp1.csrSdata1
-                      << " @ " << sc_time_stamp() << std::endl;
+                      << " csrSdata1=" << csrtmp1.csrSdata1 << " @ " << sc_time_stamp()
+                      << std::endl;
         }
         if (csrtmp1.ins.ddd.wxd | csrtmp1.ins.ddd.wvd) {
             csrtmp2.ins = csrtmp1.ins;
@@ -195,15 +196,15 @@ void Subcore::CSR_CALC() {
             }
             csrfifo.push(csrtmp2);
             // 调试：打印 CSR 结果推入 fifo（针对 SM1 warp1 在 0x80000088-0x800000c0）
-            if (m_sm_id == 1 && csrtmp2.warp_id == 1 && csrtmp2.ins.currentpc >= 0x80000088 && csrtmp2.ins.currentpc <= 0x800000c0) {
+            if (m_sm_id == 1 && csrtmp2.warp_id == 1 && csrtmp2.ins.currentpc >= 0x80000088
+                && csrtmp2.ins.currentpc <= 0x800000c0) {
                 uint32_t global_warp = warpid_convert(m_subcore_id, csrtmp2.warp_id);
                 std::cout << "[CSR_CALC->fifo] SM" << m_sm_id << " subcore" << m_subcore_id
                           << " warp" << csrtmp2.warp_id << " (global_warp=" << global_warp << ")"
                           << " ins=0x" << std::hex << csrtmp2.ins.currentpc << std::dec
                           << " op=" << static_cast<int>(csrtmp2.ins.op)
-                          << " rd=" << static_cast<int>(csrtmp2.ins.d)
-                          << " data=0x" << std::hex << csrtmp2.data << std::dec
-                          << " @ " << sc_time_stamp() << std::endl;
+                          << " rd=" << static_cast<int>(csrtmp2.ins.d) << " data=0x" << std::hex
+                          << csrtmp2.data << std::dec << " @ " << sc_time_stamp() << std::endl;
             }
             // if (sm_id == 0)
             //     std::cout << "SM" << sm_id << " CSRfifo push data ins=" << csrtmp2.ins << ",

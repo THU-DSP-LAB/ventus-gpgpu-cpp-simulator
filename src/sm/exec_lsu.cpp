@@ -67,7 +67,7 @@ int BASE::sharedMem_request(const std::unique_ptr<lsu_mem_cmd_t>& cmd) {
         sc_bv<4> wordOffset1H = cmd->wordOffset1H->at(threadidx);
         uint32_t addr = (cmd->addr->at(threadidx) & ~0b11); // {tag,setIdx,blockOffset} in RTL
         data = cmd->data[threadidx];
-        for (int i = 0; i < 4; i++) { // a word
+        for (int i = 0; i < 4; i++) {                       // a word
             if (addr + i < ldsBaseAddr_core || addr + i >= ldsBaseAddr_core + hw_lds_size) {
                 SPDLOG_LOGGER_ERROR(
                     m_logger, "SM {} warp {} 0x{:x} {}: LDS access out of range: addr=0x{:x}",
@@ -75,7 +75,7 @@ int BASE::sharedMem_request(const std::unique_ptr<lsu_mem_cmd_t>& cmd) {
                 );
                 return -1;
             }
-            if (cmd->opcode == L1D_OPCODE_READ) { // load
+            if (cmd->opcode == L1D_OPCODE_READ) {         // load
                 data_bytes[i] = m_local_mem[addr - ldsBaseAddr_core + i];
             } else if (cmd->opcode == L1D_OPCODE_WRITE) { // store
                 if (wordOffset1H[i]) {
@@ -122,10 +122,10 @@ static uint8_t wordOffset1H_calc(uint32_t addr, const I_TYPE& instr) {
 
 void BASE::lsu_new_req() {
     if (m_lsu_subcore_req_queue.size() != 1 && m_lsu_subcore_req_queue.size() != 2) {
-        std::cerr << "[ERROR] lsu_new_req: m_lsu_subcore_req_queue.size()=" 
-                  << m_lsu_subcore_req_queue.size() << " (expected 1 or 2) @ " 
-                  << sc_time_stamp() << std::endl;
-    assert(m_lsu_subcore_req_queue.size() == 1 || m_lsu_subcore_req_queue.size() == 2);
+        std::cerr << "[ERROR] lsu_new_req: m_lsu_subcore_req_queue.size()="
+                  << m_lsu_subcore_req_queue.size() << " (expected 1 or 2) @ " << sc_time_stamp()
+                  << std::endl;
+        assert(m_lsu_subcore_req_queue.size() == 1 || m_lsu_subcore_req_queue.size() == 2);
     }
     auto& req = m_lsu_subcore_req_queue.front();
     int warp_id = warpid_convert(req.subcore_id, req.subcore_warp_id);
@@ -229,7 +229,7 @@ void BASE::lsu_new_req() {
     }
     mshr_it->valid = true;
     mshr_it->warp_id = warp_id;
-    mshr_it->instr = instr; // 包括写回、regidx、mask、unsigned等指令decode信息
+    mshr_it->instr = instr;         // 包括写回、regidx、mask、unsigned等指令decode信息
     mshr_it->wordOffset1H = wordOffset1H_ptr;
     mshr_it->finished_mask = ~mask; // 非活跃⇔已完成，finish_mask全1时此MSHR项目可返回
     mshr_it->addr = addr_ptr;       // debug用的冗余信息
@@ -289,8 +289,12 @@ void BASE::lsu_new_req() {
         std::unique_ptr<lsu_mem_cmd_t> cmd = std::make_unique<lsu_mem_cmd_t>();
         cmd->instrId = mshr_idx;
         cmd->pagetable_root = req.pagetable_root;
-        SPDLOG_LOGGER_DEBUG(m_logger, "[exec_lsu::lsu_new_req] SM{} warp{} req.pagetable_root=0x{:x} -> cmd->pagetable_root=0x{:x}", 
-            sm_id, warp_id, req.pagetable_root, cmd->pagetable_root);
+        SPDLOG_LOGGER_DEBUG(
+            m_logger,
+            "[exec_lsu::lsu_new_req] SM{} warp{} req.pagetable_root=0x{:x} -> "
+            "cmd->pagetable_root=0x{:x}",
+            sm_id, warp_id, req.pagetable_root, cmd->pagetable_root
+        );
         cmd->warp_id = warp_id;
         cmd->instr = instr;
         cmd->opcode = _cmd_opcode;
@@ -361,7 +365,7 @@ void BASE::lsu_main() { // LSU sc_thread
             // Defense check: only call lsu_new_req() if queue is not empty
             // This can happen if emito_lsu signal is still true but queue was already processed
             if (!m_lsu_subcore_req_queue.empty()) {
-            lsu_new_req();
+                lsu_new_req();
             }
         }
 
@@ -378,7 +382,7 @@ void BASE::lsu_main() { // LSU sc_thread
                 // shared memory access
                 if (sharedMem_request(cmd) != 0) { // 此函数会自行写入mshr
                     assert(0);
-                } else { // shared_memory access ok
+                } else {                           // shared_memory access ok
                     m_lsu_mem_cmd_queue.pop();
                 }
             } else { // global memory access (经由 L1D_Cache_System::accept 回调式接口)
@@ -388,7 +392,7 @@ void BASE::lsu_main() { // LSU sc_thread
                                                             : callback;
                 // L1D_Cache_System::accept 为阻塞式：写入内部 FIFO 成功后返回 0
                 int failed = m_l1d_cache->accept(cmd, callback);
-                if (!failed) { // cmd accepted
+                if (!failed) {             // cmd accepted
                     m_lsu_mem_cmd_queue.pop();
                 } else if (failed == -1) { // something wrong in the cmd
                     if (cmd->instr.ddd.isvec) {
@@ -453,9 +457,10 @@ void BASE::lsu_l1d_read_callback(std::unique_ptr<lsu_mem_cmd_t> cmd) {
     assert(cmd && cmd->opcode == L1D_OPCODE_READ);
     assert(m_lsu_mshr.at(cmd->instrId).valid);
     auto& mshr_item = m_lsu_mshr[cmd->instrId];
-    SPDLOG_LOGGER_INFO(m_logger,
-        "L1D read callback: SM {} warp {} instrId={} pc=0x{:x}",
-        sm_id, cmd->warp_id, cmd->instrId, cmd->instr.currentpc);
+    SPDLOG_LOGGER_INFO(
+        m_logger, "L1D read callback: SM {} warp {} instrId={} pc=0x{:x}", sm_id, cmd->warp_id,
+        cmd->instrId, cmd->instr.currentpc
+    );
     for (int i = 0; i < hw_num_thread; i++) {
         if (cmd->mask[i]) {
             assert(!mshr_item.finished_mask[i]);
@@ -474,9 +479,10 @@ void BASE::lsu_l1d_write_callback(std::unique_ptr<lsu_mem_cmd_t> cmd) {
     assert(cmd && cmd->opcode == L1D_OPCODE_WRITE);
     assert(m_lsu_mshr.at(cmd->instrId).valid);
     auto& mshr_item = m_lsu_mshr[cmd->instrId];
-     SPDLOG_LOGGER_INFO(m_logger,
-        "L1D write callback: SM {} warp {} instrId={} pc=0x{:x}",
-        sm_id, cmd->warp_id, cmd->instrId, cmd->instr.currentpc);
+    SPDLOG_LOGGER_INFO(
+        m_logger, "L1D write callback: SM {} warp {} instrId={} pc=0x{:x}", sm_id, cmd->warp_id,
+        cmd->instrId, cmd->instr.currentpc
+    );
     // TODO: 目前Ramulator的写操作只表明成功接受，不在执行完毕后回调
     // 此回调函数实质上在Ramulator接受写操作后就被回调
     for (int i = 0; i < hw_num_thread; i++) {
@@ -486,5 +492,4 @@ void BASE::lsu_l1d_write_callback(std::unique_ptr<lsu_mem_cmd_t> cmd) {
     }
     mshr_item.finished_mask |= cmd->mask;
     SPDLOG_INFO("[L1D Callback] warp={}, pc=0x{:x} data ready", cmd->warp_id, cmd->instr.currentpc);
-
 };

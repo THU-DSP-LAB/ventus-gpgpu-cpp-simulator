@@ -88,7 +88,7 @@ private:
     // Static: only determined by the testcase/host
     //
     meta_data_t m_metadata;
-    dim3 m_grid_dim;      // grid size 3D (number of blocks)
+    dim3 m_grid_dim;                            // grid size 3D (number of blocks)
     std::function<void()> m_finish_callback;    // callback this when kernel finished
     std::function<void()> m_load_data_callback; // callback this when kernel finished
 

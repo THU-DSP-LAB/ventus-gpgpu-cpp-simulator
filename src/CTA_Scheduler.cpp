@@ -148,7 +148,7 @@ void CTA_Scheduler::warp_finished(int sm_idx, int blk_slot_idx, int warp_idx_in_
     assert(sm.rsrc.blk_slots.at(blk_slot_idx).valid == true);
     assert(sm.rsrc.blk_slots.at(blk_slot_idx).warp_finished.at(warp_idx_in_blk) == false);
     sm.rsrc.blk_slots[blk_slot_idx].warp_finished[warp_idx_in_blk] = true;
-    
+
     // 调试信息：打印warp完成情况
     std::shared_ptr<kernel_info_t> kernel = sm.rsrc.blk_slots[blk_slot_idx].kernel;
     int blk_idx = sm.rsrc.blk_slots[blk_slot_idx].block_idx;
@@ -157,13 +157,10 @@ void CTA_Scheduler::warp_finished(int sm_idx, int blk_slot_idx, int warp_idx_in_
         sm.rsrc.blk_slots[blk_slot_idx].warp_finished.begin() + kernel->get_num_warp_per_cta(),
         [](bool finished) { return finished; }
     );
-    std::cout << "[CTA_Scheduler::warp_finished] SM" << sm_idx 
-              << " block_slot=" << blk_slot_idx 
-              << " warp=" << warp_idx_in_blk
-              << " kernel=" << kernel->get_kid()
-              << " block=" << blk_idx
-              << " finished_warps=" << finished_count << "/" << kernel->get_num_warp_per_cta()
-              << " @ " << sc_time_stamp() << std::endl;
+    std::cout << "[CTA_Scheduler::warp_finished] SM" << sm_idx << " block_slot=" << blk_slot_idx
+              << " warp=" << warp_idx_in_blk << " kernel=" << kernel->get_kid()
+              << " block=" << blk_idx << " finished_warps=" << finished_count << "/"
+              << kernel->get_num_warp_per_cta() << " @ " << sc_time_stamp() << std::endl;
 }
 
 void CTA_Scheduler::collect_finished_blocks() {
@@ -173,7 +170,8 @@ void CTA_Scheduler::collect_finished_blocks() {
     if (call_count % 100000 == 0) {
         // 大幅减少输出，只在每100000次打印一次
         if (call_count % 10000 == 0) {
-            std::cout << "[CTA_Scheduler::collect_finished_blocks] called " << call_count << " times @ " << sc_time_stamp() << std::endl;
+            std::cout << "[CTA_Scheduler::collect_finished_blocks] called " << call_count
+                      << " times @ " << sc_time_stamp() << std::endl;
         }
     }
     for (int sm_idx = 0; sm_idx < NUM_SM; sm_idx++) {
@@ -202,8 +200,7 @@ void CTA_Scheduler::collect_finished_blocks() {
                 kernel->m_block_status[blk_idx] = kernel_info_t::BLOCK_STATUS_FINISHED;
                 std::cout << "[CTA_Scheduler::collect_finished_blocks] ✅ Block finished: "
                           << "kernel=" << kernel->get_kid() << " (" << kernel->get_kname() << ")"
-                          << " block=" << blk_idx
-                          << " @ " << sc_time_stamp() << std::endl;
+                          << " block=" << blk_idx << " @ " << sc_time_stamp() << std::endl;
                 SPDLOG_LOGGER_DEBUG(
                     m_logger, "kernel {} {} block {} finished", kernel->get_kid(),
                     kernel->get_kname(), blk_idx
@@ -354,21 +351,27 @@ bool CTA_Scheduler::kernel_add(std::shared_ptr<kernel_info_t> kernel) {
 
 void CTA_Scheduler::debug_print_kernel_status() const {
     std::cout << "[CTA_Scheduler::debug_print_kernel_status] "
-              << "waiting=" << m_waiting_kernels.size()
-              << " running=" << m_running_kernels.size()
+              << "waiting=" << m_waiting_kernels.size() << " running=" << m_running_kernels.size()
               << " finished=" << m_finished_kernels.size()
-              << " is_idle=" << (is_idle() ? "true" : "false")
-              << std::endl;
+              << " is_idle=" << (is_idle() ? "true" : "false") << std::endl;
     if (!m_running_kernels.empty()) {
         std::cout << "  Running kernels:" << std::endl;
         for (const auto& k : m_running_kernels) {
             std::string kname = k->get_kname();
-            std::cout << "    - kernel " << k->get_kid() << " (" << (kname.empty() ? "unknown" : kname) << ")"
-                      << " status=" << (k->is_running() ? "RUNNING" : (k->is_finished() ? "FINISHED" : "WAIT"))
-                      << " blocks_running=" << std::count_if(k->m_block_status.begin(), k->m_block_status.end(),
-                                                             [](int s) { return s == kernel_info_t::BLOCK_STATUS_RUNNING; })
-                      << " blocks_finished=" << std::count_if(k->m_block_status.begin(), k->m_block_status.end(),
-                                                               [](int s) { return s == kernel_info_t::BLOCK_STATUS_FINISHED; })
+            std::cout << "    - kernel " << k->get_kid() << " ("
+                      << (kname.empty() ? "unknown" : kname) << ")"
+                      << " status="
+                      << (k->is_running() ? "RUNNING" : (k->is_finished() ? "FINISHED" : "WAIT"))
+                      << " blocks_running="
+                      << std::count_if(
+                             k->m_block_status.begin(), k->m_block_status.end(),
+                             [](int s) { return s == kernel_info_t::BLOCK_STATUS_RUNNING; }
+                         )
+                      << " blocks_finished="
+                      << std::count_if(
+                             k->m_block_status.begin(), k->m_block_status.end(),
+                             [](int s) { return s == kernel_info_t::BLOCK_STATUS_FINISHED; }
+                         )
                       << std::endl;
         }
     }

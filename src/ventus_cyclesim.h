@@ -41,8 +41,8 @@ typedef struct ventus_kernel_metadata_t { // 这个metadata是供驱动使用的
     uint64_t num_thread_global[3]; // 全局三维thread数目
     uint64_t num_thread_local[3];  // 线程块内三维thread数目
     uint64_t threadIdxOffset[3];   // global threadIdx偏移量
-    uint64_t num_buffer;   // buffer的数目，包括pc
-    uint64_t* buffer_base; // 各buffer的基址。第一块buffer是给硬件用的metadata
+    uint64_t num_buffer;           // buffer的数目，包括pc
+    uint64_t* buffer_base;         // 各buffer的基址。第一块buffer是给硬件用的metadata
     uint64_t* buffer_size; // 各buffer的size，以Bytes为单位。实际使用的大小，用于初始化.data
     uint64_t* buffer_allocsize; // 各buffer的size，以Bytes为单位。分配的大小
 

@@ -123,13 +123,17 @@ void Top_gpgpu::add_kernel(
     std::function<void(const ventus_kernel_metadata_t*)> load_data_callback,
     std::function<void(const ventus_kernel_metadata_t*)> finish_callback
 ) {
-    SPDLOG_LOGGER_INFO(m_logger, "[Top_gpgpu::add_kernel] Received kernel {} with pagetable=0x{:x}", 
-        metadata.name ? metadata.name : "unknown", metadata.pagetable);
+    SPDLOG_LOGGER_INFO(
+        m_logger, "[Top_gpgpu::add_kernel] Received kernel {} with pagetable=0x{:x}",
+        metadata.name ? metadata.name : "unknown", metadata.pagetable
+    );
     std::shared_ptr<kernel_info_t> kernel
         = std::make_shared<kernel_info_t>(metadata, load_data_callback, finish_callback, m_logger);
     assert(kernel);
-    SPDLOG_LOGGER_INFO(m_logger, "[Top_gpgpu::add_kernel] Created kernel_info_t, kernel->get_pagetable()=0x{:x}", 
-        kernel->get_pagetable());
+    SPDLOG_LOGGER_INFO(
+        m_logger, "[Top_gpgpu::add_kernel] Created kernel_info_t, kernel->get_pagetable()=0x{:x}",
+        kernel->get_pagetable()
+    );
     kernel->activate();
     m_cta->kernel_add(kernel);
     m_kernel_cnt++;
@@ -142,9 +146,11 @@ int Top_gpgpu::pmemcpy_h2d(paddr_t dst, const void* src, size_t size) {
     return m_gmem->write(dst, src, size);
 }
 
-Top_gpgpu::pagetable_t Top_gpgpu::vmem_create() { 
+Top_gpgpu::pagetable_t Top_gpgpu::vmem_create() {
     pagetable_t ptroot = m_sv39->create_pagetable();
-    SPDLOG_LOGGER_INFO(m_logger, "[Top_gpgpu::vmem_create] Created new pagetable_root=0x{:x}", ptroot);
+    SPDLOG_LOGGER_INFO(
+        m_logger, "[Top_gpgpu::vmem_create] Created new pagetable_root=0x{:x}", ptroot
+    );
     return ptroot;
 }
 void Top_gpgpu::vmem_destroy(pagetable_t root) { m_sv39->destroy_pagetable(root); }

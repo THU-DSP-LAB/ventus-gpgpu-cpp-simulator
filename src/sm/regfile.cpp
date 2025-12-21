@@ -57,20 +57,22 @@ void Subcore::READ_REG() {
                 if (opc_banktype[row][col] == 0) {
                     read_data[i].fill(m_hw_warps[tmp.warp_id]->s_regfile[tmp.addr]);
                     // Debug output for JALR-related register reads
-                    if (opcfifo[row].ins.ddd.sel_alu3 == DecodeParams::sel_alu3_t::A3_PC 
+                    if (opcfifo[row].ins.ddd.sel_alu3 == DecodeParams::sel_alu3_t::A3_PC
                         && opcfifo[row].ins.ddd.branch == DecodeParams::branch_t::B_R && col == 2) {
-                        std::cout << "[regfile::read] JALR: bank=" << i << " warp_id=" << tmp.warp_id 
-                                  << " reg_addr=" << tmp.addr << " value=0x" << std::hex 
+                        std::cout << "[regfile::read] JALR: bank=" << i
+                                  << " warp_id=" << tmp.warp_id << " reg_addr=" << tmp.addr
+                                  << " value=0x" << std::hex
                                   << m_hw_warps[tmp.warp_id]->s_regfile[tmp.addr] << std::dec
                                   << " @ " << sc_time_stamp() << "\n";
                     }
                     // 调试：打印 VMV_V_X 指令从标量寄存器读取的数据
-                    if (opcfifo[row].ins.currentpc >= 0x800000b4 && opcfifo[row].ins.currentpc <= 0x800000c0 &&
-                        static_cast<int>(opcfifo[row].ins.op) == static_cast<int>(VMV_V_X_) && col == 0 &&
-                        opcfifo[row].ins.ddd.sel_alu1 == DecodeParams::A1_RS1) {
-                        std::cout << "[regfile::read] VMV_V_X: bank=" << i << " warp_id=" << tmp.warp_id
-                                  << " reg_addr=" << tmp.addr << " s1=" << opcfifo[row].ins.s1
-                                  << " value=0x" << std::hex 
+                    if (opcfifo[row].ins.currentpc >= 0x800000b4
+                        && opcfifo[row].ins.currentpc <= 0x800000c0
+                        && static_cast<int>(opcfifo[row].ins.op) == static_cast<int>(VMV_V_X_)
+                        && col == 0 && opcfifo[row].ins.ddd.sel_alu1 == DecodeParams::A1_RS1) {
+                        std::cout << "[regfile::read] VMV_V_X: bank=" << i
+                                  << " warp_id=" << tmp.warp_id << " reg_addr=" << tmp.addr
+                                  << " s1=" << opcfifo[row].ins.s1 << " value=0x" << std::hex
                                   << m_hw_warps[tmp.warp_id]->s_regfile[tmp.addr] << std::dec
                                   << " @ " << sc_time_stamp() << "\n";
                     }

@@ -210,7 +210,7 @@ void Subcore::VALU_CALC() {
                 assert(0);
                 break;
             }
-            for(int i = 0; i < hwarp->CSR_reg[0x802]; i++) {
+            for (int i = 0; i < hwarp->CSR_reg[0x802]; i++) {
                 valutmp2.rdv1_data[i] = dst[i].i32;
             }
             valufifo.push(valutmp2);

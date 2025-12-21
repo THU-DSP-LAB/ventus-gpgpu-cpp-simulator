@@ -44,26 +44,29 @@ void Subcore::OPC_FIFO() {
         // TODO: 按目前的事件顺序，若发生某ins进入OPC而立刻ready，则会有问题，后续要修改
         if (dispatch_valid) {
             // 调试：检查 dispatch_valid 但未 push 的情况（针对 0x8000008c）
-            if (m_sm_id == 1 && issue_ins.read().currentpc >= 0x80000080 && issue_ins.read().currentpc <= 0x800000c0) {
+            if (m_sm_id == 1 && issue_ins.read().currentpc >= 0x80000080
+                && issue_ins.read().currentpc <= 0x800000c0) {
                 uint32_t global_warp = warpid_convert(m_subcore_id, issueins_warpid);
-                std::cout << "[OPC_FIFO] dispatch_valid=1: SM" << m_sm_id << " subcore" << m_subcore_id
-                          << " warp" << issueins_warpid << " (global_warp=" << global_warp << ")"
+                std::cout << "[OPC_FIFO] dispatch_valid=1: SM" << m_sm_id << " subcore"
+                          << m_subcore_id << " warp" << issueins_warpid
+                          << " (global_warp=" << global_warp << ")"
                           << " pc=0x" << std::hex << issue_ins.read().currentpc << std::dec
                           << " op=" << static_cast<int>(issue_ins.read().op)
-                          << " opc_full=" << opc_full
-                          << " doemit=" << doemit
-                          << " @ " << sc_time_stamp() << std::endl;
+                          << " opc_full=" << opc_full << " doemit=" << doemit << " @ "
+                          << sc_time_stamp() << std::endl;
             }
             if (!opc_in_ready()) // 相当于上一cycle dispatch_ready
             {
                 // 调试：记录因 opc_full 而未 push 的情况
-                if (m_sm_id == 1 && issue_ins.read().currentpc >= 0x80000080 && issue_ins.read().currentpc <= 0x800000c0) {
+                if (m_sm_id == 1 && issue_ins.read().currentpc >= 0x80000080
+                    && issue_ins.read().currentpc <= 0x800000c0) {
                     uint32_t global_warp = warpid_convert(m_subcore_id, issueins_warpid);
-                    std::cout << "[OPC_FIFO] ⚠️ SKIP push: SM" << m_sm_id << " subcore" << m_subcore_id
-                              << " warp" << issueins_warpid << " (global_warp=" << global_warp << ")"
+                    std::cout << "[OPC_FIFO] ⚠️ SKIP push: SM" << m_sm_id << " subcore"
+                              << m_subcore_id << " warp" << issueins_warpid
+                              << " (global_warp=" << global_warp << ")"
                               << " pc=0x" << std::hex << issue_ins.read().currentpc << std::dec
-                              << " opc_full=" << opc_full << " doemit=" << doemit
-                              << " @ " << sc_time_stamp() << std::endl;
+                              << " opc_full=" << opc_full << " doemit=" << doemit << " @ "
+                              << sc_time_stamp() << std::endl;
                 }
                 // if not ready, just wait, no need throw ERROR
                 // std::cout << "OPC ERROR: is full but receive ins from issue at " <<
@@ -152,16 +155,18 @@ void Subcore::OPC_FIFO() {
 
                 opcfifo.push(newopcdat);
                 // 调试：打印推入 OPC_FIFO 的指令（聚焦 0x80000080-0x800000c0，全部 warp）
-                if (m_sm_id == 1 && _readdata4.currentpc >= 0x80000080 && _readdata4.currentpc <= 0x800000c0) {
+                if (m_sm_id == 1 && _readdata4.currentpc >= 0x80000080
+                    && _readdata4.currentpc <= 0x800000c0) {
                     uint32_t global_warp = warpid_convert(m_subcore_id, _readwarpid);
                     std::cout << "[OPC_FIFO::push] SM" << m_sm_id << " subcore" << m_subcore_id
                               << " warp" << _readwarpid << " (global_warp=" << global_warp << ")"
                               << " pc=0x" << std::hex << _readdata4.currentpc << std::dec
-                              << " op=" << static_cast<int>(_readdata4.op)
-                              << " ready=[" << in_ready[0] << "," << in_ready[1] << "," << in_ready[2] << "]"
-                              << " valid=[" << in_valid[0] << "," << in_valid[1] << "," << in_valid[2] << "]"
-                              << " opcfifo.size()=" << opcfifo.get_size()
-                              << " @ " << sc_time_stamp() << std::endl;
+                              << " op=" << static_cast<int>(_readdata4.op) << " ready=["
+                              << in_ready[0] << "," << in_ready[1] << "," << in_ready[2] << "]"
+                              << " valid=[" << in_valid[0] << "," << in_valid[1] << ","
+                              << in_valid[2] << "]"
+                              << " opcfifo.size()=" << opcfifo.get_size() << " @ "
+                              << sc_time_stamp() << std::endl;
                 }
             }
         }
@@ -189,27 +194,33 @@ void Subcore::OPC_FIFO() {
                     opcfifo[i].data[j] = read_data[opcfifo[i].srcaddr[j].bank_id];
                     printdata_ = read_data[opcfifo[i].srcaddr[j].bank_id];
                     // 调试：打印指令从标量寄存器读取的数据（扩展范围到 0x80000088-0x800000c0）
-                    if (m_sm_id == 1 && opcfifo[i].warp_id == 1 && opcfifo[i].ins.currentpc >= 0x80000088 && opcfifo[i].ins.currentpc <= 0x800000c0 &&
-                        j == 0 && opcfifo[i].ins.ddd.sel_alu1 == DecodeParams::A1_RS1) {
+                    if (m_sm_id == 1 && opcfifo[i].warp_id == 1
+                        && opcfifo[i].ins.currentpc >= 0x80000088
+                        && opcfifo[i].ins.currentpc <= 0x800000c0 && j == 0
+                        && opcfifo[i].ins.ddd.sel_alu1 == DecodeParams::A1_RS1) {
                         // 检查是否是标量寄存器（通过 sel_alu1 == A1_RS1）
                         if (opcfifo[i].ins.ddd.sel_alu1 == DecodeParams::A1_RS1) {
-                            std::cout << "[OPC_FIFO::store_data] SM" << m_sm_id << " warp=" << opcfifo[i].warp_id
-                                      << " pc=0x" << std::hex << opcfifo[i].ins.currentpc << std::dec
+                            std::cout << "[OPC_FIFO::store_data] SM" << m_sm_id
+                                      << " warp=" << opcfifo[i].warp_id << " pc=0x" << std::hex
+                                      << opcfifo[i].ins.currentpc << std::dec
                                       << " op=" << static_cast<int>(opcfifo[i].ins.op)
                                       << " s1=" << opcfifo[i].ins.s1
                                       << " bank_id=" << opcfifo[i].srcaddr[j].bank_id
                                       << " bank_addr=" << opcfifo[i].srcaddr[j].addr
-                                      << " banktype=" << opcfifo[i].banktype[j]
-                                      << " data[0][0]=0x" << std::hex << opcfifo[i].data[j][0] << std::dec
-                                      << " @ " << sc_time_stamp() << std::endl;
+                                      << " banktype=" << opcfifo[i].banktype[j] << " data[0][0]=0x"
+                                      << std::hex << opcfifo[i].data[j][0] << std::dec << " @ "
+                                      << sc_time_stamp() << std::endl;
                         }
                     }
                     // Debug output for JALR instruction
-                    if (opcfifo[i].ins.ddd.sel_alu3 == DecodeParams::sel_alu3_t::A3_PC 
+                    if (opcfifo[i].ins.ddd.sel_alu3 == DecodeParams::sel_alu3_t::A3_PC
                         && opcfifo[i].ins.ddd.branch == DecodeParams::branch_t::B_R && j == 2) {
-                        // std::cout << "[opc::store_data] JALR ins: pc=0x" << std::hex << opcfifo[i].ins.currentpc 
-                        //           << " s1=" << opcfifo[i].ins.s1 << " bank_id=" << opcfifo[i].srcaddr[j].bank_id
-                        //           << " data[2][0]=0x" << opcfifo[i].data[j][0].to_uint() << std::dec
+                        // std::cout << "[opc::store_data] JALR ins: pc=0x" << std::hex <<
+                        // opcfifo[i].ins.currentpc
+                        //           << " s1=" << opcfifo[i].ins.s1 << " bank_id=" <<
+                        //           opcfifo[i].srcaddr[j].bank_id
+                        //           << " data[2][0]=0x" << opcfifo[i].data[j][0].to_uint() <<
+                        //           std::dec
                         //           << " @ " << sc_time_stamp() << "\n";
                     }
                     // std::cout << "OPC_FIFO: store_in[" << i << "," << j << "], ins=" <<

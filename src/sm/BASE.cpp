@@ -1,5 +1,5 @@
-#include "../context_model.hpp"
 #include "BASE.h"
+#include "../context_model.hpp"
 #include "subcore.hpp"
 #include <algorithm>
 #include <fmt/core.h>
@@ -13,12 +13,12 @@ BASE::BASE(
     sc_core::sc_module_name name, int _sm_id,
     const std::shared_ptr<const std::vector<instable_t>>& instruction_table,
     const std::shared_ptr<const std::map<OP_TYPE, decodedat>>& decode_table,
-    std::shared_ptr<PhysicalMemoryInterface> gmem, 
-    mem_interface_icache_t mem_interface_icache, std::shared_ptr<spdlog::logger> logger
+    std::shared_ptr<PhysicalMemoryInterface> gmem, mem_interface_icache_t mem_interface_icache,
+    std::shared_ptr<spdlog::logger> logger
 )
     : sc_module(name)
     , sm_id(_sm_id)
-    , m_mmu(gmem, logger) 
+    , m_mmu(gmem, logger)
     , l2_request(mem_interface_icache)
     , m_icache(
           fmt::format("{}_ICache", name).c_str(),
@@ -147,8 +147,10 @@ int BASE::lsu_subcore_req(
     }
 
     if (valid && subcore_id == lsu_subcore_req_arbiter_last) { // the selected requesting subcore
-        SPDLOG_LOGGER_DEBUG(m_logger, "[BASE::lsu_subcore_req] SM{} subcore{} warp{} pagetable_root=0x{:x}", 
-            sm_id, subcore_id, subcore_warp_id, pagetable_root);
+        SPDLOG_LOGGER_DEBUG(
+            m_logger, "[BASE::lsu_subcore_req] SM{} subcore{} warp{} pagetable_root=0x{:x}", sm_id,
+            subcore_id, subcore_warp_id, pagetable_root
+        );
         m_lsu_subcore_req_queue.emplace(lsu_subcore_req_t { .subcore_id = subcore_id,
                                                             .subcore_warp_id = subcore_warp_id,
                                                             .instr = instr,

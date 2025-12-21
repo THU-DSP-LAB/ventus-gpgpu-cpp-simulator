@@ -76,21 +76,18 @@ int RamulatorWrapper::request(
         << 2;
 
     if (cmd_->opcode == L1D_OPCODE_READ) {
-        std::cout << "[Ramulator-READ] SM" << sm_id 
-          << " warp=" << cmd_->warp_id
-          << " ptroot=0x" << std::hex << cmd_->pagetable_root
-          << " paddr_block=0x" << paddr_block 
-          << std::dec << std::endl;
-
-for (int i = 0; i < hw_num_thread; ++i) {
-    if (cmd_->mask[i]) {
-        uint32_t paddr = paddr_block + (cmd_->blockOffset->at(i) << 2);
-        std::cout << "  [READ-thread " << i 
-                  << "] blockOffset=" << (int)cmd_->blockOffset->at(i)
-                  << " -> paddr=0x" << std::hex << paddr
+        std::cout << "[Ramulator-READ] SM" << sm_id << " warp=" << cmd_->warp_id << " ptroot=0x"
+                  << std::hex << cmd_->pagetable_root << " paddr_block=0x" << paddr_block
                   << std::dec << std::endl;
-    }
-}
+
+        for (int i = 0; i < hw_num_thread; ++i) {
+            if (cmd_->mask[i]) {
+                uint32_t paddr = paddr_block + (cmd_->blockOffset->at(i) << 2);
+                std::cout << "  [READ-thread " << i
+                          << "] blockOffset=" << (int)cmd_->blockOffset->at(i) << " -> paddr=0x"
+                          << std::hex << paddr << std::dec << std::endl;
+            }
+        }
         // Deal with the write request
         m_pending_requests.emplace_back();
         auto req = std::prev(m_pending_requests.end());
@@ -100,12 +97,11 @@ for (int i = 0; i < hw_num_thread; ++i) {
         auto ramulator_callback = [this, req, paddr_block](Ramulator::Request& _) {
             assert(req->cmd->opcode == L1D_OPCODE_READ);
             if (req->cmd->data[0] == 0 && req->cmd->instr.currentpc == 0x800002c0) {
-                std::cout << "[ramulator::read] SM" << req->sm_id << " warp" << req->cmd->warp_id 
-                            << " LW @ pc=0x800002c0: paddr_block=0x" << std::hex << paddr_block
-                            << " blockOffset=" << static_cast<int>(req->cmd->blockOffset->at(0))
-                            << std::dec
-                            << " data_read=0x" << std::hex << req->cmd->data[0] << std::dec
-                            << " @ " << sc_time_stamp() << "\n";
+                std::cout << "[ramulator::read] SM" << req->sm_id << " warp" << req->cmd->warp_id
+                          << " LW @ pc=0x800002c0: paddr_block=0x" << std::hex << paddr_block
+                          << " blockOffset=" << static_cast<int>(req->cmd->blockOffset->at(0))
+                          << std::dec << " data_read=0x" << std::hex << req->cmd->data[0]
+                          << std::dec << " @ " << sc_time_stamp() << "\n";
             }
             if (req->callback) {
                 req->callback(std::move(req->cmd));
@@ -121,12 +117,13 @@ for (int i = 0; i < hw_num_thread; ++i) {
                     m_mem->read(paddr, &req->cmd->data[i], 4);
                     // Debug: Check if we're reading 0 when we shouldn't
                     if (req->cmd->data[i] == 0 && req->cmd->instr.currentpc == 0x800002c0) {
-                        std::cout << "[ramulator::read] SM" << sm_id << " warp" << req->cmd->warp_id 
-                                  << " LW @ pc=0x800002c0: paddr_block=0x" << std::hex << paddr_block
-                                  << " blockOffset=" << static_cast<int>(req->cmd->blockOffset->at(i))
-                                  << " paddr=0x" << paddr << std::dec
-                                  << " data_read=0x" << std::hex << req->cmd->data[i] << std::dec
-                                  << " @ " << sc_time_stamp() << "\n";
+                        std::cout << "[ramulator::read] SM" << sm_id << " warp" << req->cmd->warp_id
+                                  << " LW @ pc=0x800002c0: paddr_block=0x" << std::hex
+                                  << paddr_block << " blockOffset="
+                                  << static_cast<int>(req->cmd->blockOffset->at(i)) << " paddr=0x"
+                                  << paddr << std::dec << " data_read=0x" << std::hex
+                                  << req->cmd->data[i] << std::dec << " @ " << sc_time_stamp()
+                                  << "\n";
                     }
                     // 这里总load word（地址向下对齐），在LSU中按照指令lw,lh,lb来选取需要的数据
                 }
@@ -147,23 +144,20 @@ for (int i = 0; i < hw_num_thread; ++i) {
         // Deal with the write request
         if (!m_enable_ramulator
             || m_frontend->receive_external_requests(1, paddr_block, sm_id, nullptr)) {
-            std::cout << "[Ramulator-WRITE] SM" << sm_id
-          << " warp=" << cmd_->warp_id
-          << " ptroot=0x" << std::hex << cmd_->pagetable_root
-          << std::dec << std::endl;
+            std::cout << "[Ramulator-WRITE] SM" << sm_id << " warp=" << cmd_->warp_id
+                      << " ptroot=0x" << std::hex << cmd_->pagetable_root << std::dec << std::endl;
 
-for (int threadidx = 0; threadidx < hw_num_thread; threadidx++) {
-    if (cmd_->mask[threadidx]) {
-        uint8_t wordOffset1H = cmd_->wordOffset1H->at(threadidx);
-        uint32_t paddr = paddr_block + (cmd_->blockOffset->at(threadidx) << 2);
-        std::cout << "  [WRITE-thread " << threadidx 
-                  << "] blockOffset=" << (int)cmd_->blockOffset->at(threadidx)
-                  << " paddr=0x" << std::hex << paddr
-                  << " wordOffset1H=0b" << std::bitset<4>(wordOffset1H)
-                  << std::dec << " data=" << cmd_->data[threadidx]
-                  << std::endl;
-    }
-}
+            for (int threadidx = 0; threadidx < hw_num_thread; threadidx++) {
+                if (cmd_->mask[threadidx]) {
+                    uint8_t wordOffset1H = cmd_->wordOffset1H->at(threadidx);
+                    uint32_t paddr = paddr_block + (cmd_->blockOffset->at(threadidx) << 2);
+                    std::cout << "  [WRITE-thread " << threadidx
+                              << "] blockOffset=" << (int)cmd_->blockOffset->at(threadidx)
+                              << " paddr=0x" << std::hex << paddr << " wordOffset1H=0b"
+                              << std::bitset<4>(wordOffset1H) << std::dec
+                              << " data=" << cmd_->data[threadidx] << std::endl;
+                }
+            }
             for (int threadidx = 0; threadidx < hw_num_thread; threadidx++) {
                 if (cmd_->mask[threadidx]) {
                     sc_bv<4> wordOffset1H = cmd_->wordOffset1H->at(threadidx);

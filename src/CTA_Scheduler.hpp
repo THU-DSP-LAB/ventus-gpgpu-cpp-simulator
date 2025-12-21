@@ -85,6 +85,7 @@ public:
         sc_core::sc_module_name name, BASE* sm_group_[],
         std::shared_ptr<spdlog::logger> logger = nullptr
     );
+
 public:
     // Interface: callback function for SM when a warp finished
     void warp_finished(int sm_id, int block_slot_idx, int warp_idx_in_block);
@@ -110,7 +111,7 @@ private:
     // Kernel management (split kernel into blocks)
     std::vector<std::shared_ptr<kernel_info_t>> m_waiting_kernels; // Data not yet loaded to memory
     std::vector<std::shared_ptr<kernel_info_t>>
-        m_running_kernels; // Data loaded to memory, some blocks may be running
+        m_running_kernels;  // Data loaded to memory, some blocks may be running
     std::vector<std::shared_ptr<kernel_info_t>>
         m_finished_kernels; // All blocks finished, memory released
 

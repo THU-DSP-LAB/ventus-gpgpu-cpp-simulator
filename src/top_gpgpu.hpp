@@ -1,8 +1,8 @@
 #pragma once
 
+#include "CTA_Scheduler.hpp"
 #include "physical_mem.hpp"
 #include "ramulator.hpp"
-#include "CTA_Scheduler.hpp"
 #include "sm/BASE.h"
 #include "sm/BASE_sti.h"
 #include "sysc/communication/sc_clock.h"
@@ -32,6 +32,7 @@ class Top_gpgpu {
     int m_kernel_cnt = 0;
 
     std::array<std::unique_ptr<L1D_Cache_System>, NUM_SM> l1d_Cache_Systems;
+
 public:
     Top_gpgpu(const char* ramulator_config_filename, const char* vcd_filename = nullptr);
     ~Top_gpgpu();

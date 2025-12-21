@@ -18,7 +18,7 @@ struct ICacheConfig {
     unsigned numMshrItems;
     std::string replacementPolicy;
 
-    unsigned numFetch; // fetch multiple instructions in one access
+    unsigned numFetch;   // fetch multiple instructions in one access
 
     unsigned rspLatency; // core response delay cycles (hit or miss)
 };
@@ -113,8 +113,8 @@ private:
     sc_core::sc_event_queue ev_rsp;   // response to core event
     sc_core::sc_event ev_mshr_l2_req; // MSHR miss need to send to L2 later
 
-    void process_response(); // sc_thread for response to SM
-    void send_mshr_to_l2();  // sc_thread for sending MSHR miss to L2
+    void process_response();          // sc_thread for response to SM
+    void send_mshr_to_l2();           // sc_thread for sending MSHR miss to L2
     int memory_response_handler(unsigned sourceId);
 
     // Helper functions

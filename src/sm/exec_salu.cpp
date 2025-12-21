@@ -21,21 +21,22 @@ void Subcore::SALU_IN() {
                 new_data.rss2_data = tosalu_data2;
                 new_data.rss3_data = tosalu_data3;
                 salu_dq.push(new_data);
-                
+
                 // 调试：追踪 JALR 推入 SALU 队列（放宽条件，打印所有相关指令）
-                if (m_sm_id == 1 && emit_ins.read().currentpc >= 0x80000080 && emit_ins.read().currentpc <= 0x800000c0) {
+                if (m_sm_id == 1 && emit_ins.read().currentpc >= 0x80000080
+                    && emit_ins.read().currentpc <= 0x800000c0) {
                     uint32_t global_warp = warpid_convert(m_subcore_id, emitins_warpid);
-                    std::cout << "[SALU_IN] SM" << m_sm_id << " subcore" << m_subcore_id
-                              << " warp" << emitins_warpid << " (global_warp=" << global_warp << ")"
-                              << " push to SALU: pc=0x" << std::hex << emit_ins.read().currentpc << std::dec
-                              << " op=" << static_cast<int>(emit_ins.read().op)
-                              << " @ " << sc_time_stamp() << std::endl;
+                    std::cout << "[SALU_IN] SM" << m_sm_id << " subcore" << m_subcore_id << " warp"
+                              << emitins_warpid << " (global_warp=" << global_warp << ")"
+                              << " push to SALU: pc=0x" << std::hex << emit_ins.read().currentpc
+                              << std::dec << " op=" << static_cast<int>(emit_ins.read().op) << " @ "
+                              << sc_time_stamp() << std::endl;
                 }
-                
-                // std::cout << "[EMIT->SALU] " 
-                //   << " tosalu_data1=" << tosalu_data1 
-                //   << " tosalu_data2=" << tosalu_data2 
-                //   << " tosalu_data3=" << tosalu_data3 
+
+                // std::cout << "[EMIT->SALU] "
+                //   << " tosalu_data1=" << tosalu_data1
+                //   << " tosalu_data2=" << tosalu_data2
+                //   << " tosalu_data3=" << tosalu_data3
                 //   << " @ " << sc_time_stamp() << "\n";
 
                 // std::cout << "salu_dq has just pushed 1 elem at " << sc_time_stamp() <<","<<
@@ -118,15 +119,14 @@ void Subcore::SALU_CALC() {
         }
         salutmp1 = salu_dq.front();
         // 调试：弹出 SALU 队列的指令（关注 0x80000080-0x800000c0）
-        if (m_sm_id == 1
-            && salutmp1.ins.currentpc >= 0x80000080
+        if (m_sm_id == 1 && salutmp1.ins.currentpc >= 0x80000080
             && salutmp1.ins.currentpc <= 0x800000c0) {
             uint32_t global_warp = warpid_convert(m_subcore_id, salutmp1.warp_id);
-            std::cout << "[SALU_CALC] POP SM" << m_sm_id << " subcore" << m_subcore_id
-                      << " warp" << salutmp1.warp_id << " (global_warp=" << global_warp << ")"
+            std::cout << "[SALU_CALC] POP SM" << m_sm_id << " subcore" << m_subcore_id << " warp"
+                      << salutmp1.warp_id << " (global_warp=" << global_warp << ")"
                       << " pc=0x" << std::hex << salutmp1.ins.currentpc << std::dec
-                      << " op=" << static_cast<int>(salutmp1.ins.op)
-                      << " @ " << sc_time_stamp() << std::endl;
+                      << " op=" << static_cast<int>(salutmp1.ins.op) << " @ " << sc_time_stamp()
+                      << std::endl;
         }
         // std::cout << "salu_dq.front's ins is " << salutmp1.ins << ", data is " <<
         // salutmp1.rss1_data << "," << salutmp1.rss2_data << std::endl;
@@ -156,24 +156,24 @@ void Subcore::SALU_CALC() {
                 } else if (salutmp1.ins.ddd.branch == DecodeParams::branch_t::B_R) // jalr
                 {
                     jump_addr_tmp = (salutmp1.rss3_data + salutmp1.ins.imm) & (~1);
-                    std::cout<<"[salu] JALR: warp="<<salutmp1.warp_id
-                             <<" pc=0x"<<std::hex<<salutmp1.ins.currentpc<<std::dec
-                             <<" rss3_data=0x"<<std::hex<<salutmp1.rss3_data<<std::dec
-                             <<" imm="<<salutmp1.ins.imm
-                             <<" jump_addr_tmp=0x"<<std::hex<<jump_addr_tmp<<std::dec
-                             <<" @ "<<sc_time_stamp()<<std::endl;
-                    
+                    std::cout << "[salu] JALR: warp=" << salutmp1.warp_id << " pc=0x" << std::hex
+                              << salutmp1.ins.currentpc << std::dec << " rss3_data=0x" << std::hex
+                              << salutmp1.rss3_data << std::dec << " imm=" << salutmp1.ins.imm
+                              << " jump_addr_tmp=0x" << std::hex << jump_addr_tmp << std::dec
+                              << " @ " << sc_time_stamp() << std::endl;
+
                     // 检查跳转地址是否为0（可能是LW指令数据未正确写回）
                     if (jump_addr_tmp == 0x0) {
                         std::cerr << "[salu] ⚠️ WARNING: JALR jump address is 0x0! "
-                                  << "warp=" << salutmp1.warp_id
-                                  << ", pc=0x" << std::hex << salutmp1.ins.currentpc << std::dec
-                                  << ", rss3_data=0x" << std::hex << salutmp1.rss3_data << std::dec
+                                  << "warp=" << salutmp1.warp_id << ", pc=0x" << std::hex
+                                  << salutmp1.ins.currentpc << std::dec << ", rss3_data=0x"
+                                  << std::hex << salutmp1.rss3_data << std::dec
                                   << ", imm=" << salutmp1.ins.imm
-                                  << ". This may indicate that LW instruction data was not written back correctly!"
+                                  << ". This may indicate that LW instruction data was not written "
+                                     "back correctly!"
                                   << std::endl;
                     }
-                    
+
 #ifdef SPIKE_OUTPUT
                     SPDLOG_LOGGER_TRACE(
                         m_logger, "SM {} warp {} 0x{:x} {} JUMP=true, jumpTO 0x{:x}", m_sm_id,
@@ -184,16 +184,19 @@ void Subcore::SALU_CALC() {
                     hwarp->branch_sig = true;
                     hwarp->jump = 1;
                     hwarp->jump_addr = jump_addr_tmp;
-                    
-                // 调试：记录 JALR 设置 branch_sig 和 jump（放宽条件，打印所有 JALR）
-                if (m_sm_id == 1 && salutmp1.ins.currentpc >= 0x80000080 && salutmp1.ins.currentpc <= 0x800000c0) {
-                    uint32_t global_warp = warpid_convert(m_subcore_id, salutmp1.warp_id);
-                    std::cout << "[SALU_CALC] SM" << m_sm_id << " subcore" << m_subcore_id
-                              << " warp" << salutmp1.warp_id << " (global_warp=" << global_warp << ")"
-                              << " JALR SET branch_sig=1 jump=1: pc=0x" << std::hex << salutmp1.ins.currentpc << std::dec
-                              << " jump_addr=0x" << std::hex << jump_addr_tmp << std::dec
-                              << " @ " << sc_time_stamp() << std::endl;
-                }
+
+                    // 调试：记录 JALR 设置 branch_sig 和 jump（放宽条件，打印所有 JALR）
+                    if (m_sm_id == 1 && salutmp1.ins.currentpc >= 0x80000080
+                        && salutmp1.ins.currentpc <= 0x800000c0) {
+                        uint32_t global_warp = warpid_convert(m_subcore_id, salutmp1.warp_id);
+                        std::cout << "[SALU_CALC] SM" << m_sm_id << " subcore" << m_subcore_id
+                                  << " warp" << salutmp1.warp_id << " (global_warp=" << global_warp
+                                  << ")"
+                                  << " JALR SET branch_sig=1 jump=1: pc=0x" << std::hex
+                                  << salutmp1.ins.currentpc << std::dec << " jump_addr=0x"
+                                  << std::hex << jump_addr_tmp << std::dec << " @ "
+                                  << sc_time_stamp() << std::endl;
+                    }
                 } else {
 #ifdef SPIKE_OUTPUT
                     // if (salutmp1.warp_id == 2 && m_sm_id == 0) {
