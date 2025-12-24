@@ -1,5 +1,8 @@
 #include "utils.h"
 
+// 全局PC追踪配置：用于调试和追踪特定指令在cache中的执行路径
+std::vector<uint64_t> trace_pcs = {0x800001ac, 0x8000019c};
+
 unsigned int LOGB2(unsigned int v) {
     unsigned int shift = 0;
     unsigned int r = 0;

@@ -1036,6 +1036,7 @@ public:
     I_TYPE _scoretmpins;
     std::set<SCORE_TYPE> score; // record regfile addr that's to be written
     bool wait_bran; // 应该使用C++类型；dispatch了分支指令，则要暂停dispatch等待分支指令被执行
+    std::unordered_map<const I_TYPE*, int> m_scoreb_status; // debug, 若同一条指令长期阻塞报warning
     // warp scheduling
     sc_event ev_warp_dispatch;
     // regfile

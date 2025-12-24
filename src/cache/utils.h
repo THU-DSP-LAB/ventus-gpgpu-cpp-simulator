@@ -3,6 +3,10 @@
 
 #include <functional>
 #include <random>
+#include <vector>
+
+// 全局PC追踪配置：用于调试和追踪特定指令在cache中的执行路径
+extern std::vector<uint64_t> trace_pcs;
 
 /*integer log2 floor(向下取整)
 ref: GPGPU-Sim gpu-misc.h */

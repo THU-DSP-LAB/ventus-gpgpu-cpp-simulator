@@ -37,9 +37,9 @@ bool mshr::vec_arrange_core_rsp(
         assert(!pipe_reg.is_valid());
         auto& current_sub = current_main.front();
         vec_nlane_t coreRsp_data;
-        // Debug: Check data for LW instruction at 0x800002c0
-        if (current_sub.m_pc == 0x800002c0) {
-            std::cout << "[mshr::vec_arrange_core_rsp] LW @ pc=0x800002c0: "
+        // Debug: Check data for traced instructions
+        if (std::find(trace_pcs.begin(), trace_pcs.end(), current_sub.m_pc) != trace_pcs.end()) {
+            std::cout << "[mshr::vec_arrange_core_rsp] TRACE @ pc=0x" << std::hex << current_sub.m_pc << std::dec << ": "
                       << "missRsp_line[0]=0x" << std::hex << missRsp_line[0]
                       << " missRsp_line[1]=0x" << missRsp_line[1] << " block_offset[0]=" << std::dec
                       << static_cast<int>(current_sub.m_block_offset[0]) << std::endl;
@@ -47,9 +47,9 @@ bool mshr::vec_arrange_core_rsp(
         for (int i = 0; i < NLANE; ++i) {
             if (current_sub.m_mask[i] == true) { // mem order to core order crossbar
                 coreRsp_data[i] = missRsp_line[current_sub.m_block_offset[i]];
-                // Debug: Check data assignment
-                if (current_sub.m_pc == 0x800002c0) {
-                    std::cout << "[mshr::vec_arrange_core_rsp] LW @ pc=0x800002c0: "
+                // Debug: Check data assignment (per-lane for vector)
+                if (std::find(trace_pcs.begin(), trace_pcs.end(), current_sub.m_pc) != trace_pcs.end()) {
+                    std::cout << "[mshr::vec_arrange_core_rsp] TRACE @ pc=0x" << std::hex << current_sub.m_pc << std::dec << ": "
                               << "lane=" << i
                               << " block_offset=" << static_cast<int>(current_sub.m_block_offset[i])
                               << " coreRsp_data[" << i << "]=0x" << std::hex << coreRsp_data[i]
@@ -174,8 +174,11 @@ enum entry_target_type mshr::detect_missRsp_type(block_addr_t& block_idx, uint32
     }
 }
 
+// check if current main entry has no subentry
+// normally, main entry with 0 subentry do not exist
+// just check if main entry exists
 bool mshr::current_main_0_sub(block_addr_t block_idx) {
-    return m_vec_entry[block_idx].m_sub_en.size() == 0;
+    return m_vec_entry.find(block_idx) == m_vec_entry.end();
 }
 
 bool mshr::empty() { return m_vec_entry.empty(); }

@@ -62,7 +62,7 @@ Top_gpgpu::Top_gpgpu(const char* ramulator_config_filename, const char* vcd_file
     m_rst_gen->rst_n(m_rstn);
 
     // 缓存部分
-    m_l2cache = std::make_unique<L2_Cache>("L2", m_gmem);
+    m_l2cache = std::make_unique<L2_Cache>("L2", m_gmem, m_logger);
     m_l2cache->bind_ramulator(m_ramulator.get());
 
     for (int i = 0; i < NUM_SM; i++) {
@@ -78,7 +78,7 @@ Top_gpgpu::Top_gpgpu(const char* ramulator_config_filename, const char* vcd_file
         m_sm[i]->rst_n(m_rstn);
         std::string l1d_name = fmt::format("L1D_Cache_System{}", i);
         auto l1d_cache
-            = std::make_unique<L1D_Cache_System>(l1d_name.c_str(), i, *m_l2cache, m_gmem);
+            = std::make_unique<L1D_Cache_System>(l1d_name.c_str(), i, *m_l2cache, m_gmem, m_logger);
 
         m_sm[i]->m_l1d_cache = l1d_cache.get();
         l1d_cache->clk(m_clk);

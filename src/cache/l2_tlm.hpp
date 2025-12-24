@@ -3,6 +3,8 @@
 
 #include <cstdio>
 #include <deque>
+#include <memory>
+#include <spdlog/logger.h>
 #include <systemc>
 #include <tlm>
 #include <tlm_utils/multi_passthrough_target_socket.h>
@@ -19,10 +21,11 @@ public:
     static constexpr unsigned NL1 = 32; // 假设最多 4 路 L1
     tlm_utils::multi_passthrough_target_socket<L2_Cache, 32> target_socket;
 
-    L2_Cache(sc_core::sc_module_name name, std::shared_ptr<PhysicalMemoryInterface> pmem)
+    L2_Cache(sc_core::sc_module_name name, std::shared_ptr<PhysicalMemoryInterface> pmem, std::shared_ptr<spdlog::logger> logger = nullptr)
         : target_socket("target_socket")
         , m_mem(pmem)
-        , m_mmu(std::make_unique<SV39_basic>(pmem, nullptr)) {
+        , m_mmu(std::make_unique<SV39_basic>(pmem, logger))
+        , m_logger(logger ? logger : spdlog::default_logger()) {
         SC_HAS_PROCESS(L2_Cache);
 
         // 注册非阻塞 forward 回调
@@ -56,5 +59,7 @@ private:
     sc_core::sc_mutex amo_lock;
     // 线程：模拟 L2 行为(多周期、hit/miss、等待等)
     void process_queue();
+
+    std::shared_ptr<spdlog::logger> m_logger;
 };
 #endif

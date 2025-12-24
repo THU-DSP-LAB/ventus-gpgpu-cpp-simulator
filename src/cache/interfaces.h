@@ -4,9 +4,35 @@
 #include "../parameters.h"
 #include "parameter.h"
 #include <cassert>
+#include <concepts>
 #include <deque>
 #include <iomanip>
+#include <memory>
 #include <ostream>
+
+inline auto addr_to_block_idx(std::integral auto addr) {
+    return addr >> (2 + log2Ceil(L1D_BLOCK_NUM_WORD));
+}
+inline auto block_idx_to_addr(std::integral auto block_idx) {
+    return block_idx << (2 + log2Ceil(L1D_BLOCK_NUM_WORD));
+}
+
+template <std::integral addr_t>
+inline addr_t get_addr(addr_t tag, addr_t set_idx, addr_t blockOffset) {
+    return (tag << (2 + log2Ceil(L1D_BLOCK_NUM_WORD) + log2Ceil(L1D_NUM_SET)))
+        | (set_idx << (2 + log2Ceil(L1D_BLOCK_NUM_WORD))) | (blockOffset << 2);
+}
+template <std::integral addr_t> inline addr_t get_addr(addr_t block_idx, addr_t blockOffset = 0) {
+    return (block_idx << (2 + log2Ceil(L1D_BLOCK_NUM_WORD))) | (blockOffset << 2);
+}
+
+struct debug_trace_info_t {
+    int sm_id;
+    int warp_id;
+    vaddr_t pc;
+    I_TYPE instr;
+    std::vector<std::string> trace_msg;
+};
 
 enum LSU_cache_coreReq_opcode { Read, Write, Amo, InvOrFlu };
 
@@ -74,7 +100,7 @@ public:
         , a_mask(mask) {
         // block_idx 是从 L1D_Cache_System 传递过来的，它是地址右移 (2 +
         // log2Ceil(L1D_BLOCK_NUM_WORD)) 位后的值 要重建虚拟地址，需要左移相同的位数
-        a_address = block_idx << (2 + log2Ceil(L1D_BLOCK_NUM_WORD));
+        a_address = block_idx_to_addr(block_idx);
     }
 
     enum TL_UH_A_opcode a_opcode;
@@ -89,6 +115,8 @@ public:
     std::array<bool, LINEWORDS> a_mask;
     // bool a_data;//only to indicate whether there is a data transaction
     std::array<uint32_t, hw_num_thread> a_data;
+    // debug trace info
+    std::shared_ptr<debug_trace_info_t> m_debug_info;
 };
 
 // memReq_Q include W from cReq, dirty replace, or flush et.al
@@ -111,7 +139,7 @@ public:
         a_pc = pc;
         // block_idx 是从 L1D_Cache_System 传递过来的，它是地址右移 (2 +
         // log2Ceil(L1D_BLOCK_NUM_WORD)) 位后的值 要重建虚拟地址，需要左移相同的位数
-        a_address = block_idx << (2 + log2Ceil(L1D_BLOCK_NUM_WORD));
+        a_address = block_idx_to_addr(block_idx);
     }
 
     void set_coreRsp() { need_coreRsp = true; }
@@ -152,6 +180,8 @@ struct L2_2_dcache_memRsp : cache_building_block {
     std::array<uint32_t, hw_num_thread> d_data;
     uint8_t d_instrId;
     uint32_t d_pc;
+    // debug trace info
+    std::shared_ptr<debug_trace_info_t> m_debug_info;
 };
 
 class memRsp_Q : cache_building_block {
@@ -200,6 +230,8 @@ public:
     std::array<bool, NLANE> m_mask;
     bool m_wxd; // indicate whether its a scalar instruction
     vec_nlane_t m_data;
+    // debug trace info
+    std::shared_ptr<debug_trace_info_t> m_debug_info;
 };
 
 class coreRsp_Q : cache_building_block {
@@ -268,6 +300,8 @@ public:
     vec_nlane_t m_block_offset;
     vec_nlane_t m_word_offset;
     vec_nlane_t m_data;
+    // debug trace info
+    std::shared_ptr<debug_trace_info_t> m_debug_info;
 };
 
 class coreReq_pipe_reg : public LSU_2_dcache_coreReq, public pipe_reg_base {
@@ -275,20 +309,11 @@ public:
     coreReq_pipe_reg() { }
 
     void update_with(LSU_2_dcache_coreReq coreReq) {
-        m_opcode = coreReq.m_opcode;
-        m_type = coreReq.m_type;
-        m_wid = coreReq.m_wid;
-        m_l1id = coreReq.m_l1id;
-        m_instrId = coreReq.m_instrId;
-        m_pc = coreReq.m_pc;
-        m_reg_idxw = coreReq.m_reg_idxw;
-        m_block_idx = coreReq.m_block_idx;
-        m_mask = coreReq.m_mask;
-        m_block_offset = coreReq.m_block_offset;
-        m_word_offset = coreReq.m_word_offset;
-        m_amo_type = coreReq.m_amo_type;
-        m_data = coreReq.m_data;
-        m_pagetable_root = coreReq.m_pagetable_root;
+        LSU_2_dcache_coreReq::operator=(coreReq);
+        // 传递 debug trace info
+        if (coreReq.m_debug_info) {
+            m_debug_info = coreReq.m_debug_info;
+        }
         set_valid();
     }
 };
@@ -309,20 +334,7 @@ public:
 
     bool LRSCAMO_is_dirty() { return m_chosen_tag_is_dirty; }
     void update_with(LSU_2_dcache_coreReq coreReq) {
-        m_opcode = coreReq.m_opcode;
-        m_type = coreReq.m_type;
-        m_wid = coreReq.m_wid;
-        m_l1id = coreReq.m_l1id;
-        m_pagetable_root = coreReq.m_pagetable_root;
-        m_instrId = coreReq.m_instrId;
-        m_pc = coreReq.m_pc;
-        m_reg_idxw = coreReq.m_reg_idxw;
-        m_block_idx = coreReq.m_block_idx;
-        m_mask = coreReq.m_mask;
-        m_block_offset = coreReq.m_block_offset;
-        m_word_offset = coreReq.m_word_offset;
-        m_amo_type = coreReq.m_amo_type;
-        m_data = coreReq.m_data;
+        LSU_2_dcache_coreReq::operator=(coreReq);
         set_valid();
     }
 
@@ -348,6 +360,10 @@ public:
         m_mask = coreRsp.m_mask;
         m_wxd = coreRsp.m_wxd;
         m_data = coreRsp.m_data;
+        // 传递 debug trace info
+        if (coreRsp.m_debug_info) {
+            m_debug_info = coreRsp.m_debug_info;
+        }
         set_valid();
     }
     /* coreRsp_pipe_reg(uint32_t reg_idxw, bool data, uint32_t wid,
@@ -371,15 +387,18 @@ public:
         a_address = memReq.a_address;
         a_mask = memReq.a_mask;
         a_data = memReq.a_data;
+        // 传递 debug trace info
+        if (memReq.m_debug_info) {
+            m_debug_info = memReq.m_debug_info;
+        }
         set_valid();
     }
 };
 
 // 重载运算符的内联函数, 四个均有添加
 inline std::ostream& operator<<(std::ostream& os, const dcache_2_LSU_coreRsp& rsp) {
-    os << "dcache_2_LSU_coreRsp{"
-       << "wid=" << rsp.m_wid << ", reg_idxw=" << rsp.m_reg_idxw << ", m_l1id=" << rsp.m_l1id
-       << ",m_pagetable_root=" << rsp.m_pagetable_root << ", mask=[";
+    os << "dcache_2_LSU_coreRsp{" << "wid=" << rsp.m_wid << ", reg_idxw=" << rsp.m_reg_idxw
+       << ", m_l1id=" << rsp.m_l1id << ",m_pagetable_root=" << rsp.m_pagetable_root << ", mask=[";
     for (bool m : rsp.m_mask)
         os << m << " ";
     os << "], wxd=" << rsp.m_wxd << ", data=[";
@@ -389,9 +408,8 @@ inline std::ostream& operator<<(std::ostream& os, const dcache_2_LSU_coreRsp& rs
     return os;
 }
 inline std::ostream& operator<<(std::ostream& os, const LSU_2_dcache_coreReq& req) {
-    os << "LSU_2_dcache_coreReq{"
-       << "opcode=" << static_cast<int>(req.m_opcode) << ", type=" << req.m_type
-       << ", wid=" << req.m_wid << ",m_l1id=" << req.m_l1id
+    os << "LSU_2_dcache_coreReq{" << "opcode=" << static_cast<int>(req.m_opcode)
+       << ", type=" << req.m_type << ", wid=" << req.m_wid << ",m_l1id=" << req.m_l1id
        << ",m_pagetable_root=" << req.m_pagetable_root << ", reg_idxw=" << req.m_reg_idxw
        << ", block_idx=" << req.m_block_idx << ", mask=[";
     for (bool m : req.m_mask)
@@ -409,8 +427,8 @@ inline std::ostream& operator<<(std::ostream& os, const LSU_2_dcache_coreReq& re
     return os;
 }
 inline std::ostream& operator<<(std::ostream& os, const L2_2_dcache_memRsp& rsp) {
-    os << "L2_2_dcache_memRsp{"
-       << "opcode=" << static_cast<int>(rsp.d_opcode) << ", source=" << rsp.d_source << ", mask=[";
+    os << "L2_2_dcache_memRsp{" << "opcode=" << static_cast<int>(rsp.d_opcode)
+       << ", source=" << rsp.d_source << ", mask=[";
     for (bool m : rsp.d_mask)
         os << m << " ";
     os << "], data=[";
@@ -420,10 +438,9 @@ inline std::ostream& operator<<(std::ostream& os, const L2_2_dcache_memRsp& rsp)
     return os;
 }
 inline std::ostream& operator<<(std::ostream& os, const dcache_2_L2_memReq& req) {
-    os << "dcache_2_L2_memReq{"
-       << "opcode=" << static_cast<int>(req.a_opcode) << ", param=" << req.a_param
-       << ", source=" << req.a_source << ", l1id=" << req.a_l1id << ", address=0x" << std::hex
-       << req.a_address << ", mask=[";
+    os << "dcache_2_L2_memReq{" << "opcode=" << static_cast<int>(req.a_opcode)
+       << ", param=" << req.a_param << ", source=" << req.a_source << ", l1id=" << req.a_l1id
+       << ", address=0x" << std::hex << req.a_address << ", mask=[";
     for (bool m : req.a_mask)
         os << m << " ";
     os << "], data=[";

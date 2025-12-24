@@ -466,7 +466,7 @@ void Subcore::icache_wait() { // pipeline stage fetch2
                 f_l1icache_flushpipe(fetch.warp_id);
                 continue; // miss, do not exec functional model
             }
-        } else {          // valid fetch result from L0 icache
+        } else { // valid fetch result from L0 icache
             // directly pass L0 icache fetch
             fetch2_reg.write(fetch);
         }
@@ -657,7 +657,8 @@ void Subcore::cycle_UPDATE_SCORE(const int warp_id) {
         }
 
         hwarp->wait_bran = 0;
-    } else if (hwarp->dispatch_warp_valid && (tmpins.ddd.branch != 0) && opc_in_ready()) // 表示将要dispatch
+    } else if (hwarp->dispatch_warp_valid && (tmpins.ddd.branch != 0)
+               && opc_in_ready()) // 表示将要dispatch
     {
         if (should_debug_wait_bran && wait_bran_before == 0) {
             uint32_t global_warp = warpid_convert(m_subcore_id, warp_id);
@@ -670,7 +671,8 @@ void Subcore::cycle_UPDATE_SCORE(const int warp_id) {
                       << sc_time_stamp() << std::endl;
         }
         hwarp->wait_bran = 1;
-    } else if (hwarp->dispatch_warp_valid && tmpins.op == OP_TYPE::ENDPRG_ && opc_in_ready()) { // TODO: 权宜之计，让endprg后暂停dispatch
+    } else if (hwarp->dispatch_warp_valid && tmpins.op == OP_TYPE::ENDPRG_
+               && opc_in_ready()) { // TODO: 权宜之计，让endprg后暂停dispatch
         // std::cout << "SM" << sm_id << " warp " << warp_id << " UPDATE_SCORE detect ENDPRG,
         // suspend to dispatch at "
         // << sc_time_stamp() << "," << sc_delta_count_at_current_time() << std::endl;
@@ -726,8 +728,7 @@ bool Subcore::cycle_JUDGE_DISPATCH(int warp_id) {
                       << " warp" << warp_id << " (global_warp=" << global_warp << ")"
                       << " can_dispatch=false: wait_bran=" << hwarp->wait_bran
                       << " jump=" << hwarp->jump << " (count=" << judge_dispatch_wait_count[warp_id]
-                      << ")"
-                      << " @ " << sc_time_stamp() << std::endl;
+                      << ")" << " @ " << sc_time_stamp() << std::endl;
         }
         return false;
     }
@@ -740,8 +741,28 @@ bool Subcore::cycle_JUDGE_DISPATCH(int warp_id) {
 
     const auto& instr = *hwarp->ififo.front();
 
+    // for debug: 若一条指令在Scoreboard长期阻塞报Warning
+    auto& scoreb_blocked_cnt = hwarp->m_scoreb_status[&instr];
+    scoreb_blocked_cnt += 1;
+    bool scoreb_blocked_print = false;
+    if (scoreb_blocked_cnt >= 4096 && scoreb_blocked_cnt % 1024 == 0) {
+        scoreb_blocked_print = true;
+    }
+
+#define RETURN_FALSE_PRINT_WHY(why)                                                                \
+    do {                                                                                           \
+        if (scoreb_blocked_print) {                                                                \
+            SPDLOG_LOGGER_WARN(                                                                    \
+                m_logger, "SM {} warp {} 0x{:x} {} SCOREB blocked for {} cycles because: {}",      \
+                m_sm_id, warpid_convert(m_subcore_id, warp_id), instr.currentpc, instr,            \
+                scoreb_blocked_cnt, (why)                                                          \
+            );                                                                                     \
+        }                                                                                          \
+        return false;                                                                              \
+    } while (0)
+
     if (instr.op == INVALID_)
-        return false;
+        RETURN_FALSE_PRINT_WHY("Invalid insturction");
     if (instr.op == ENDPRG_ && !hwarp->score.empty()) {
         // 调试：打印 ENDPRG 指令因为 scoreboard 不为空而无法 dispatch（限制打印频率，避免日志爆炸）
         static int judge_dispatch_endprg_count[hw_num_warp] = { 0 };
@@ -756,8 +777,8 @@ bool Subcore::cycle_JUDGE_DISPATCH(int warp_id) {
             uint32_t global_warp = warpid_convert(m_subcore_id, warp_id);
             std::cout << "[cycle_JUDGE_DISPATCH] SM" << m_sm_id << " subcore" << m_subcore_id
                       << " warp" << warp_id << " (global_warp=" << global_warp << ")"
-                      << " can_dispatch=false: ENDPRG with non-empty scoreboard"
-                      << " ins=0x" << std::hex << instr.currentpc << std::dec
+                      << " can_dispatch=false: ENDPRG with non-empty scoreboard" << " ins=0x"
+                      << std::hex << instr.currentpc << std::dec
                       << " score.size()=" << hwarp->score.size() << " scoreboard=[";
             bool first = true;
             for (const auto& s : hwarp->score) {
@@ -766,57 +787,63 @@ bool Subcore::cycle_JUDGE_DISPATCH(int warp_id) {
                 std::cout << (s.regtype == REG_TYPE::s ? "s" : "v") << static_cast<int>(s.addr);
                 first = false;
             }
-            std::cout << "] (count=" << judge_dispatch_endprg_count[warp_id] << ")"
-                      << " @ " << sc_time_stamp() << std::endl;
+            std::cout << "] (count=" << judge_dispatch_endprg_count[warp_id] << ")" << " @ "
+                      << sc_time_stamp() << std::endl;
         }
-        return false;
+        RETURN_FALSE_PRINT_WHY("ENDPRG waiting for scoreboard to be empty");
     }
     if (instr.op == CUSTOM_PRINT_ && !hwarp->score.empty())
         return false;
 
     if (instr.ddd.wxd && hwarp->score.find(SCORE_TYPE(s, instr.d)) != hwarp->score.end())
-        return false;
+        RETURN_FALSE_PRINT_WHY(fmt::format("waiting for dest x[{}]", instr.d));
     if (instr.ddd.wvd && hwarp->score.find(SCORE_TYPE(v, instr.d)) != hwarp->score.end())
-        return false;
+        RETURN_FALSE_PRINT_WHY(fmt::format("waiting for dest v[{}]", instr.d));
 
     if (instr.ddd.sel_alu1 == DecodeParams::A1_RS1
         && hwarp->score.find(SCORE_TYPE(s, instr.s1)) != hwarp->score.end())
-        return false;
+        RETURN_FALSE_PRINT_WHY(fmt::format("waiting for src1 x[{}]", instr.s1));
     if (instr.ddd.sel_alu1 == DecodeParams::A1_VRS1
         && hwarp->score.find(SCORE_TYPE(v, instr.s1)) != hwarp->score.end())
-        return false;
+        RETURN_FALSE_PRINT_WHY(fmt::format("waiting for src1 v[{}]", instr.s1));
     if (instr.ddd.sel_alu2 == DecodeParams::sel_alu2_t::A2_RS2
         && hwarp->score.find(SCORE_TYPE(s, instr.s2)) != hwarp->score.end())
-        return false;
+        RETURN_FALSE_PRINT_WHY(fmt::format("waiting for src2 x[{}]", instr.s2));
     if (instr.ddd.sel_alu2 == DecodeParams::sel_alu2_t::A2_VRS2
         && hwarp->score.find(SCORE_TYPE(v, instr.s2)) != hwarp->score.end())
-        return false;
+        RETURN_FALSE_PRINT_WHY(fmt::format("waiting for src2 v[{}]", instr.s2));
     if (instr.ddd.sel_alu3 == DecodeParams::sel_alu3_t::A3_FRS3
         && hwarp->score.find(SCORE_TYPE(s, instr.s3)) != hwarp->score.end())
-        return false;
+        RETURN_FALSE_PRINT_WHY(fmt::format("waiting for src3 x[{}]", instr.s3));
     if (instr.ddd.sel_alu3 == DecodeParams::sel_alu3_t::A3_VRS3
         && hwarp->score.find(SCORE_TYPE(v, instr.s3)) != hwarp->score.end())
-        return false;
+        RETURN_FALSE_PRINT_WHY(fmt::format("waiting for src3 v[{}]", instr.s3));
     if (instr.ddd.sel_alu3 == DecodeParams::sel_alu3_t::A3_PC
         && instr.ddd.branch == DecodeParams::branch_t::B_R
         && hwarp->score.find(SCORE_TYPE(s, instr.s1)) != hwarp->score.end())
-        return false;
+        RETURN_FALSE_PRINT_WHY(fmt::format("waiting for branch src x[{}]", instr.s1));
     if (instr.ddd.sel_alu3 == DecodeParams::sel_alu3_t::A3_SD) {
         if (instr.ddd.isvec) {
             if (instr.ddd.readmask) {
                 if (hwarp->score.find(SCORE_TYPE(v, instr.s2)) != hwarp->score.end()) {
-                    return false;
+                    RETURN_FALSE_PRINT_WHY(fmt::format("waiting for store src v[{}]", instr.s2));
                 }
             } else {
                 if (hwarp->score.find(SCORE_TYPE(v, instr.s3)) != hwarp->score.end()) {
-                    return false;
+                    RETURN_FALSE_PRINT_WHY(fmt::format("waiting for store src v[{}]", instr.s3));
                 }
             }
         } else {
             if (hwarp->score.find(SCORE_TYPE(s, instr.s2)) != hwarp->score.end()) {
-                return false;
+                RETURN_FALSE_PRINT_WHY(fmt::format("waiting for store src x[{}]", instr.s2));
             }
         }
+    }
+#undef RETURN_FALSE_PRINT_WHY
+
+    // scoreboard check passed
+    if (hwarp->m_scoreb_status.contains(&instr)) {
+        hwarp->m_scoreb_status.erase(&instr); // for debug: 清除该指令的scoreboard阻塞状态记录
     }
     return true;
 }

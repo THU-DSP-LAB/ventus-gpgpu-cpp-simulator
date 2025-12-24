@@ -1,18 +1,21 @@
 #include "L1D_Cache_System.hpp"
 #include "../parameters.h" // 用于 L1D_NUM_SET 和 L1D_BLOCK_NUM_WORD
+#include <memory>
 #define NUM_L1 4
 
 static sc_core::sc_trace_file* tf = nullptr;
 L1D_Cache_System::L1D_Cache_System(
     sc_core::sc_module_name name, int l1_id, L2_Cache& l2_ref,
-    std::shared_ptr<PhysicalMemoryInterface> pmem_ptr
+    std::shared_ptr<PhysicalMemoryInterface> pmem_ptr, std::shared_ptr<spdlog::logger> logger
 )
     : sc_core::sc_module(name)
     , clk("clk")
-    , l2(l2_ref) {
+    , m_sm_id(l1_id)
+    , l2(l2_ref)
+    , m_logger(logger ? logger : spdlog::default_logger()) {
     // 创建子模块
-    l1 = new SC_L1_CACHE((std::string("l1_") + std::to_string(l1_id)).c_str());
-    adapter = new L1_TLM_Adapter((std::string("adapter_") + std::to_string(l1_id)).c_str());
+    l1 = new SC_L1_CACHE((std::string("l1_") + std::to_string(l1_id)).c_str(), m_logger);
+    adapter = new L1_TLM_Adapter((std::string("adapter_") + std::to_string(l1_id)).c_str(), m_logger);
 
     // 绑定内部 FIFO 与 TLM 适配器
     l1->dcache_2_L2_memReq_port(fifo_l1_to_adapter);
@@ -85,6 +88,14 @@ int L1D_Cache_System::accept(
     req.m_reg_idxw = cmd->instr.d;
     req.m_instrId = cmd->instrId;
     req.m_pc = cmd->instr.currentpc;
+    req.m_debug_info = std::make_shared<debug_trace_info_t>();
+    req.m_debug_info->sm_id = m_sm_id;
+    req.m_debug_info->warp_id = cmd->warp_id;
+    req.m_debug_info->pc = cmd->instr.currentpc;
+    req.m_debug_info->instr = cmd->instr;
+    req.m_debug_info->trace_msg.push_back(
+        fmt::format("L1D_Cache_System::accept @{}", sc_time_stamp().to_string())
+    );
 
     // 调试输出
     // std::cout << "[accept] warp=" << req.m_wid << ", rd=" << req.m_reg_idxw

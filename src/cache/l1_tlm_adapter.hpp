@@ -31,15 +31,20 @@
 #ifndef L1_TLM_ADAPTER_H_
 #define L1_TLM_ADAPTER_H_
 
+#include <memory>
+#include <spdlog/logger.h>
 #include <tlm_utils/simple_initiator_socket.h>
 
 #include <map>
 #include <tlm>
 
 #include "sc_l1cache.hpp"
+#include "sysc/kernel/sc_module.h"
 
 struct DCacheMemReqExtension : public tlm::tlm_extension<DCacheMemReqExtension> {
     dcache_2_L2_memReq req;
+    // debug trace info passed from L1 to L2
+    std::shared_ptr<debug_trace_info_t> m_debug_info;
 
     // 必须实现 clone 和 copy_from，用于 TLM 在需要时复制 extension
     virtual tlm_extension_base* clone() const override {
@@ -50,10 +55,13 @@ struct DCacheMemReqExtension : public tlm::tlm_extension<DCacheMemReqExtension> 
     virtual void copy_from(const tlm_extension_base& ext) override {
         const DCacheMemReqExtension& other = static_cast<const DCacheMemReqExtension&>(ext);
         req = other.req;
+        m_debug_info = other.m_debug_info;
     }
 };
 struct L2MemRspExtension : public tlm::tlm_extension<L2MemRspExtension> {
     L2_2_dcache_memRsp rsp;
+    // debug trace info passed from L2 back to L1
+    std::shared_ptr<debug_trace_info_t> m_debug_info;
 
     // 必须实现 clone() 和 copy_from()，以便 TLM 在需要时复制 extension
     virtual tlm_extension_base* clone() const override {
@@ -63,6 +71,7 @@ struct L2MemRspExtension : public tlm::tlm_extension<L2MemRspExtension> {
     virtual void copy_from(const tlm_extension_base& ext) override {
         auto& other = static_cast<const L2MemRspExtension&>(ext);
         rsp = other.rsp;
+        m_debug_info = other.m_debug_info;
     }
 };
 
@@ -75,8 +84,11 @@ public:
     // ============= TLM 侧 initiator socket =============
     tlm_utils::simple_initiator_socket<L1_TLM_Adapter> initiator_socket;
 
-    SC_CTOR(L1_TLM_Adapter)
-        : initiator_socket("initiator_socket") {
+    L1_TLM_Adapter(sc_core::sc_module_name name, std::shared_ptr<spdlog::logger> logger = nullptr)
+        : sc_core::sc_module(name)
+        , initiator_socket("initiator_socket")
+        , m_logger(logger ? logger : spdlog::default_logger()) {
+        SC_HAS_PROCESS(L1_TLM_Adapter);
         SC_THREAD(send_req_thread);
 
         initiator_socket.register_nb_transport_bw(this, &L1_TLM_Adapter::nb_transport_bw);
@@ -97,6 +109,8 @@ private:
     tlm::tlm_sync_enum nb_transport_bw(
         tlm::tlm_generic_payload& trans, tlm::tlm_phase& phase, sc_core::sc_time& delay
     );
+
+    std::shared_ptr<spdlog::logger> m_logger;
 };
 
 #endif

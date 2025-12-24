@@ -4,6 +4,8 @@
 #include "../parameters.h"
 #include "l1_data_cache.h"
 #include <iostream>
+#include <memory>
+#include <spdlog/logger.h>
 #include <systemc.h>
 
 class SC_L1_CACHE : public sc_core::sc_module {
@@ -23,11 +25,13 @@ public:
     size_t get_hit_count() const { return dcache.hit_count; }
     size_t get_miss_count() const { return dcache.miss_count; }
     // constructor
-    SC_L1_CACHE(sc_core::sc_module_name name);
+    SC_L1_CACHE(sc_core::sc_module_name name, std::shared_ptr<spdlog::logger> logger = nullptr);
 
 private:
     cycle_t time;
     l1_data_cache dcache;
+
+    std::shared_ptr<spdlog::logger> m_logger;
 };
 
 #endif

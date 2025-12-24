@@ -6,7 +6,7 @@
 
 #include "interfaces.h"
 #include "parameter.h"
-#include "utils.h"
+#include <spdlog/spdlog.h>
 
 enum entry_target_type { REGULAR_READ_MISS, LOAD_RESRV, STORE_COND, AMO };
 
@@ -36,8 +36,8 @@ public:
         , m_instrId(instrId)
         , m_pc(pc)
         , m_mask(mask)
-        , m_block_offset(block_offset) { } //,
-    // m_word_offset(word_offset){}
+        , m_block_offset(block_offset) { }
+    // , m_word_offset(word_offset){}
 private:
     uint32_t m_req_id;
     uint32_t m_wid;
@@ -48,6 +48,9 @@ private:
     std::array<bool, NLANE> m_mask;
     vec_nlane_t m_block_offset;
     // vec_nlane_t m_word_offset;
+public:
+    // debug trace info for this subentry request
+    std::shared_ptr<debug_trace_info_t> m_debug_info;
 
     friend class special_target_info;
     friend class vec_entry_target_info;
@@ -71,6 +74,13 @@ public:
     void allocate_sub(const vec_subentry& sub) {
         assert(!sub_is_full());
         m_sub_en.push_back(sub);
+        // auto log = fmt::format("MSHR item: \n");
+        // for (auto& debug_info : m_sub_en | std::views::transform(&vec_subentry::m_debug_info)) {
+        //     log += fmt::format("  - SM {} warp {} 0x{:x} {}",
+        //                        debug_info->sm_id, debug_info->warp_id, debug_info->pc,
+        //                        debug_info->instr);
+        // }
+        // std::cout << log << std::endl;
     }
 
     void deallocate_sub() {
@@ -115,6 +125,8 @@ private:
     uint32_t m_pc;
     // enum LSU_cache_coreReq_type_amo m_amo_type;
     // block_addr_t m_block_idx;
+    // debug trace info for special operations (LR/SC/AMO)
+    std::shared_ptr<debug_trace_info_t> m_debug_info;
 
     friend class mshr;
 };
@@ -147,7 +159,8 @@ public:
         , m_req_id(req_id)
         , m_l1id(l1id)
         , m_pagetable_root(m_pagetable_root)
-        , m_block_idx(block_idx) { }
+        , m_block_idx(block_idx)
+        , m_debug_info(nullptr) { }
 
     enum entry_target_type m_type;
     uint32_t m_req_id;
@@ -156,6 +169,7 @@ public:
     uint8_t m_instrId;
     uint32_t m_pc;
     block_addr_t m_block_idx;
+    std::shared_ptr<debug_trace_info_t> m_debug_info;
 
     friend class mshr;
 };

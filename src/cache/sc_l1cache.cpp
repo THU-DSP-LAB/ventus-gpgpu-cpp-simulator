@@ -1,8 +1,9 @@
 #include "sc_l1cache.hpp"
 
-SC_L1_CACHE::SC_L1_CACHE(sc_core::sc_module_name name)
+SC_L1_CACHE::SC_L1_CACHE(sc_core::sc_module_name name, std::shared_ptr<spdlog::logger> logger)
     : sc_module(name)
-    , dcache(l1_data_cache())
+    , m_logger(logger ? logger : spdlog::default_logger())
+    , dcache(l1_data_cache(1, logger))
     , time(0)
     , LSU_2_dcache_coreReq_port("LSU_2_dcache_coreReq_port")
     , dcache_2_LSU_coreRsp_port("dcache_2_LSU_coreRsp_port") {

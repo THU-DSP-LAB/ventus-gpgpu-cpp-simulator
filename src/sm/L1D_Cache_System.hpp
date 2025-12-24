@@ -17,10 +17,14 @@ public:
     // 构造函数
     L1D_Cache_System(
         sc_core::sc_module_name name, int l1_id, L2_Cache& l2_ref,
-        std::shared_ptr<PhysicalMemoryInterface> pmem_ptr
+        std::shared_ptr<PhysicalMemoryInterface> pmem_ptr,
+        std::shared_ptr<spdlog::logger> logger = nullptr
     );
 
     virtual ~L1D_Cache_System();
+
+    const int m_sm_id;
+
     // 获取统计信息接口
     int get_l1_hit_count() const;
     int get_l1_miss_count() const;
@@ -45,6 +49,8 @@ private:
     void forward_rsp();
     // 内存接口引用
     L2_Cache& l2;
+
+    std::shared_ptr<spdlog::logger> m_logger;
 };
 
 #endif // L1D_CACHE_SYSTEM_HPP

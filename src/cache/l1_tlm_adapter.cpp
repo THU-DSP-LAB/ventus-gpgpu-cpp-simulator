@@ -1,4 +1,5 @@
 #include "l1_tlm_adapter.hpp"
+#include <sstream>
 
 void L1_TLM_Adapter::send_req_thread() {
     while (true) {
@@ -11,6 +12,13 @@ void L1_TLM_Adapter::send_req_thread() {
         // 给 transaction 绑定一个 extension 存储这个请求信息
         auto* ext = new DCacheMemReqExtension;
         ext->req = req; // 拷贝
+        // 传递 debug trace info
+        if (req.m_debug_info) {
+            ext->m_debug_info = req.m_debug_info;
+            std::ostringstream oss;
+            oss << "L1_SEND_MEMREQ opcode=" << static_cast<int>(req.a_opcode);
+            req.m_debug_info->trace_msg.push_back(oss.str());
+        }
         trans->set_extension(ext);
         // command: currently not include atomic, invalidate, flush, etc.
         trans->set_command(
@@ -138,6 +146,13 @@ tlm::tlm_sync_enum L1_TLM_Adapter::nb_transport_bw(
         }
         // 3) 构造 L2_2_dcache_memRsp
         L2_2_dcache_memRsp final_rsp = rspExt->rsp;
+        // 传递 debug trace info 从 L2 回到 L1
+        if (rspExt->m_debug_info) {
+            final_rsp.m_debug_info = rspExt->m_debug_info;
+            std::ostringstream oss;
+            oss << "L2_RETURN_MEMRSP opcode=" << static_cast<int>(rspExt->rsp.d_opcode);
+            rspExt->m_debug_info->trace_msg.push_back(oss.str());
+        }
 
         // 调试：记录 store 响应（AccessAck 表示 store）
         static int adapter_rsp_count = 0;

@@ -1,6 +1,7 @@
 #include "l2_tlm.hpp"
 #include "../ramulator.hpp"
 #include "interfaces.h"
+#include <algorithm>
 #include <cstdio>
 #include <sstream>
 tlm::tlm_sync_enum L2_Cache::nb_transport_fw(
@@ -53,6 +54,14 @@ void L2_Cache::process_queue() {
             //  构造响应 extension
             auto* rspExt = new L2MemRspExtension;
             rspExt->rsp.d_source = reqExt ? reqExt->req.a_source : 0;
+            // 传递 debug trace info 从请求到响应
+            if (reqExt && reqExt->m_debug_info) {
+                rspExt->m_debug_info = reqExt->m_debug_info;
+                std::ostringstream oss;
+                oss << "L2_PROCESS_REQ opcode=" << static_cast<int>(reqExt->req.a_opcode) 
+                    << " addr=0x" << std::hex << reqExt->req.a_address << std::dec;
+                reqExt->m_debug_info->trace_msg.push_back(oss.str());
+            }
             std::array<bool, cache_building_block::LINEWORDS> return_mask {};
             bool response_sent = false; // 标记响应是否已发送
             // char log_buf[128];
@@ -67,12 +76,13 @@ void L2_Cache::process_queue() {
                 uint32_t vaddr_block = reqExt->req.a_address;
                 uint32_t paddr_block = m_mmu->translate(reqExt->req.a_pagetable_root, vaddr_block);
 
-                // Debug: Check translation for LW instruction at 0x800002c0
-                if (reqExt->req.a_pc == 0x800002c0) {
-                    std::cout << "[L2_Cache::process_queue] LW @ pc=0x800002c0: ptroot=0x"
-                              << std::hex << reqExt->req.a_pagetable_root << ", vaddr_block=0x"
-                              << vaddr_block << ", paddr_block=0x" << paddr_block << std::dec
-                              << std::endl;
+                // Debug: Check translation for traced instructions
+                if (std::find(trace_pcs.begin(), trace_pcs.end(), reqExt->req.a_pc) != trace_pcs.end()) {
+                    SPDLOG_LOGGER_TRACE(
+                        m_logger,
+                        "L2::process_queue GET request at pc=0x{:x}, vaddr_block=0x{:x}, paddr_block=0x{:x}",
+                        reqExt->req.a_pc, vaddr_block, paddr_block
+                    );
                 }
 
                 if (paddr_block == 0) {
@@ -126,14 +136,30 @@ void L2_Cache::process_queue() {
                 uint32_t saved_source = reqExt->req.a_source;
                 uint32_t saved_instrId = reqExt->req.a_instrId;
                 uint32_t saved_pc = reqExt->req.a_pc;
-
+                std::shared_ptr<debug_trace_info_t> saved_debug_info = reqExt->m_debug_info;
                 std::cout << "[L2_Cache::process_queue] Sending request to Ramulator: saved_pc=0x"
                           << std::hex << saved_pc << std::dec << ", saved_source=0x" << std::hex
                           << saved_source << std::dec << ", l1id=" << l1id_copy << " @ "
                           << sc_time_stamp() << std::endl;
+                // Add trace log for Ramulator request
+                if (std::find(trace_pcs.begin(), trace_pcs.end(), saved_pc) != trace_pcs.end()) {
+                    SPDLOG_LOGGER_TRACE(
+                        m_logger,
+                        "L2::ramulator_request sent to DRAM, pc=0x{:x}, paddr_block=0x{:x}, l1id={}",
+                        saved_pc, paddr_block, l1id_copy
+                    );
+                }
                 int ret = ramulator->request(
                     saved_source, cmd,
                     [=, this](std::unique_ptr<lsu_mem_cmd_t> ret_cmd) mutable {
+                        // Add trace log for Ramulator callback
+                        if (std::find(trace_pcs.begin(), trace_pcs.end(), saved_pc) != trace_pcs.end()) {
+                            SPDLOG_LOGGER_TRACE(
+                                m_logger,
+                                "L2::ramulator_callback response received from DRAM, pc=0x{:x}, data[0]=0x{:x}",
+                                saved_pc, ret_cmd->data[0]
+                            );
+                        }
                         std::cout << "[L2_Cache::ramulator_callback] CALLED: saved_pc=0x"
                                   << std::hex << saved_pc << std::dec << ", saved_source=0x"
                                   << std::hex << saved_source << std::dec << ", l1id=" << l1id_copy
@@ -143,6 +169,13 @@ void L2_Cache::process_queue() {
                         rspExt->rsp.d_opcode = TL_UH_D_opcode::AccessAckData;
                         rspExt->rsp.d_instrId = saved_instrId;
                         rspExt->rsp.d_pc = saved_pc;
+                        // 传递 debug trace info
+                        if (saved_debug_info) {
+                            rspExt->m_debug_info = saved_debug_info;
+                            std::ostringstream oss;
+                            oss << "L2_RAMULATOR_RESPONSE received_from_dram";
+                            saved_debug_info->trace_msg.push_back(oss.str());
+                        }
                         // Initialize d_data to 0
                         rspExt->rsp.d_data.fill(0);
                         // Copy data from ramulator response to L2 response
@@ -169,6 +202,14 @@ void L2_Cache::process_queue() {
                                   << std::hex << rspExt->rsp.d_pc << std::dec
                                   << ", l1id=" << l1id_copy << " @ " << sc_time_stamp()
                                   << std::endl;
+                        // Add trace log for response being sent back to L1
+                        if (std::find(trace_pcs.begin(), trace_pcs.end(), saved_pc) != trace_pcs.end()) {
+                            SPDLOG_LOGGER_TRACE(
+                                m_logger,
+                                "L2::nb_transport_bw sending data back to L1, pc=0x{:x}, d_data[0]=0x{:x}",
+                                saved_pc, rspExt->rsp.d_data[0]
+                            );
+                        }
                         // 调用 nb_transport_bw 将响应发送回 L1
                         tlm::tlm_phase phase = tlm::BEGIN_RESP;
                         sc_time delay = SC_ZERO_TIME;
@@ -240,6 +281,15 @@ void L2_Cache::process_queue() {
                 // int ret = ramulator->request(reqExt->req.a_source, cmd, nullptr);
                 rspExt->rsp.d_mask = reqExt->req.a_mask;
 
+                // Add trace log for PutFullData
+                if (std::find(trace_pcs.begin(), trace_pcs.end(), reqExt->req.a_pc) != trace_pcs.end()) {
+                    SPDLOG_LOGGER_TRACE(
+                        m_logger,
+                        "L2::process_queue PUTFULLDATA response sent back to L1, paddr=0x{:x}, data[0]=0x{:x}",
+                        paddr_block, reqExt->req.a_data[0]
+                    );
+                }
+
                 // 立即发送响应（写操作不需要等待ramulator完成）
                 trans->set_extension(rspExt);
                 tlm::tlm_phase phase = tlm::BEGIN_RESP;
@@ -254,6 +304,15 @@ void L2_Cache::process_queue() {
                 // L2 层做虚拟地址到物理地址的翻译
                 uint32_t vaddr_block = reqExt->req.a_address;
                 uint32_t paddr_block = m_mmu->translate(reqExt->req.a_pagetable_root, vaddr_block);
+
+                // Add trace log for PutPartialData translation
+                if (std::find(trace_pcs.begin(), trace_pcs.end(), reqExt->req.a_pc) != trace_pcs.end()) {
+                    SPDLOG_LOGGER_TRACE(
+                        m_logger,
+                        "L2::process_queue PUTPARTIALDATA request at pc=0x{:x}, vaddr=0x{:x}, paddr=0x{:x}",
+                        reqExt->req.a_pc, vaddr_block, paddr_block
+                    );
+                }
 
                 if (paddr_block == 0) {
                     char msg[256];

@@ -7,8 +7,13 @@
 #include "miss_status_holding_reg.h"
 #include "parameter.h"
 #include "tag_array.h"
+#include "utils.h"
 #include "write_status_holding_reg.h"
+#include <algorithm>
 #include <fstream>
+#include <memory>
+#include <spdlog/spdlog.h>
+#include <vector>
 
 class mshr_missRsp_pipe_reg : public mshr_miss_rsp, public pipe_reg_base {
 public:
@@ -23,6 +28,7 @@ public:
         m_block_idx = miss_rsp.m_block_idx;
         m_fill_data = fill_data;
         m_pagetable_root = miss_rsp.m_pagetable_root;
+        m_debug_info = miss_rsp.m_debug_info;
         set_valid();
     }
 
@@ -44,11 +50,12 @@ public:
 
 class l1_data_cache : public cache_building_block {
 public:
-    l1_data_cache() {};
-    l1_data_cache(int verbose_level)
-        : m_DEBUG_verbose_level(verbose_level) {};
+    l1_data_cache(int verbose_level = 1, std::shared_ptr<spdlog::logger> logger = nullptr)
+        : m_DEBUG_verbose_level(verbose_level)
+        , m_logger(logger) {};
     uint64_t hit_count = 0;
     uint64_t miss_count = 0;
+    std::shared_ptr<spdlog::logger> m_logger;
 
     void coreReq_pipe0_cycle(cycle_t time) {
         if (m_memRsp_Q.m_Q.size() == 0) { // 没有 memRsp 时才能处理 coreReq
@@ -64,9 +71,14 @@ public:
                         std::cout << ", op=" << coreReq_opcode;
                         std::cout << ", param=" << m_coreReq.m_type << std::endl;
                     }
-                    if (m_coreReq.m_pc == 0x800002c0) {
-                        std::cout << "[L1_cache::coreReq_pipe0_cycle] LW @ pc=0x800002c0 @ "
-                                  << sc_time_stamp() << std::endl;
+                    if (std::ranges::find(trace_pcs, m_coreReq.m_pc) != trace_pcs.end()) {
+                        SPDLOG_LOGGER_TRACE(
+                            m_logger,
+                            "SM {} warp {} 0x{:x} {} L1D::coreReq_pipe0_cycle, base addr=0x{:x}",
+                            m_coreReq.m_debug_info->sm_id, m_coreReq.m_debug_info->warp_id,
+                            m_coreReq.m_pc, m_coreReq.m_debug_info->instr,
+                            block_idx_to_addr(m_coreReq.m_block_idx)
+                        );
                     }
                     if (coreReq_opcode == Read || coreReq_opcode == Write
                         || coreReq_opcode == Amo) {
@@ -143,31 +155,23 @@ public:
                                 );
                             } else {
                                 auto data_from_array = m_data_array.read(set_idx, way_idx);
-                                // Debug: Check cache hit data for LW instruction at 0x800002c0
-                                // if (pipe1_r.m_pc == 0x800002c0) {
-                                //     std::cout << "[L1_cache::coreReq_pipe1_cycle] HIT
-                                //     pc=0x800002c0: "
-                                //               << "data_from_array[" <<
-                                //               static_cast<int>(pipe1_r.m_block_offset[0]) <<
-                                //               "]=0x"
-                                //               << std::hex <<
-                                //               data_from_array[pipe1_r.m_block_offset[0]] <<
-                                //               std::dec
-                                //               << " @ " << sc_time_stamp() << std::endl;
-                                // }
                                 for (int i = 0; i < NLANE; ++i) {
                                     if (pipe1_r.m_mask[i]
                                         == true) { // mem order to core order crossbar
                                         data[i] = data_from_array[pipe1_r.m_block_offset[i]];
-                                        // Debug: Check data assignment for LW
-                                        if (pipe1_r.m_pc == 0x800002c0) {
-                                            std::cout << "[L1_cache::coreReq_pipe1_cycle] HIT "
-                                                         "pc=0x800002c0: "
-                                                      << "lane=" << i << " block_offset="
-                                                      << static_cast<int>(pipe1_r.m_block_offset[i])
-                                                      << " data[" << i << "]=0x" << std::hex
-                                                      << data[i] << std::dec << " @ "
-                                                      << sc_time_stamp() << std::endl;
+                                        // Debug: Check data assignment for traced PCs (per-lane for
+                                        // vector)
+                                        if (std::ranges::find(trace_pcs, pipe1_r.m_pc)
+                                            != trace_pcs.end()) {
+                                            SPDLOG_LOGGER_TRACE(
+                                                m_logger,
+                                                "SM {} warp {} 0x{:x} {} L1D::coreReq_pipe1 HIT: "
+                                                "base addr=0x{:x}",
+                                                pipe1_r.m_debug_info->sm_id,
+                                                pipe1_r.m_debug_info->warp_id, pipe1_r.m_pc,
+                                                pipe1_r.m_debug_info->instr,
+                                                block_idx_to_addr(pipe1_block_idx)
+                                            );
                                         }
                                     }
                                 }
@@ -176,6 +180,11 @@ public:
                                 pipe1_r.m_reg_idxw, data, pipe1_r.m_l1id, pipe1_r.m_pagetable_root,
                                 pipe1_r.m_instrId, pipe1_r.m_pc, pipe1_r.m_wid, pipe1_r.m_mask
                             );
+                            // 传递 debug trace info 并记录 L1 HIT 事件
+                            if (pipe1_r.m_debug_info) {
+                                hit_coreRsp.m_debug_info = pipe1_r.m_debug_info;
+                                hit_coreRsp.m_debug_info->trace_msg.push_back("L1 hit");
+                            }
                             m_coreRsp_pipe2_reg.update_with(hit_coreRsp);
                             pipe1_r.invalidate();
                         }
@@ -193,6 +202,11 @@ public:
                                         pipe1_r.m_pagetable_root, pipe1_r.m_instrId, pipe1_r.m_pc,
                                         pipe1_r.m_mask, pipe1_r.m_block_offset
                                     );
+                                    // 传递 debug info 到 MSHR subentry
+                                    if (pipe1_r.m_debug_info) {
+                                        new_vec_sub.m_debug_info = pipe1_r.m_debug_info;
+                                        pipe1_r.m_debug_info->trace_msg.push_back("L1 read miss");
+                                    }
                                     m_mshr.allocate_vec_main(pipe1_block_idx, new_vec_sub);
                                     // 这里有一个硬件时序bug，修改了mshr条目数，后面的coreReq_st0会读取到修改后的新值。
                                     // push memReq Q
@@ -204,8 +218,20 @@ public:
                                         pipe1_r.m_pagetable_root, pipe1_r.m_instrId, pipe1_r.m_pc,
                                         pipe1_block_idx, data, full_mask
                                     );
+                                    if (pipe1_r.m_debug_info) {
+                                        new_read_miss.m_debug_info = pipe1_r.m_debug_info;
+                                    }
                                     m_memReq_Q.m_Q.push_back(new_read_miss);
                                     pipe1_r.invalidate();
+                                }
+                                if (std::ranges::find(trace_pcs, pipe1_r.m_pc) != trace_pcs.end()) {
+                                    SPDLOG_LOGGER_TRACE(
+                                        m_logger,
+                                        "SM {} warp {} 0x{:x} {} L1D::coreReq_pipe1 MISS, create "
+                                        "new MSHR item",
+                                        pipe1_r.m_debug_info->sm_id, pipe1_r.m_debug_info->warp_id,
+                                        pipe1_r.m_pc, pipe1_r.m_debug_info->instr
+                                    );
                                 }
                             } else if (mshr_status == SECONDARY_AVAIL) {
                                 // vecMSHR在旧entry下记录新成员
@@ -214,10 +240,26 @@ public:
                                     pipe1_r.m_pagetable_root, pipe1_r.m_instrId, pipe1_r.m_pc,
                                     pipe1_r.m_mask, pipe1_r.m_block_offset
                                 );
+                                // 合并请求的 debug info 也记录到 MSHR
+                                if (pipe1_r.m_debug_info) {
+                                    new_vec_sub.m_debug_info = pipe1_r.m_debug_info;
+                                    pipe1_r.m_debug_info->trace_msg.push_back(
+                                        "L1 MSHR merge to exist"
+                                    );
+                                }
+                                if (std::ranges::find(trace_pcs, pipe1_r.m_pc) != trace_pcs.end()) {
+                                    SPDLOG_LOGGER_TRACE(
+                                        m_logger,
+                                        "SM {} warp {} 0x{:x} {} L1D::coreReq_pipe1 MISS, merge to "
+                                        "existing MSHR item",
+                                        pipe1_r.m_debug_info->sm_id, pipe1_r.m_debug_info->warp_id,
+                                        pipe1_r.m_pc, pipe1_r.m_debug_info->instr
+                                    );
+                                }
                                 m_mshr.allocate_vec_sub(pipe1_block_idx, new_vec_sub);
                                 pipe1_r.invalidate();
-                            }    // PRIMARY_FULL和SECONDARY_FULL直接跳过
-                        } else { // Write (write no allocation when miss)
+                            } // PRIMARY_FULL和SECONDARY_FULL直接跳过
+                        } else {                         // Write (write no allocation when miss)
                             if (!m_memReq_Q.is_full()) { //&& !m_coreRsp_Q.is_full()){
                                 // push memReq Q
                                 std::array<uint32_t, hw_num_thread> data_memReq;
@@ -236,6 +278,11 @@ public:
                                     pipe1_r.m_l1id, pipe1_r.m_pagetable_root, pipe1_r.m_instrId,
                                     pipe1_r.m_pc, pipe1_block_idx, data_memReq, write_miss_mask
                                 );
+                                // 传递 debug info 到 WRITE MISS memReq
+                                if (pipe1_r.m_debug_info) {
+                                    new_write_miss.m_debug_info = pipe1_r.m_debug_info;
+                                    pipe1_r.m_debug_info->trace_msg.push_back("L1 write miss");
+                                }
                                 new_write_miss.set_coreRsp();
                                 m_memReq_Q.m_Q.push_back(new_write_miss);
                                 pipe1_r.invalidate();
@@ -263,14 +310,47 @@ public:
         if (pipe1_opcode == Amo) {
             new_spe_type = AMO;
             cast_amo_LSU_type_2_TLUH_param(pipe1_r.m_amo_type, new_mReq_opcode, new_mReq_param);
+            // Add trace log for AMO operation
+            if (std::ranges::find(trace_pcs, pipe1_r.m_pc) != trace_pcs.end()) {
+                SPDLOG_LOGGER_TRACE(
+                    m_logger,
+                    "SM {} warp {} 0x{:x} {} L1D::coreReq_pipe1_LRSCAMO AMO operation, base addr=0x{:x}",
+                    pipe1_r.m_debug_info ? pipe1_r.m_debug_info->sm_id : 0,
+                    pipe1_r.m_wid, pipe1_r.m_pc,
+                    pipe1_r.m_debug_info ? pipe1_r.m_debug_info->instr.d : 0,
+                    block_idx_to_addr(pipe1_block_idx)
+                );
+            }
         } else if (pipe1_opcode == Read) {
             new_spe_type = LOAD_RESRV;
             new_mReq_opcode = Get;
             new_mReq_param = 0x1;
+            // Add trace log for LR (Load-Reserved) operation
+            if (std::ranges::find(trace_pcs, pipe1_r.m_pc) != trace_pcs.end()) {
+                SPDLOG_LOGGER_TRACE(
+                    m_logger,
+                    "SM {} warp {} 0x{:x} {} L1D::coreReq_pipe1_LRSCAMO LR operation, base addr=0x{:x}",
+                    pipe1_r.m_debug_info ? pipe1_r.m_debug_info->sm_id : 0,
+                    pipe1_r.m_wid, pipe1_r.m_pc,
+                    pipe1_r.m_debug_info ? pipe1_r.m_debug_info->instr.d : 0,
+                    block_idx_to_addr(pipe1_block_idx)
+                );
+            }
         } else {
             new_spe_type = STORE_COND;
             new_mReq_opcode = PutFullData;
             new_mReq_param = 0x1;
+            // Add trace log for SC (Store-Conditional) operation
+            if (std::ranges::find(trace_pcs, pipe1_r.m_pc) != trace_pcs.end()) {
+                SPDLOG_LOGGER_TRACE(
+                    m_logger,
+                    "SM {} warp {} 0x{:x} {} L1D::coreReq_pipe1_LRSCAMO SC operation, base addr=0x{:x}",
+                    pipe1_r.m_debug_info ? pipe1_r.m_debug_info->sm_id : 0,
+                    pipe1_r.m_wid, pipe1_r.m_pc,
+                    pipe1_r.m_debug_info ? pipe1_r.m_debug_info->instr.d : 0,
+                    block_idx_to_addr(pipe1_block_idx)
+                );
+            }
         }
         // 实际硬件行为中，mshr的probe发生在pipe1_cycle，结果在pipe2_cycle取得。
         if (m_mshr.probe_spe_out() == AVAIL) {
@@ -313,6 +393,16 @@ public:
         uint32_t tag_evict;
         if (pipe1_r.m_type == 2) { // WaitMSHR
             if (m_mshr.empty()) {
+                // Add trace log for WaitMSHR completion
+                if (std::ranges::find(trace_pcs, pipe1_r.m_pc) != trace_pcs.end()) {
+                    SPDLOG_LOGGER_TRACE(
+                        m_logger,
+                        "SM {} warp {} 0x{:x} {} L1D::coreReq_pipe1_invORflu WaitMSHR complete",
+                        pipe1_r.m_debug_info ? pipe1_r.m_debug_info->sm_id : 0,
+                        pipe1_r.m_wid, pipe1_r.m_pc,
+                        pipe1_r.m_debug_info ? pipe1_r.m_debug_info->instr.d : 0
+                    );
+                }
                 vec_nlane_t data { 0 };
                 dcache_2_LSU_coreRsp WaitMSHR_Rsp(
                     pipe1_r.m_reg_idxw, data, pipe1_r.m_l1id, pipe1_r.m_pagetable_root,
@@ -340,6 +430,16 @@ public:
                 if (pipe1_r.m_type == 0) { // Invalidate
                     if (m_mshr.empty() && m_wshr.empty()) {
                         if (!m_coreRsp_Q.is_full()) {
+                            // Add trace log for invalidate operation
+                            if (std::ranges::find(trace_pcs, pipe1_r.m_pc) != trace_pcs.end()) {
+                                SPDLOG_LOGGER_TRACE(
+                                    m_logger,
+                                    "SM {} warp {} 0x{:x} {} L1D::coreReq_pipe1_invORflu INVALIDATE all cache",
+                                    pipe1_r.m_debug_info ? pipe1_r.m_debug_info->sm_id : 0,
+                                    pipe1_r.m_wid, pipe1_r.m_pc,
+                                    pipe1_r.m_debug_info ? pipe1_r.m_debug_info->instr.d : 0
+                                );
+                            }
                             m_tag_array.invalidate_all();
                             dcache_2_LSU_coreRsp Invalidate_coreRsp(
                                 pipe1_r.m_reg_idxw, data, pipe1_r.m_l1id, pipe1_r.m_pagetable_root,
@@ -351,6 +451,16 @@ public:
                     }
                 } else if (pipe1_r.m_type == 1) { // Flush
                     if (!m_coreRsp_Q.is_full() && m_wshr.empty()) {
+                        // Add trace log for flush operation
+                        if (std::ranges::find(trace_pcs, pipe1_r.m_pc) != trace_pcs.end()) {
+                            SPDLOG_LOGGER_TRACE(
+                                m_logger,
+                                "SM {} warp {} 0x{:x} {} L1D::coreReq_pipe1_invORflu FLUSH cache",
+                                pipe1_r.m_debug_info ? pipe1_r.m_debug_info->sm_id : 0,
+                                pipe1_r.m_wid, pipe1_r.m_pc,
+                                pipe1_r.m_debug_info ? pipe1_r.m_debug_info->instr.d : 0
+                            );
+                        }
                         dcache_2_LSU_coreRsp Flush_coreRsp(
                             pipe1_r.m_reg_idxw, data, pipe1_r.m_l1id, pipe1_r.m_pagetable_root,
                             pipe1_r.m_instrId, pipe1_r.m_pc, pipe1_r.m_wid, pipe1_r.m_mask
@@ -368,6 +478,17 @@ public:
     void coreRsp_pipe2_cycle() {
         if (m_coreRsp_pipe2_reg.is_valid()) {
             if (!m_coreRsp_Q.is_full()) {
+                // Add trace log when returning data to LSU
+                if (std::ranges::find(trace_pcs, m_coreRsp_pipe2_reg.m_pc) != trace_pcs.end()) {
+                    SPDLOG_LOGGER_TRACE(
+                        m_logger,
+                        "SM {} warp {} 0x{:x} {} L1D::coreRsp_pipe2_cycle RETURN to LSU, data[0]=0x{:x}",
+                        m_coreRsp_pipe2_reg.m_debug_info ? m_coreRsp_pipe2_reg.m_debug_info->sm_id : 0,
+                        m_coreRsp_pipe2_reg.m_wid, m_coreRsp_pipe2_reg.m_pc,
+                        m_coreRsp_pipe2_reg.m_debug_info ? m_coreRsp_pipe2_reg.m_debug_info->instr.d : 0,
+                        m_coreRsp_pipe2_reg.m_data[0]
+                    );
+                }
                 m_coreRsp_Q.m_Q.push_back(m_coreRsp_pipe2_reg);
                 m_coreRsp_pipe2_reg.invalidate();
             }
@@ -380,6 +501,17 @@ public:
                 if (m_memRsp_Q.m_Q.front().d_opcode == AccessAckData) {
                     // 这种机制要求SC也返回AccessAckData，而不是AccessAck
                     auto const req_id = m_memRsp_Q.m_Q.front().d_source;
+                    auto pc = m_memRsp_Q.m_Q.front().d_pc;
+                    // Add trace log when L2 responds to L1 with data
+                    if (std::ranges::find(trace_pcs, pc) != trace_pcs.end()) {
+                        auto& debug_info = m_memRsp_Q.m_Q.front().m_debug_info;
+                        SPDLOG_LOGGER_TRACE(
+                            m_logger,
+                            "SM {} warp {} 0x{:x} {} L1D::memRsp_pipe0_cycle L2 RESPONSE received, data[0]=0x{:x}",
+                            debug_info->sm_id, debug_info->warp_id, pc,
+                            debug_info->instr, m_memRsp_Q.m_Q.front().d_data[0]
+                        );
+                    }
                     // std::cout << "[L1_cache::memRsp_pipe0_cycle] Processing response: req_id=" <<
                     // req_id
                     //           << " (d_source), pc=0x" << std::hex << m_memRsp_Q.m_Q.front().d_pc
@@ -387,7 +519,6 @@ public:
                     block_addr_t block_idx;
                     auto missRsp_type = m_mshr.detect_missRsp_type(block_idx, req_id);
                     // Get info from m_memRsp_Q (which has d_pc and d_instrId)
-                    auto pc = m_memRsp_Q.m_Q.front().d_pc;
                     auto instrId = m_memRsp_Q.m_Q.front().d_instrId;
                     // For l1id and pagetable_root, we'll use default values (they're not critical
                     // for debugging)
@@ -406,6 +537,11 @@ public:
                     }
                     mshr_miss_rsp new_miss_rsp
                         = mshr_miss_rsp(missRsp_type, req_id, l1id, instrId, pc, block_idx);
+                    // 从 L2 memRsp 传递 debug info 到 MSHR miss response
+                    if (m_memRsp_Q.m_Q.front().m_debug_info) {
+                        new_miss_rsp.m_debug_info = m_memRsp_Q.m_Q.front().m_debug_info;
+                        new_miss_rsp.m_debug_info->trace_msg.push_back("L2 rsp L1 MSHR");
+                    }
                     m_memRsp_pipe1_reg.update_with(new_miss_rsp, m_memRsp_Q.m_Q.front().d_data);
                     // Debug: Check data after updating
                     if (memRsp_count <= 10) {
@@ -418,7 +554,17 @@ public:
                         //           << " after update_with @ " << sc_time_stamp() << std::endl;
                     }
                 } else {
-                    // pop wshr
+                    // pop wshr - write response from L2
+                    auto req_id = m_memRsp_Q.m_Q.front().d_source;
+                    auto pc = m_memRsp_Q.m_Q.front().d_pc;
+                    if (std::ranges::find(trace_pcs, pc) != trace_pcs.end()) {
+                        auto& debug_info = m_memRsp_Q.m_Q.front().m_debug_info;
+                        SPDLOG_LOGGER_TRACE(
+                            m_logger,
+                            "SM {} warp {} 0x{:x} {} L1D::memRsp_pipe0_cycle L2 WRITE ACK received",
+                            debug_info->sm_id, debug_info->warp_id, pc, debug_info->instr
+                        );
+                    }
                     m_wshr.pop(m_memRsp_Q.m_Q.front().d_source);
                 }
                 if (m_DEBUG_verbose_level >= 1) {
@@ -488,10 +634,7 @@ public:
                                     << (2 + log2Ceil(L1D_BLOCK_NUM_WORD) + log2Ceil(L1D_NUM_SET)))
                                    + (set_idx << (2 + log2Ceil(L1D_BLOCK_NUM_WORD))))
                                 << 2;
-                            // block_addr 是完整的块地址，需要右移 (2 +
-                            // log2Ceil(L1D_BLOCK_NUM_WORD)) 得到 block_idx
-                            uint32_t block_idx_for_req
-                                = block_addr >> (2 + log2Ceil(L1D_BLOCK_NUM_WORD));
+                            uint32_t block_idx_for_req = addr_to_block_idx(block_addr);
                             std::array<bool, LINEWORDS> full_mask;
                             full_mask.fill(true);
                             memReq_Q_ele new_dirty_back
@@ -533,28 +676,32 @@ public:
                         auto& cReq_st1_r = m_coreReq_pipe1_reg;
                         auto& mRsp_st1_r = m_memRsp_pipe1_reg;
                         vec_nlane_t data;
-                        // Debug: Check data for LW instruction at 0x800002c0
-                        if (cReq_st1_r.m_pc == 0x800002c0) {
-                            std::cout
-                                << "[L1_cache::memRsp_pipe1_cycle] LW @ pc=0x800002c0: "
-                                << "m_fill_data[0]=0x" << std::hex << mRsp_st1_r.m_fill_data[0]
-                                << " m_fill_data[1]=0x" << mRsp_st1_r.m_fill_data[1]
-                                << " block_offset[0]=" << std::dec
-                                << static_cast<int>(cReq_st1_r.m_block_offset[0]) << std::endl;
-                        }
+                        bool debug_log
+                            = std::ranges::find(trace_pcs, cReq_st1_r.m_pc) != trace_pcs.end();
+                        std::string debug_addr_data;
+                        debug_addr_data.reserve(1024);
                         for (int i = 0; i < NLANE; ++i) {
                             if (cReq_st1_r.m_mask[i] == true) { // mem order to core order crossbar
                                 data[i] = mRsp_st1_r.m_fill_data[cReq_st1_r.m_block_offset[i]];
-                                // Debug: Check data assignment
-                                // if (cReq_st1_r.m_pc == 0x80000058) {
-                                //     std::cout << "[L1_cache::memRsp_pipe1_cycle] LW @
-                                //     pc=0x80000058: "
-                                //               << "lane=" << i << " block_offset=" <<
-                                //               static_cast<int>(cReq_st1_r.m_block_offset[i])
-                                //               << " data[" << i << "]=0x" << std::hex << data[i]
-                                //               << std::dec << std::endl;
-                                // }
+                                // Debug: Check data assignment (per-lane for vector)
+                                if (debug_log) {
+                                    debug_addr_data += fmt::format(
+                                        "{:x}={:x} ",
+                                        get_addr(
+                                            cReq_st1_r.m_block_idx, cReq_st1_r.m_block_offset[i]
+                                        ),
+                                        data[i]
+                                    );
+                                }
                             }
+                        }
+                        // Debug: Check data for traced instructions
+                        if (std::ranges::find(trace_pcs, cReq_st1_r.m_pc) != trace_pcs.end()) {
+                            SPDLOG_LOGGER_TRACE(
+                                m_logger, "SM {} warp {} 0x{:x} {} L1D::memRsp_pipe1_cycle: {}",
+                                cReq_st1_r.m_debug_info->sm_id, cReq_st1_r.m_debug_info->warp_id,
+                                cReq_st1_r.m_pc, cReq_st1_r.m_debug_info->instr, debug_addr_data
+                            );
                         }
                         dcache_2_LSU_coreRsp secondary_full_return_cRsp(
                             cReq_st1_r.m_reg_idxw, data, cReq_st1_r.m_l1id,
@@ -639,6 +786,18 @@ public:
                     // mReq_updated.a_source is already = mReq.a_source from the copy above
                 }
                 m_memReq_pipe3_reg.update_with(mReq_updated);
+                // Add trace log when sending request to L2
+                if (std::ranges::find(trace_pcs, mReq.a_pc) != trace_pcs.end()) {
+                    const char* op_str = (is_read) ? "GET" : ((is_write) ? "PUT" : "AMO");
+                    SPDLOG_LOGGER_TRACE(
+                        m_logger,
+                        "SM {} warp {} 0x{:x} {} L1D::memReq_pipe2_cycle SEND to L2, op={} addr=0x{:x}",
+                        mReq.m_debug_info ? mReq.m_debug_info->sm_id : 0,
+                        mReq.a_source, mReq.a_pc,
+                        mReq.m_debug_info ? mReq.m_debug_info->instr.d : 0,
+                        op_str, mReq.a_address
+                    );
+                }
                 // std::cout << "[L1_cache::memReq_pipe3_cycle] Created dcache_2_L2_memReq:
                 // a_opcode="
                 //           << (is_read ? "Get" : (is_write ? "PutFullData" : "Other"))
@@ -725,8 +884,8 @@ public:
         auto& o = m_coreReq;
         waveform_file << o.is_valid() << "," << o.m_opcode << "," << o.m_type << "," << o.m_wid
                       << ",";
-        waveform_file << o.m_reg_idxw << o.m_l1id << ","
-                      << "," << o.m_block_idx << "," << o.m_block_offset[0] << ",";
+        waveform_file << o.m_reg_idxw << o.m_l1id << "," << "," << o.m_block_idx << ","
+                      << o.m_block_offset[0] << ",";
         waveform_file << o.m_mask[0] << "," << o.m_mask[1] << "," << o.m_data[0] << ",";
     }
 
