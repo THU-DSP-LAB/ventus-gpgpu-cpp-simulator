@@ -780,6 +780,7 @@ void Subcore::receive_warp(
     uint32_t blk_idx_in_kernel, uint32_t warp_idx_in_blk, std::shared_ptr<kernel_info_t> kernel,
     uint32_t lds_baseaddr, uint32_t blk_slot_idx, uint32_t subcore_warp_idx
 ) {
+    (void)blk_idx_in_kernel;
     auto& hwarp = m_hw_warps.at(subcore_warp_idx);
     assert(hwarp && !hwarp->is_warp_activated && !hwarp->will_warp_activate);
 
@@ -801,9 +802,12 @@ void Subcore::receive_warp(
     hwarp->CSR_reg[0x804] = blk_slot_idx;
     hwarp->CSR_reg[0x805] = warp_idx_in_blk;
     hwarp->CSR_reg[0x806] = ldsBaseAddr_core + lds_baseaddr;
-    hwarp->CSR_reg[0x807] = kernel->get_pdsBaseAddr()
-        + (blk_idx_in_kernel * kernel->get_num_warp_per_cta() + warp_idx_in_blk)
-            * kernel->get_num_thread_per_warp() * kernel->get_pdsSize_per_thread();
+    const uint64_t slot_linear = static_cast<uint64_t>(m_sm_id) * MAX_CTA_PER_CORE + blk_slot_idx;
+    const uint64_t pds_bytes_per_warp =
+        static_cast<uint64_t>(kernel->get_num_thread_per_warp()) * kernel->get_pdsSize_per_thread();
+    const uint64_t wg_pds_base = static_cast<uint64_t>(kernel->get_pdsBaseAddr())
+        + slot_linear * static_cast<uint64_t>(kernel->get_num_warp_per_cta()) * pds_bytes_per_warp;
+    hwarp->CSR_reg[0x807] = wg_pds_base + static_cast<uint64_t>(warp_idx_in_blk) * pds_bytes_per_warp;
     hwarp->CSR_reg[0x808] = block_idx_3d.x;
     hwarp->CSR_reg[0x809] = block_idx_3d.y;
     hwarp->CSR_reg[0x80a] = block_idx_3d.z;
