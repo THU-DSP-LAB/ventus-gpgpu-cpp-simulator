@@ -68,6 +68,14 @@ typedef struct {
     bool idle;        // All given kernels has finished
 } ventus_cyclesim_step_result_t;
 
+typedef enum {
+    VENTUS_CYCLESIM_PARAM_NUM_SM = 1,
+    VENTUS_CYCLESIM_PARAM_NUM_WARP_PER_SM = 2,
+    VENTUS_CYCLESIM_PARAM_NUM_THREAD_PER_WARP = 3,
+    VENTUS_CYCLESIM_PARAM_MAX_CTA_PER_SM = 4,
+    VENTUS_CYCLESIM_PARAM_LOCAL_MEM_SIZE = 5,
+} ventus_cyclesim_param_id_t;
+
 // =
 // API functions:
 // =
@@ -78,6 +86,8 @@ typedef struct {
 
 // Give you a recommended default config.
 DLL_PUBLIC void ventus_cyclesim_get_default_config(ventus_cyclesim_config_t* config);
+// Query static architectural parameters used by the simulator model.
+DLL_PUBLIC int ventus_cyclesim_get_param_u64(ventus_cyclesim_param_id_t param, uint64_t* value);
 // Get current simulation time.
 DLL_PUBLIC uint64_t ventus_cyclesim_get_time(const ventus_cyclesim_t* sim);
 // Check if the simulated GPU is idle (no kernel is running).

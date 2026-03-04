@@ -1,4 +1,5 @@
 #include "ventus_cyclesim_impl.hpp"
+#include "parameters.h"
 
 ventus_cyclesim_t* ventus_cyclesim_init(const ventus_cyclesim_config_t* config) {
     ventus_cyclesim_t* sim = new ventus_cyclesim_t();
@@ -12,6 +13,29 @@ void ventus_cyclesim_get_default_config(ventus_cyclesim_config_t* config) {
     config->ramulator.filename = VENTUS_CYCLESIM_PROJECT_DIR "/ramulator_config.yaml";
     config->waveform.enable = false;
     config->waveform.filename = "cyclesim";
+}
+
+int ventus_cyclesim_get_param_u64(ventus_cyclesim_param_id_t param, uint64_t* value) {
+    if (value == nullptr) return -1;
+    switch (param) {
+    case VENTUS_CYCLESIM_PARAM_NUM_SM:
+        *value = NUM_SM;
+        return 0;
+    case VENTUS_CYCLESIM_PARAM_NUM_WARP_PER_SM:
+        *value = hw_num_warp;
+        return 0;
+    case VENTUS_CYCLESIM_PARAM_NUM_THREAD_PER_WARP:
+        *value = hw_num_thread;
+        return 0;
+    case VENTUS_CYCLESIM_PARAM_MAX_CTA_PER_SM:
+        *value = MAX_CTA_PER_CORE;
+        return 0;
+    case VENTUS_CYCLESIM_PARAM_LOCAL_MEM_SIZE:
+        *value = hw_lds_size;
+        return 0;
+    default:
+        return -1;
+    }
 }
 
 void ventus_cyclesim_config(ventus_cyclesim_t* sim, const ventus_cyclesim_config_t* config) {
