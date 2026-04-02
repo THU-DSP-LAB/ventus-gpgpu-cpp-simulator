@@ -355,6 +355,8 @@ class I_TYPE // type of per instruction
 {
 public:
     uint32_t origin32bit; // 原始32位指令
+    bool is_extended = false;
+    uint32_t dispatch_id = 0;
     int op;               // sc_trace不支持enum，只能定义op为int型
     int d = -1;           // beq指令为imm
     int s1 = -1;          // load指令为寄存器addr
@@ -376,6 +378,8 @@ public:
         , s2(_s2) {};
     I_TYPE(I_TYPE _ins, int _currentpc)
         : origin32bit(_ins.origin32bit)
+        , is_extended(_ins.is_extended)
+        , dispatch_id(_ins.dispatch_id)
         , op(_ins.op)
         , d(_ins.d)
         , s1(_ins.s1)
@@ -390,6 +394,8 @@ public:
     I_TYPE& operator=(const I_TYPE& rhs) {
         currentpc = rhs.currentpc;
         origin32bit = rhs.origin32bit;
+        is_extended = rhs.is_extended;
+        dispatch_id = rhs.dispatch_id;
         op = rhs.op;
         d = rhs.d;
         s1 = rhs.s1;
@@ -408,6 +414,8 @@ public:
     }
     friend void sc_trace(sc_trace_file* tf, const I_TYPE& v, const std::string& NAME) {
         sc_trace(tf, v.origin32bit, NAME + ".ins_bit");
+        sc_trace(tf, v.is_extended, NAME + ".is_extended");
+        sc_trace(tf, v.dispatch_id, NAME + ".dispatch_id");
         sc_trace(tf, v.op, NAME + ".op");
         sc_trace(tf, v.s1, NAME + ".s1");
         sc_trace(tf, v.s2, NAME + ".s2");
@@ -968,6 +976,7 @@ public:
     std::function<void(int, int)> finish_callback; // 当前warp执行完毕后回调通知CTA Scheduler
     paddr_t pagetable;                             // 页表基址
     int num_thread;                                // warp内线程数
+    uint32_t dispatch_id = 0;
 
     explicit WARP_BONE(int warp_id)
         : warp_id(warp_id)
@@ -1002,6 +1011,7 @@ public:
         for (auto& subarray : v_regfile)
             subarray.fill(0);
         CSR_reg.clear();
+        dispatch_id = 0;
         std::stack<simtstack_t>().swap(IPDOM_stack);
 
         endprg_flush_pipe.write(true);

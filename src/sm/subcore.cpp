@@ -1,5 +1,8 @@
 #include "subcore.hpp"
+#include "../../gpgpu/sim-verilator/gvm_dpic.hpp"
+#include "../../gpgpu/sim-verilator/gvm_global_var.hpp"
 #include "../context_model.hpp"
+#include "../cyclesim_gvm.hpp"
 #include "icache.hpp"
 #include "sysc/kernel/sc_simcontext.h"
 #include "sysc/kernel/sc_time.h"
@@ -860,6 +863,29 @@ void Subcore::receive_warp(
         _validmask[i] = 1;
     }
     hwarp->current_mask.write(_validmask);
+
+    if (cyclesim_gvm_enabled()) {
+        const auto hw_warp_id = warpid_convert(m_subcore_id, subcore_warp_idx);
+        hwarp->dispatch_id = 0;
+        const uint64_t software_wg_id =
+            ventus_cyclesim_gvm_get_kernel_wg_id_base(kernel->get_kid())
+            + static_cast<uint64_t>(blk_idx_in_kernel);
+        g_sgprUsage = static_cast<uint32_t>(kernel->get_metadata().sgprUsage);
+        g_vgprUsage = static_cast<uint32_t>(kernel->get_metadata().vgprUsage);
+        c_GvmDutCta2Warp(
+            static_cast<int>(software_wg_id), static_cast<int>(warp_idx_in_blk),
+            static_cast<int>(m_sm_id), static_cast<int>(hw_warp_id), 0, 0,
+            static_cast<int>(blk_slot_idx), hwarp->num_thread
+        );
+        const uint32_t xreg_words
+            = std::min<uint32_t>(static_cast<uint32_t>(kernel->get_metadata().sgprUsage), hwarp->s_regfile.size());
+        for (uint32_t i = 0; i < xreg_words; ++i) {
+            c_GvmDutWarpXRegInit(
+                static_cast<int>(m_sm_id), static_cast<int>(hw_warp_id),
+                static_cast<int>(hwarp->s_regfile[i]), static_cast<int>(i)
+            );
+        }
+    }
 }
 
 void Subcore::exec_calc_helper(

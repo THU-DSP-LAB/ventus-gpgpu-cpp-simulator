@@ -1,4 +1,6 @@
 #include "subcore.hpp"
+#include "../../gpgpu/sim-verilator/gvm_dpic.hpp"
+#include "../cyclesim_gvm.hpp"
 
 void Subcore::WRITE_BACK() {
     // FloatAndInt newFI;
@@ -202,6 +204,33 @@ void Subcore::WRITE_BACK() {
             write_s = false;
             write_v = false;
             wb_ena = false;
+        }
+
+        if (wb_ena && cyclesim_gvm_enabled()) {
+            const auto wb_ins_value = wb_ins.read();
+            const auto wb_data = rdv1_data.read();
+            const auto hw_warp_id = warpid_convert(m_subcore_id, wb_warpid);
+            const int reg_idx = rdv1_addr.read();
+            if (write_s) {
+                c_GvmDutXRegWriteback(
+                    static_cast<int>(m_sm_id), static_cast<int>(wb_data[0]), true, reg_idx,
+                    static_cast<int>(hw_warp_id), static_cast<int>(wb_ins_value.currentpc),
+                    static_cast<int>(wb_ins_value.origin32bit),
+                    static_cast<int>(wb_ins_value.dispatch_id)
+                );
+            } else if (write_v) {
+                for (int thread_idx = 0; thread_idx < hw_num_thread; ++thread_idx) {
+                    c_GvmDutVRegWriteback(
+                        static_cast<int>(m_sm_id), static_cast<int>(wb_data[thread_idx]),
+                        true, reg_idx, static_cast<int>(hw_warp_id),
+                        static_cast<int>(wb_ins_value.currentpc),
+                        static_cast<int>(wb_ins_value.origin32bit),
+                        static_cast<int>(wb_ins_value.dispatch_id),
+                        wb_ins_value.mask[thread_idx] == 1,
+                        thread_idx
+                    );
+                }
+            }
         }
     }
 }

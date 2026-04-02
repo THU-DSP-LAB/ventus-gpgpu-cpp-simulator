@@ -16,10 +16,15 @@ public:
         : append_func_(std::move(func)) { }
 
     void format(const spdlog::details::log_msg& msg, spdlog::memory_buf_t& dest) override {
-        auto filename = std::strrchr(msg.source.filename, '/'); // 去除路径
+        const char* source_filename = msg.source.filename;
+        const char* filename = "?";
+        if (source_filename != nullptr) {
+            const char* slash = std::strrchr(source_filename, '/'); // 去除路径
+            filename = (slash != nullptr) ? (slash + 1) : source_filename;
+        }
         auto str = fmt::format(
             "{} {} [{} {}:{}]\n", msg.payload, append_func_(),
-            spdlog::level::to_string_view(msg.level), filename + 1, msg.source.line
+            spdlog::level::to_string_view(msg.level), filename, msg.source.line
         );
         dest.append(str.data(), str.data() + str.size());
     }

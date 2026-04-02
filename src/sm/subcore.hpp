@@ -37,8 +37,10 @@ public:
     using l1icache_request_interface
         = std::function<void(paddr_t ptroot, vaddr_t addr, int warpid)>;
     using l1icache_flushpipe_interface = std::function<void(int warpid)>;
-    using warp_barrier_req_interface
-        = std::function<void(int subcore_warp_id, int blk_slot_id, int warp_id_in_blk, vaddr_t pc)>;
+    using warp_barrier_req_interface = std::function<void(
+        int subcore_warp_id, int blk_slot_id, int warp_id_in_blk, vaddr_t pc, uint32_t insn,
+        uint32_t dispatch_id
+    )>;
     using warp_endprg_interface
         = std::function<void(int subcore_warp_id, int blk_slot_id, int warp_id_in_blk)>;
     void warp_barrier_set(int subcore_warp_id, bool val);

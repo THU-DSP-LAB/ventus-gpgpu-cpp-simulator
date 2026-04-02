@@ -173,6 +173,28 @@ DLL_PUBLIC void ventus_cyclesim_vmemcpy_d2h(
     ventus_cyclesim_t* sim, paddr_t pagetable_root, void* dst, vaddr_t src, size_t size
 );
 
+// GVM-only sidecar state for cyclesim/GVM integration.
+DLL_PUBLIC void ventus_cyclesim_gvm_reset_kernel_wg_id_base();
+DLL_PUBLIC void ventus_cyclesim_gvm_set_kernel_wg_id_base(
+    uint64_t kernel_id, uint64_t software_wg_id_base
+);
+DLL_PUBLIC uint64_t ventus_cyclesim_gvm_get_kernel_wg_id_base(uint64_t kernel_id);
+
+DLL_PUBLIC int fw_vt_dev_open();
+DLL_PUBLIC int fw_vt_dev_close();
+DLL_PUBLIC int fw_vt_buf_alloc(
+    uint64_t size, uint64_t* vaddr, int BUF_TYPE, uint64_t taskID, uint64_t kernelID
+);
+DLL_PUBLIC int fw_vt_buf_free(uint64_t size, uint64_t* vaddr, uint64_t taskID, uint64_t kernelID);
+DLL_PUBLIC int fw_vt_one_buf_free(
+    uint64_t size, uint64_t* vaddr, uint64_t taskID, uint64_t kernelID
+);
+DLL_PUBLIC int fw_vt_copy_to_dev(
+    uint64_t dev_vaddr, const void* src_addr, uint64_t size, uint64_t taskID, uint64_t kernelID
+);
+DLL_PUBLIC int fw_vt_start(void* metaData, uint64_t taskID);
+DLL_PUBLIC int fw_vt_upload_kernel_file(const char* filename, int taskID);
+
 #undef DLL_PUBLIC
 #undef DLL_LOCAL
 

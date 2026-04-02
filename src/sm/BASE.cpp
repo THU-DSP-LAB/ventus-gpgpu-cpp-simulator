@@ -1,4 +1,6 @@
 #include "../context_model.hpp"
+#include "../../gpgpu/sim-verilator/gvm_dpic.hpp"
+#include "../cyclesim_gvm.hpp"
 #include "BASE.h"
 #include "subcore.hpp"
 #include <algorithm>
@@ -57,8 +59,13 @@ BASE::BASE(
                     src_data2, src_data3
                 );
             },
-            [this, i](int subcore_warp_id, int blk_slot_id, int warp_id_in_blk, vaddr_t pc) {
-                warp_reach_barrier(i, subcore_warp_id, blk_slot_id, warp_id_in_blk, pc);
+            [this, i](
+                int subcore_warp_id, int blk_slot_id, int warp_id_in_blk, vaddr_t pc,
+                uint32_t insn, uint32_t dispatch_id
+            ) {
+                warp_reach_barrier(
+                    i, subcore_warp_id, blk_slot_id, warp_id_in_blk, pc, insn, dispatch_id
+                );
             },
             [this, i](int subcore_warp_id, int blk_slot_id, int warp_id_in_blk) {
                 warp_endprg(i, subcore_warp_id, blk_slot_id, warp_id_in_blk);
@@ -165,7 +172,8 @@ int BASE::lsu_subcore_req(
 }
 
 void BASE::warp_reach_barrier(
-    int subcore_id, int subcore_warp_id, int blk_slot_id, int warp_idx_in_blk, vaddr_t pc
+    int subcore_id, int subcore_warp_id, int blk_slot_id, int warp_idx_in_blk, vaddr_t pc,
+    uint32_t insn, uint32_t dispatch_id
 ) {
     auto hwarp_id = warpid_convert(subcore_id, subcore_warp_id);
     auto& hblkslot = m_block_slots.at(blk_slot_id);
@@ -207,6 +215,13 @@ void BASE::warp_reach_barrier(
                 m_logger, "SM {} warp scheduler: all warps of blkslot {} reach barrier pc=0x{:x}",
                 sm_id, blk_slot_id, pc
             );
+            if (cyclesim_gvm_enabled()) {
+                c_GvmDutBarrierDone(
+                    static_cast<int>(sm_id), static_cast<int>(blk_slot_id),
+                    static_cast<int>(pc), static_cast<int>(insn),
+                    static_cast<int>(dispatch_id)
+                );
+            }
             // reset barrier
             hblkslot.warp_reach_barrier.fill(false);
             // warn: SC_MANY_WRITERS here

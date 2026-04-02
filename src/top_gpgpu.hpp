@@ -34,6 +34,7 @@ class Top_gpgpu {
 public:
     Top_gpgpu(const char* ramulator_config_filename, const char* vcd_filename = nullptr);
     ~Top_gpgpu();
+    std::shared_ptr<spdlog::logger> get_logger() const { return m_logger; }
 
     void add_kernel(std::string name, std::string metafile, std::string datafile);
     void add_kernel(

@@ -56,6 +56,17 @@ endif()
 set(SYSTEMC_INCLUDE_DIR ${SYSTEMC_HOME}/include)
 set(SYSTEMC_LIBRARY_DIR ${SYSTEMC_HOME}/lib-linux64)
 
+# Get GVM_REF_DIR from user
+if(DEFINED GVM_REF_DIR AND NOT GVM_REF_DIR STREQUAL "")
+  # use cmake cmd arg
+elseif(DEFINED ENV{GVM_REF_DIR} AND NOT "$ENV{GVM_REF_DIR}" STREQUAL "")
+  set(GVM_REF_DIR "$ENV{GVM_REF_DIR}" CACHE PATH "GVM Ref install root" FORCE)
+else()
+  if(EXISTS "${CMAKE_INSTALL_PREFIX}/lib/libgvmref.so")
+    set(GVM_REF_DIR "${CMAKE_INSTALL_PREFIX}/lib" CACHE PATH "GVM Ref install root" FORCE)
+  endif()
+endif()
+
 #
 # include submodules
 #
@@ -75,25 +86,37 @@ add_library(VentusCycleSim SHARED
     src/ramulator.cpp
     src/ventus_cyclesim.cpp 
     src/ventus_cyclesim_impl.cpp
+    ../gpgpu/sim-verilator/gvm.cpp
+    ../gpgpu/sim-verilator/gvm_care_insns.cpp
+    ../gpgpu/sim-verilator/gvm_dpic.cpp
+    ../gpgpu/sim-verilator/gvm_global_var.cpp
 )
 target_include_directories(VentusCycleSim
     PRIVATE ${SYSTEMC_INCLUDE_DIR}
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 target_link_directories(VentusCycleSim
     PRIVATE ${SYSTEMC_LIBRARY_DIR}
 )
+if(DEFINED GVM_REF_DIR)
+    target_link_directories(VentusCycleSim PRIVATE ${GVM_REF_DIR})
+endif()
 target_link_libraries(VentusCycleSim
     PRIVATE SV
     PRIVATE ramulator
     PRIVATE systemc
     PRIVATE spdlog
     PRIVATE fmt
+    PRIVATE gvmref
 )
 set_target_properties(VentusCycleSim PROPERTIES
     # libramulator.so will be installed together, use $ORIGIN
     INSTALL_RPATH "${SYSTEMC_LIBRARY_DIR};$ORIGIN"
     PUBLIC_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/src/ventus_cyclesim.h"
 )
+if(DEFINED GVM_REF_DIR)
+    set_property(TARGET VentusCycleSim APPEND PROPERTY INSTALL_RPATH "${GVM_REF_DIR}")
+endif()
 target_compile_definitions(VentusCycleSim PRIVATE
     VENTUS_CYCLESIM_PROJECT_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
 )
@@ -121,4 +144,3 @@ target_link_libraries(main
 target_compile_definitions(main PRIVATE
     VENTUS_CYCLESIM_PROJECT_DIR="\"${CMAKE_CURRENT_SOURCE_DIR}\""
 )
-

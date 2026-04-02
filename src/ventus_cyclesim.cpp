@@ -1,5 +1,11 @@
 #include "ventus_cyclesim_impl.hpp"
+#include "../../gpgpu/sim-verilator/gvmref_interface.h"
+#include "cyclesim_gvm.hpp"
 #include "parameters.h"
+#include <cassert>
+#include <unordered_map>
+
+static std::unordered_map<uint64_t, uint64_t> g_cyclesim_gvm_kernel_wg_id_base;
 
 ventus_cyclesim_t* ventus_cyclesim_init(const ventus_cyclesim_config_t* config) {
     ventus_cyclesim_t* sim = new ventus_cyclesim_t();
@@ -115,4 +121,59 @@ void ventus_cyclesim_vmem_free(
     ventus_cyclesim_t* sim, paddr_t ptroot, vaddr_t vaddr, size_t size
 ) {
     sim->m_dut->vmem_free(ptroot, vaddr, size);
+}
+
+void ventus_cyclesim_gvm_reset_kernel_wg_id_base() { g_cyclesim_gvm_kernel_wg_id_base.clear(); }
+
+void ventus_cyclesim_gvm_set_kernel_wg_id_base(uint64_t kernel_id, uint64_t software_wg_id_base) {
+    g_cyclesim_gvm_kernel_wg_id_base[kernel_id] = software_wg_id_base;
+}
+
+uint64_t ventus_cyclesim_gvm_get_kernel_wg_id_base(uint64_t kernel_id) {
+    auto it = g_cyclesim_gvm_kernel_wg_id_base.find(kernel_id);
+    assert(it != g_cyclesim_gvm_kernel_wg_id_base.end());
+    return it->second;
+}
+
+extern "C" int fw_vt_dev_open() {
+    return cyclesim_gvm_enabled() ? gvmref_vt_dev_open() : 0;
+}
+
+extern "C" int fw_vt_dev_close() {
+    return cyclesim_gvm_enabled() ? gvmref_vt_dev_close() : 0;
+}
+
+extern "C" int fw_vt_buf_alloc(
+    uint64_t size, uint64_t* vaddr, int BUF_TYPE, uint64_t taskID, uint64_t kernelID
+) {
+    return cyclesim_gvm_enabled() ? gvmref_vt_buf_alloc(size, vaddr, BUF_TYPE, taskID, kernelID)
+                                  : 0;
+}
+
+extern "C" int fw_vt_buf_free(
+    uint64_t size, uint64_t* vaddr, uint64_t taskID, uint64_t kernelID
+) {
+    return cyclesim_gvm_enabled() ? gvmref_vt_buf_free(size, vaddr, taskID, kernelID) : 0;
+}
+
+extern "C" int fw_vt_one_buf_free(
+    uint64_t size, uint64_t* vaddr, uint64_t taskID, uint64_t kernelID
+) {
+    return cyclesim_gvm_enabled() ? gvmref_vt_one_buf_free(size, vaddr, taskID, kernelID) : 0;
+}
+
+extern "C" int fw_vt_copy_to_dev(
+    uint64_t dev_vaddr, const void* src_addr, uint64_t size, uint64_t taskID, uint64_t kernelID
+) {
+    return cyclesim_gvm_enabled()
+        ? gvmref_vt_copy_to_dev(dev_vaddr, src_addr, size, taskID, kernelID)
+        : 0;
+}
+
+extern "C" int fw_vt_start(void* metaData, uint64_t taskID) {
+    return cyclesim_gvm_enabled() ? gvmref_vt_start(metaData, taskID) : 0;
+}
+
+extern "C" int fw_vt_upload_kernel_file(const char* filename, int taskID) {
+    return cyclesim_gvm_enabled() ? gvmref_vt_upload_kernel_file(filename, taskID) : 0;
 }

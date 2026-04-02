@@ -83,7 +83,8 @@ public:
     // @param: warp_id_in_blk: software warp id in block
     // @param: pc: the pc address that reaches barrier
     void warp_reach_barrier(
-        int subcore_id, int subcore_warp_id, int blk_slot_id, int warp_id_in_blk, vaddr_t pc
+        int subcore_id, int subcore_warp_id, int blk_slot_id, int warp_id_in_blk, vaddr_t pc,
+        uint32_t insn, uint32_t dispatch_id
     );
 
     // @brief: a warp finished execution, clear the block_slot, back to CTA scheduler

@@ -40,7 +40,8 @@ void Subcore::WARP_SCHEDULER() {
             switch (new_ins.op) {
             case OP_TYPE::BARRIER_:
                 f_warp_barrier_req(
-                    new_ins_warpid, hwarp->blk_slot_idx, hwarp->warp_idx_in_blk, new_ins.currentpc
+                    new_ins_warpid, hwarp->blk_slot_idx, hwarp->warp_idx_in_blk,
+                    new_ins.currentpc, new_ins.origin32bit, new_ins.dispatch_id
                 );
                 break;
             case OP_TYPE::ENDPRG_:

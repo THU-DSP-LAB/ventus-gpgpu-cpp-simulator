@@ -1,4 +1,6 @@
 #include "subcore.hpp"
+#include "../../gpgpu/sim-verilator/gvm_dpic.hpp"
+#include "../cyclesim_gvm.hpp"
 #include <fmt/format.h>
 #include <memory>
 #include <spdlog/spdlog.h>
@@ -51,6 +53,18 @@ void Subcore::OPC_FIFO() {
             } else {
                 _readdata4 = issue_ins.read();
                 _readwarpid = issueins_warpid;
+                auto& hwarp = m_hw_warps.at(_readwarpid);
+                if (cyclesim_gvm_enabled()) {
+                    const auto hw_warp_id = warpid_convert(m_subcore_id, _readwarpid);
+                    c_GvmDutInsnDispatch(
+                        static_cast<int>(m_sm_id), static_cast<int>(hw_warp_id),
+                        static_cast<int>(_readdata4.currentpc),
+                        static_cast<int>(_readdata4.origin32bit),
+                        static_cast<int>(hwarp->dispatch_id), _readdata4.is_extended
+                    );
+                    _readdata4.dispatch_id = hwarp->dispatch_id;
+                    hwarp->dispatch_id += 1;
+                }
                 // std::cout << "SM" << sm_id << " opc begin to put, warpid=" << issueins_warpid <<
                 // ", at " << sc_time_stamp() << ", " << sc_delta_count_at_current_time() << "\n";
 

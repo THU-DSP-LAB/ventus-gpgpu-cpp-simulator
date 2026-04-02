@@ -128,6 +128,7 @@ void Subcore::DECODE() {
             instr->s2 = extractBits32(instr->origin32bit, 24, 20);
             instr->d = 0;
             if (regext.valid) {
+                instr->is_extended = true;
                 instr->s1 += regext.ext1 << 5;
                 instr->s2 += regext.ext2 << 5;
                 instr->s3 += ((instr->ddd.fp && !instr->ddd.isvec) ? regext.ext3 : regext.extd)
@@ -170,6 +171,7 @@ void Subcore::DECODE() {
                 : extractBits32(instr->origin32bit, 11, 7);
             instr->d = extractBits32(instr->origin32bit, 11, 7);
             if (regext.valid) {
+                instr->is_extended = true;
                 instr->imm += regext.extimm << 5;
                 instr->s1 += regext.ext1 << 5;
                 instr->s2 += regext.ext2 << 5;
