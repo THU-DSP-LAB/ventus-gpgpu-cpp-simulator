@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../gpgpu/sim-verilator/gvm.hpp"
+#include "gvm.hpp"
 #include "top_gpgpu.hpp"
 #include "ventus_cyclesim.h"
 extern "C" struct ventus_cyclesim_t {

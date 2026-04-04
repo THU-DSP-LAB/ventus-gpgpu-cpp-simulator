@@ -1,5 +1,5 @@
 #include "ventus_cyclesim_impl.hpp"
-#include "../../gpgpu/sim-verilator/gvmref_interface.h"
+#include "../../spike/gvmref/gvmref_interface.h"
 #include "cyclesim_gvm.hpp"
 #include "parameters.h"
 #include <cassert>

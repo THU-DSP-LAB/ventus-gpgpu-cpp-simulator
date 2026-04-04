@@ -1,5 +1,5 @@
 #include "subcore.hpp"
-#include "../../gpgpu/sim-verilator/gvm_dpic.hpp"
+#include "../gvm_dpic.hpp"
 #include "../cyclesim_gvm.hpp"
 #include <fmt/format.h>
 #include <memory>

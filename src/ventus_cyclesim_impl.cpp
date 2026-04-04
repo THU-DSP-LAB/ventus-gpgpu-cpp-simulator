@@ -1,5 +1,5 @@
 #include "ventus_cyclesim_impl.hpp"
-#include "../../gpgpu/sim-verilator/gvm_global_var.hpp"
+#include "gvm_global_var.hpp"
 #include "cyclesim_gvm.hpp"
 #include "parameters.h"
 #include "sysc/kernel/sc_simcontext.h"

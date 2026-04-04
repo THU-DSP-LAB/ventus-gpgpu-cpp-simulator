@@ -1,6 +1,6 @@
 #include "subcore.hpp"
-#include "../../gpgpu/sim-verilator/gvm_dpic.hpp"
-#include "../../gpgpu/sim-verilator/gvm_global_var.hpp"
+#include "../gvm_dpic.hpp"
+#include "../gvm_global_var.hpp"
 #include "../context_model.hpp"
 #include "../cyclesim_gvm.hpp"
 #include "icache.hpp"

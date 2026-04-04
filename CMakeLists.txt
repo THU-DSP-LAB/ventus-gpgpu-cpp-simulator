@@ -84,12 +84,12 @@ add_library(VentusCycleSim SHARED
     src/parameters.cpp 
     src/top_gpgpu.cpp
     src/ramulator.cpp
+    src/gvm.cpp
+    src/gvm_care_insns.cpp
+    src/gvm_dpic.cpp
+    src/gvm_global_var.cpp
     src/ventus_cyclesim.cpp 
     src/ventus_cyclesim_impl.cpp
-    ../gpgpu/sim-verilator/gvm.cpp
-    ../gpgpu/sim-verilator/gvm_care_insns.cpp
-    ../gpgpu/sim-verilator/gvm_dpic.cpp
-    ../gpgpu/sim-verilator/gvm_global_var.cpp
 )
 target_include_directories(VentusCycleSim
     PRIVATE ${SYSTEMC_INCLUDE_DIR}
