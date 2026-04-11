@@ -187,7 +187,7 @@ void gvm_t::getDutWarpNew() {
     warp_key_t key { d.software_wg_id, d.software_warp_id };
     dut_active_warps[key] = d;
     hw_warp_to_sw_warp[makeHwWarpKey(d.sm_id, d.hardware_warp_id)] = key;
-    sm_wgslot_to_sw_warp[makeSmWgslotKey(d.sm_id, d.wg_slot_id_in_warp_sche)] = key;
+    sm_wgslot_to_sw_wg[makeSmWgslotKey(d.sm_id, d.wg_slot_id_in_warp_sche)] = d.software_wg_id;
   }
 }
 
@@ -208,7 +208,19 @@ void gvm_t::getDutWarpFinish() {
             warp->sm_id, warp->hardware_warp_id
         );
         hw_warp_to_sw_warp.erase(makeHwWarpKey(warp->sm_id, warp->hardware_warp_id));
-        sm_wgslot_to_sw_warp.erase(makeSmWgslotKey(warp->sm_id, warp->wg_slot_id_in_warp_sche));
+        bool has_same_wgslot = false;
+        for (const auto& active_warp : dut_active_warps) {
+          if (active_warp.second.sm_id == warp->sm_id
+              && active_warp.second.wg_slot_id_in_warp_sche == warp->wg_slot_id_in_warp_sche
+              && !(active_warp.second.software_wg_id == warp->software_wg_id
+                   && active_warp.second.software_warp_id == warp->software_warp_id)) {
+            has_same_wgslot = true;
+            break;
+          }
+        }
+        if (!has_same_wgslot) {
+          sm_wgslot_to_sw_wg.erase(makeSmWgslotKey(warp->sm_id, warp->wg_slot_id_in_warp_sche));
+        }
         dut_active_warps.erase({ warp->software_wg_id, warp->software_warp_id });
       }
       // 这里最好把对应的 ref warp 跑到头
@@ -388,11 +400,13 @@ void gvm_t::getDutBarDone() {
       continue;
     } // barrier 指令不参与单指令比对
     bool found = false;
-    auto sw_it = sm_wgslot_to_sw_warp.find(makeSmWgslotKey(item.sm_id, item.wg_slot_id));
-    if (sw_it != sm_wgslot_to_sw_warp.end()) {
-      auto warp_it = dut_active_warps.find(sw_it->second);
-      if (warp_it != dut_active_warps.end()) {
-        for (auto& insn: warp_it->second.insns) {
+    auto sw_it = sm_wgslot_to_sw_wg.find(makeSmWgslotKey(item.sm_id, item.wg_slot_id));
+    if (sw_it != sm_wgslot_to_sw_wg.end()) {
+      for (auto& warp_it : dut_active_warps) {
+        if (warp_it.second.software_wg_id != sw_it->second) {
+          continue;
+        }
+        for (auto& insn: warp_it.second.insns) {
           if (insn.second.pc == item.pc) {
             if(insn.second.done == false) {
               found = true;
