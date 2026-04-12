@@ -323,8 +323,8 @@ void gvm_t::getDutXRegWbFinish() {
         insn_it->second.single_insn_cmp.dut_result.xreg_result.reg_idx = item.reg_idx;
       }
     } else {
-      logger->debug(
-          "GVM info: xreg wb cannot match unfinished dispatch_id, sm_id={}, hw_warp_id={}, dispatch_id={}, pc=0x{:08x}, insn=0x{:08x}",
+      logger->error(
+          "GVM ERROR[XREG]: xreg wb cannot match unfinished dispatch_id, sm_id={}, hw_warp_id={}, dispatch_id={}, pc=0x{:08x}, insn=0x{:08x}",
           item.sm_id, item.hardware_warp_id, item.dispatch_id, item.pc, item.insn
       );
     }
