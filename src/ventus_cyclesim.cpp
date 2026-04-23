@@ -150,6 +150,14 @@ extern "C" int fw_vt_buf_alloc(
                                   : 0;
 }
 
+extern "C" int fw_vt_buf_alloc_fixed(
+    uint64_t size, uint64_t fixed_vaddr, int BUF_TYPE, uint64_t taskID, uint64_t kernelID
+) {
+    return cyclesim_gvm_enabled()
+        ? gvmref_vt_buf_alloc_fixed(size, fixed_vaddr, BUF_TYPE, taskID, kernelID)
+        : 0;
+}
+
 extern "C" int fw_vt_buf_free(
     uint64_t size, uint64_t* vaddr, uint64_t taskID, uint64_t kernelID
 ) {

@@ -185,6 +185,9 @@ DLL_PUBLIC int fw_vt_dev_close();
 DLL_PUBLIC int fw_vt_buf_alloc(
     uint64_t size, uint64_t* vaddr, int BUF_TYPE, uint64_t taskID, uint64_t kernelID
 );
+DLL_PUBLIC int fw_vt_buf_alloc_fixed(
+    uint64_t size, uint64_t fixed_vaddr, int BUF_TYPE, uint64_t taskID, uint64_t kernelID
+);
 DLL_PUBLIC int fw_vt_buf_free(uint64_t size, uint64_t* vaddr, uint64_t taskID, uint64_t kernelID);
 DLL_PUBLIC int fw_vt_one_buf_free(
     uint64_t size, uint64_t* vaddr, uint64_t taskID, uint64_t kernelID
