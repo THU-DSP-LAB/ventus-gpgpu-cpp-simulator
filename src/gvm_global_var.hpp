@@ -17,6 +17,7 @@ struct Cta2WarpData {
   uint32_t sgpr_base;
   uint32_t vgpr_base;
   uint32_t wg_slot_id_in_warp_sche;
+  uint32_t lds_base;
   uint32_t num_thread_in_warp;
 };
 extern std::vector<Cta2WarpData> g_cta2warp_data;

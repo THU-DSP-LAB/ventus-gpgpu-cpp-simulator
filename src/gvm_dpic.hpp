@@ -15,6 +15,7 @@ void c_GvmDutCta2Warp(int software_wg_id,
                        int sgpr_base,
                        int vgpr_base,
                        int wg_slot_id_in_warp_sche,
+                       int lds_base,
                        int rtl_num_thread);
 // Insn Dispatch
 void c_GvmDutInsnDispatch(int sm_id,

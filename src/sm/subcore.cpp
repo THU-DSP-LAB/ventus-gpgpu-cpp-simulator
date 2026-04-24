@@ -875,7 +875,7 @@ void Subcore::receive_warp(
         c_GvmDutCta2Warp(
             static_cast<int>(software_wg_id), static_cast<int>(warp_idx_in_blk),
             static_cast<int>(m_sm_id), static_cast<int>(hw_warp_id), 0, 0,
-            static_cast<int>(blk_slot_idx), hwarp->num_thread
+            static_cast<int>(blk_slot_idx), static_cast<int>(hwarp->CSR_reg[0x806]), hwarp->num_thread
         );
         const uint32_t xreg_words
             = std::min<uint32_t>(static_cast<uint32_t>(kernel->get_metadata().sgprUsage), hwarp->s_regfile.size());

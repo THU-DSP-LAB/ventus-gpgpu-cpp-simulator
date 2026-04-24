@@ -17,6 +17,7 @@ void c_GvmDutCta2Warp(int software_wg_id,
                        int sgpr_base,
                        int vgpr_base,
                        int wg_slot_id_in_warp_sche,
+                       int lds_base,
                        int rtl_num_thread) {
   Cta2WarpData d;
   d.software_wg_id     = software_wg_id;
@@ -26,6 +27,7 @@ void c_GvmDutCta2Warp(int software_wg_id,
   d.sgpr_base          = sgpr_base;
   d.vgpr_base          = vgpr_base;
   d.wg_slot_id_in_warp_sche = wg_slot_id_in_warp_sche;
+  d.lds_base           = static_cast<uint32_t>(lds_base);
   d.num_thread_in_warp = rtl_num_thread;
   g_cta2warp_data.push_back(d);
 }

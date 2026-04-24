@@ -26,9 +26,17 @@ public:
   std::shared_ptr<spdlog::logger> logger;
 
 private:
+  struct workgroup_runtime_binding_t {
+    bool pds_slot_valid = false;
+    uint32_t pds_slot_linear = 0;
+    bool lds_base_valid = false;
+    uint32_t lds_base = 0;
+  };
+
   std::map<warp_key_t, dut_active_warp_t> dut_active_warps;
   std::unordered_map<uint64_t, warp_key_t> hw_warp_to_sw_warp;
   std::unordered_map<uint64_t, uint32_t> sm_wgslot_to_sw_wg;
+  std::unordered_map<uint32_t, workgroup_runtime_binding_t> workgroup_runtime_bindings;
   std::unordered_map<uint32_t, bool> retire_care_cache;
   std::unordered_map<uint32_t, bool> scalar_single_cmp_care_cache;
   std::unordered_map<uint32_t, bool> single_cmp_care_cache;
@@ -61,6 +69,9 @@ private:
   void resetRetireInfo();
   static uint64_t makeHwWarpKey(uint32_t sm_id, uint32_t hardware_warp_id);
   static uint64_t makeSmWgslotKey(uint32_t sm_id, uint32_t wg_slot_id);
+  uint32_t getNumWgSlotPerSm();
+  void bindWorkgroupSlotOrDie(uint32_t software_wg_id, uint32_t slot_linear);
+  void bindWorkgroupLdsBaseOrDie(uint32_t software_wg_id, uint32_t lds_base);
   dut_active_warp_t* findWarpByHw(uint32_t sm_id, uint32_t hardware_warp_id);
   const dut_active_warp_t* findWarpByHw(uint32_t sm_id, uint32_t hardware_warp_id) const;
   bool isInsnCareCached(
