@@ -630,11 +630,13 @@ void gvm_t::checkRetire() {
         break;
       }
     }
-    ++it;
     bool retiring = true;
+    if (it != warp.second.insns.end()) {
+      ++it;
+    }
     for (; it != warp.second.insns.end(); ++it) {
       if (barriered) {
-        if (!(it->second.care == false || it->second.done == false)) {
+        if (it->second.care == true && it->second.done == true) {
           logger->error(
               "GVM ERROR[BARRIER_CROSS]: insn crossed barrier and completed, sw_wg={}, sw_warp={}, dispatch_id={}",
               warp.second.software_wg_id, warp.second.software_warp_id, it->second.dispatch_id

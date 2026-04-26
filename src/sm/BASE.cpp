@@ -180,6 +180,13 @@ void BASE::warp_reach_barrier(
     assert(hblkslot.valid);
     assert(hblkslot.num_warp > 0 && hblkslot.hw_warp_running[hwarp_id]);
     if (hblkslot.num_warp == 1) {
+        if (cyclesim_gvm_enabled()) {
+            c_GvmDutBarrierDone(
+                static_cast<int>(sm_id), static_cast<int>(blk_slot_id),
+                static_cast<int>(pc), static_cast<int>(insn),
+                static_cast<int>(dispatch_id)
+            );
+        }
         return; // do not barrier
     } else if (std::all_of(
                    hblkslot.warp_reach_barrier.begin(),
