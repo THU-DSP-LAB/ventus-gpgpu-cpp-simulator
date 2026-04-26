@@ -1,5 +1,15 @@
 #include "subcore.hpp"
 
+namespace {
+bool signed_ge(reg_t lhs, reg_t rhs) {
+    return static_cast<int32_t>(lhs) >= static_cast<int32_t>(rhs);
+}
+
+bool signed_lt(reg_t lhs, reg_t rhs) {
+    return static_cast<int32_t>(lhs) < static_cast<int32_t>(rhs);
+}
+}
+
 void Subcore::VALU_IN() {
     valu_in_t new_data;
     int a_delay, b_delay;
@@ -265,7 +275,7 @@ void Subcore::VALU_CALC() {
                     if (valutmp1.ins.mask[i] == 0) {
                         _velsemask[i] = 0;
                         _vifmask[i] = 0;
-                    } else if (valutmp1.rsv2_data[i] >= valutmp1.rsv1_data[i]) {
+                    } else if (signed_ge(valutmp1.rsv2_data[i], valutmp1.rsv1_data[i])) {
                         _velsemask[i] = 1;
                         _vifmask[i] = 0;
                     } else {
@@ -286,7 +296,7 @@ void Subcore::VALU_CALC() {
                     if (valutmp1.ins.mask[i] == 0) {
                         _velsemask[i] = 0;
                         _vifmask[i] = 0;
-                    } else if (valutmp1.rsv2_data[i] < valutmp1.rsv1_data[i]) {
+                    } else if (signed_lt(valutmp1.rsv2_data[i], valutmp1.rsv1_data[i])) {
                         _velsemask[i] = 1;
                         _vifmask[i] = 0;
                     } else {

@@ -1,6 +1,16 @@
 #include "subcore.hpp"
 #include <spdlog/spdlog.h>
 
+namespace {
+bool signed_ge(reg_t lhs, reg_t rhs) {
+    return static_cast<int32_t>(lhs) >= static_cast<int32_t>(rhs);
+}
+
+bool signed_lt(reg_t lhs, reg_t rhs) {
+    return static_cast<int32_t>(lhs) < static_cast<int32_t>(rhs);
+}
+}
+
 void Subcore::SALU_IN() {
     salu_in_t new_data;
     int a_delay, b_delay;
@@ -176,7 +186,7 @@ void Subcore::SALU_CALC() {
             // case SLT_:
             // case SLTI_:
             case DecodeParams::alu_fn_t::FN_SLT:
-                if (salutmp1.rss1_data < salutmp1.rss2_data)
+                if (signed_lt(salutmp1.rss1_data, salutmp1.rss2_data))
                     salutmp2.data = 1;
                 else
                     salutmp2.data = 0;
@@ -251,7 +261,7 @@ void Subcore::SALU_CALC() {
             // case BGE_:
             case DecodeParams::alu_fn_t::FN_SGE:
                 hwarp->branch_sig = true;
-                if (salutmp1.rss1_data >= salutmp1.rss2_data) {
+                if (signed_ge(salutmp1.rss1_data, salutmp1.rss2_data)) {
                     hwarp->jump = 1;
                     hwarp->jump_addr = salutmp1.rss3_data;
 #ifdef SPIKE_OUTPUT
@@ -282,7 +292,7 @@ void Subcore::SALU_CALC() {
             // case BLT_:
             case DecodeParams::alu_fn_t::FN_SLT:
                 hwarp->branch_sig = true;
-                if (salutmp1.rss1_data < salutmp1.rss2_data) {
+                if (signed_lt(salutmp1.rss1_data, salutmp1.rss2_data)) {
                     hwarp->jump = 1;
                     hwarp->jump_addr = salutmp1.rss3_data;
 #ifdef SPIKE_OUTPUT
