@@ -810,7 +810,7 @@ void Subcore::receive_warp(
         static_cast<uint64_t>(kernel->get_num_thread_per_warp()) * kernel->get_pdsSize_per_thread();
     const uint64_t wg_pds_base = static_cast<uint64_t>(kernel->get_pdsBaseAddr())
         + slot_linear * static_cast<uint64_t>(kernel->get_num_warp_per_cta()) * pds_bytes_per_warp;
-    hwarp->CSR_reg[0x807] = wg_pds_base + static_cast<uint64_t>(warp_idx_in_blk) * pds_bytes_per_warp;
+    hwarp->CSR_reg[0x807] = wg_pds_base;
     hwarp->CSR_reg[0x808] = block_idx_3d.x;
     hwarp->CSR_reg[0x809] = block_idx_3d.y;
     hwarp->CSR_reg[0x80a] = block_idx_3d.z;

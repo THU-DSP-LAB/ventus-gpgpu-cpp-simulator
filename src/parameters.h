@@ -15,6 +15,7 @@
 #include <stdexcept> // For std::out_of_range
 #include <unordered_map>
 
+#include "hardware_config.hpp"
 #include "utils_print.hpp"
 #define SC_INCLUDE_DYNAMIC_PROCESSES
 #define SPIKE_OUTPUT
@@ -23,13 +24,6 @@
 
 // #include <format>  // gcc13支持std::format
 
-inline constexpr unsigned SUBCORE_NUM = 2;
-inline constexpr unsigned SUBCORE_WARP_NUM = 4;
-
-inline constexpr int hw_num_warp = SUBCORE_WARP_NUM * SUBCORE_NUM; // 每个SM的硬件warp数量
-inline constexpr unsigned MAX_CTA_PER_CORE
-    = hw_num_warp; // 每个core支持的最大cta数目，不应大于hw_num_warp
-inline constexpr int MAX_WARP_PER_BLOCK = hw_num_warp; // 每个block支持的最大warp数目
 inline constexpr int xLen = 32;
 inline constexpr long unsigned int hw_num_thread = 32; // 每个warp支持的最大thread数目
 inline constexpr uint32_t hw_num_thread_mask = 0xFFFFFFFF;
@@ -41,7 +35,6 @@ inline constexpr auto TIME_UNIT = SC_NS;
 inline constexpr int IFIFO_SIZE = 10;
 inline constexpr int OPCFIFO_SIZE = SUBCORE_WARP_NUM;
 inline constexpr int BANK_NUM = 4;
-inline constexpr int NUM_SM = 2;
 inline constexpr int num_register_per_warp = 256; // 每个warp寄存器数目
 inline constexpr int NUM_MAX_KERNEL = 8;
 inline constexpr unsigned max_concurrent_kernel = 4; // 正在运行的kernel的最大数量

@@ -120,6 +120,19 @@ static uint8_t wordOffset1H_calc(uint32_t addr, const I_TYPE& instr) {
     return 0;
 }
 
+static uint32_t private_pds_addr(
+    const BASE::lsu_subcore_req_t& req, const I_TYPE& instr, uint32_t private_byte_offset,
+    uint32_t lane
+) {
+    const uint32_t word_base_offset = private_byte_offset & ~3u;
+    const uint32_t byte_lane_offset =
+        instr.ddd.mem_whb == DecodeParams::MEM_W ? 0u : (private_byte_offset & 3u);
+    return req.pds_base
+        + word_base_offset * req.csr_numw * req.csr_numt
+        + (req.csr_tid + lane) * 4u
+        + byte_lane_offset;
+}
+
 void BASE::lsu_new_req() {
     assert(m_lsu_subcore_req_queue.size() == 1 || m_lsu_subcore_req_queue.size() == 2);
     auto& req = m_lsu_subcore_req_queue.front();
@@ -146,7 +159,7 @@ void BASE::lsu_new_req() {
         addr[i] = (instr.ddd.isvec && instr.ddd.disable_mask)
             ? (instr.ddd.is_vls12()
                    ? (src1[i] + src2[i])
-                   : ((src1[i] + src2[i]) * hw_num_thread + (i << 2) + req.pds_base)) // TODO: check
+                   : private_pds_addr(req, instr, src1[i] + src2[i], i))
             : (instr.ddd.isvec ? (src1[i] + (instr.ddd.mop == 0 ? i << 2 : i * src2[i]))
                                : (src1[0] + src2[0]));
         enum { UNKNOWN, GLOBAL, SHARED } addr_type = UNKNOWN, addr_type_;

@@ -1,4 +1,5 @@
 #include "task.hpp"
+#include "pds_layout.hpp"
 #include "ventus_cyclesim.h"
 #include <algorithm>
 #include <cassert>
@@ -89,7 +90,7 @@ int main(int argc, char* argv[]) {
             // to destroy the virtual memory space after the task finished
             [sim, ptroot]() { ventus_cyclesim_vmem_destroy(sim, ptroot); },
             // to free the private memory of threads after a kernel of task finished
-            [sim, ptroot](uint32_t vaddr, uint32_t size) {
+            [sim, ptroot](uint32_t vaddr, size_t size) {
                 ventus_cyclesim_vmem_free(sim, ptroot, vaddr, size);
             }
         ));
@@ -180,6 +181,17 @@ void kernel_load_data(
         buffer.reserve(mtd.buffer_size[bufferIndex]); // 提前分配空间
         uint64_t vaddr = mtd.buffer_base[bufferIndex];
         size_t vsize = mtd.buffer_allocsize[bufferIndex];
+        if (mtd.pdsBaseAddr != 0 && mtd.pdsSize != 0 && vaddr == mtd.pdsBaseAddr) {
+            const size_t pds_pool_size = resident_pds_pool_size(mtd);
+            if (mtd.buffer_size[bufferIndex] > pds_pool_size) {
+                SPDLOG_ERROR(
+                    "Kernel {}: PDS buffer data size 0x{:x} exceeds resident pool size 0x{:x}",
+                    mtd.name, mtd.buffer_size[bufferIndex], pds_pool_size
+                );
+                assert(mtd.buffer_size[bufferIndex] <= pds_pool_size);
+            }
+            vsize = pds_pool_size;
+        }
         if (vaddr == 0x80000000 && vsize >= mtd.buffer_size[bufferIndex] + 0x5000) {
             // 0x80000000代码段默认被分配了过分大的0x10000000大小，将其缩小
             vsize = mtd.buffer_size[bufferIndex] + 0x5000;

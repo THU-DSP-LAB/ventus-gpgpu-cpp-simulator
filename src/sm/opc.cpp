@@ -307,6 +307,7 @@ void Subcore::OPC_EMIT() {
                     auto src3 = std::make_unique<std::array<reg_t, hw_num_thread>>(opcitem.data[2]);
                     int result = f_lsu_subcore_req(
                         true, m_subcore_id, opcitem.warp_id, opcitem.ins, hwarp->CSR_reg[0x807],
+                        hwarp->CSR_reg[0x800], hwarp->CSR_reg[0x801], hwarp->CSR_reg[0x802],
                         hwarp->pagetable, src1, src2, src3
                     );
                     if (result == 0) {
@@ -450,8 +451,8 @@ void Subcore::OPC_EMIT() {
         if (!instr_tried_emit_to_lsu) {
             std::unique_ptr<std::array<reg_t, hw_num_thread>> unique_ptr_null = nullptr;
             f_lsu_subcore_req(
-                false, m_subcore_id, 0, opcfifo[emit_idx].ins, 0, 0, unique_ptr_null,
-                unique_ptr_null, unique_ptr_null
+                false, m_subcore_id, 0, opcfifo[emit_idx].ins, 0, 0, 0, 0, 0,
+                unique_ptr_null, unique_ptr_null, unique_ptr_null
             );
         }
         ev_opc_judge_emit.notify();

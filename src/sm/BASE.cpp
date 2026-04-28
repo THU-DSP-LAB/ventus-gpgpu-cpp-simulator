@@ -49,14 +49,15 @@ BASE::BASE(
             subcore_name.c_str(), sm_id, i, instruction_table, decode_table,
             [this](
                 bool valid, uint8_t subcore_id, uint8_t subcore_warp_id, I_TYPE instr,
-                vaddr_t pds_base, paddr_t pagetable_root,
+                vaddr_t pds_base, uint32_t csr_tid, uint32_t csr_numw, uint32_t csr_numt,
+                paddr_t pagetable_root,
                 std::unique_ptr<std::array<reg_t, hw_num_thread>>& src_data1,
                 std::unique_ptr<std::array<reg_t, hw_num_thread>>& src_data2,
                 std::unique_ptr<std::array<reg_t, hw_num_thread>>& src_data3
             ) {
                 return lsu_subcore_req(
-                    valid, subcore_id, subcore_warp_id, instr, pds_base, pagetable_root, src_data1,
-                    src_data2, src_data3
+                    valid, subcore_id, subcore_warp_id, instr, pds_base, csr_tid, csr_numw,
+                    csr_numt, pagetable_root, src_data1, src_data2, src_data3
                 );
             },
             [this, i](
@@ -114,7 +115,8 @@ void BASE::icache_response_handler(const ICacheRsp& rsp) {
 
 int BASE::lsu_subcore_req(
     bool valid, uint32_t subcore_id, uint32_t subcore_warp_id, I_TYPE instr, vaddr_t pds_base,
-    paddr_t pagetable_root, std::unique_ptr<std::array<reg_t, hw_num_thread>>& src_data1,
+    uint32_t csr_tid, uint32_t csr_numw, uint32_t csr_numt, paddr_t pagetable_root,
+    std::unique_ptr<std::array<reg_t, hw_num_thread>>& src_data1,
     std::unique_ptr<std::array<reg_t, hw_num_thread>>& src_data2,
     std::unique_ptr<std::array<reg_t, hw_num_thread>>& src_data3
 ) {
@@ -159,6 +161,9 @@ int BASE::lsu_subcore_req(
                                                             .subcore_warp_id = subcore_warp_id,
                                                             .instr = instr,
                                                             .pds_base = pds_base,
+                                                            .csr_tid = csr_tid,
+                                                            .csr_numw = csr_numw,
+                                                            .csr_numt = csr_numt,
                                                             .pagetable_root = pagetable_root,
                                                             .src_data1 = std::move(src_data1),
                                                             .src_data2 = std::move(src_data2),

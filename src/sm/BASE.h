@@ -122,7 +122,8 @@ public:
     // 指令成功发射到lsu则返回0并将data unique_ptr转移，否则返回-1
     int lsu_subcore_req(
         bool valid, uint32_t subcore_id, uint32_t subcore_warp_id, I_TYPE instr, vaddr_t pds_base,
-        paddr_t pagetable_root, std::unique_ptr<std::array<reg_t, hw_num_thread>>& src_data1,
+        uint32_t csr_tid, uint32_t csr_numw, uint32_t csr_numt, paddr_t pagetable_root,
+        std::unique_ptr<std::array<reg_t, hw_num_thread>>& src_data1,
         std::unique_ptr<std::array<reg_t, hw_num_thread>>& src_data2,
         std::unique_ptr<std::array<reg_t, hw_num_thread>>& src_data3
     );
@@ -131,6 +132,9 @@ public:
         uint32_t subcore_warp_id;
         I_TYPE instr;
         vaddr_t pds_base;
+        uint32_t csr_tid;
+        uint32_t csr_numw;
+        uint32_t csr_numt;
         paddr_t pagetable_root;
         std::unique_ptr<std::array<reg_t, hw_num_thread>> src_data1;
         std::unique_ptr<std::array<reg_t, hw_num_thread>> src_data2;

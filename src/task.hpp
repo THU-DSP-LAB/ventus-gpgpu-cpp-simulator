@@ -1,6 +1,7 @@
 #pragma once
 #include "ventus_cyclesim.h"
 #include <any>
+#include <cstddef>
 #include <functional>
 #include <map>
 #include <memory>
@@ -18,7 +19,7 @@ public:
     task_t(
         uint32_t id, const std::string name, uint64_t pagetable,
         std::function<void()> finish_callback = nullptr,
-        std::function<void(uint32_t, uint32_t)> vmem_free = nullptr
+        std::function<void(uint32_t, size_t)> vmem_free = nullptr
     );
 
     void add_kernel(std::shared_ptr<kernel_t> kernel);
@@ -61,8 +62,8 @@ private:
     enum { TASKSTATUS_IDLE, TASKSTATUS_RUNNING, TASKSTATUS_FINISHED } m_status = TASKSTATUS_IDLE;
 
     uint32_t m_kernel_private_memory_vaddr = 0;
-    uint32_t m_kernel_private_memory_size = 0;
+    size_t m_kernel_private_memory_size = 0;
 
     std::function<void()> m_finish_callback = nullptr; // task finish callback
-    std::function<void(uint32_t vaddr, uint32_t size)> m_vmem_free = nullptr;
+    std::function<void(uint32_t vaddr, size_t size)> m_vmem_free = nullptr;
 };

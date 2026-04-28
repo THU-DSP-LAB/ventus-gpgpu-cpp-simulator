@@ -1,4 +1,5 @@
 #include "task.hpp"
+#include "pds_layout.hpp"
 #include <any>
 #include <cstdint>
 #include <functional>
@@ -7,7 +8,7 @@
 
 task_t::task_t(
     uint32_t id, const std::string name, uint64_t pagetable, std::function<void()> finish_callback,
-    std::function<void(uint32_t, uint32_t)> vmem_free
+    std::function<void(uint32_t, size_t)> vmem_free
 )
     : m_id(id)
     , m_name(name)
@@ -48,8 +49,7 @@ void task_t::exec_nextstep(std::function<void(
         assert(kernel);
         std::function<void()> cb_func = std::bind(&task_t::callback_kernel_finish, this, kernel);
         m_kernel_private_memory_vaddr = kernel->pdsBaseAddr;
-        m_kernel_private_memory_size = kernel->pdsSize * kernel->wf_size * kernel->wg_size
-            * kernel->kernel_size[0] * kernel->kernel_size[1] * kernel->kernel_size[2];
+        m_kernel_private_memory_size = resident_pds_pool_vmem_size(*kernel);
         f_kernel_add(kernel, cb_func, &m_vmem_allocated);
         m_step_is_running = true;
     } else {
@@ -75,7 +75,7 @@ void task_t::finish() {
 void task_t::callback_kernel_finish(std::shared_ptr<kernel_t> kernel) {
     assert(m_steps[m_step_id_running].type() == typeid(std::shared_ptr<kernel_t>));
     assert(std::any_cast<std::shared_ptr<kernel_t>>(m_steps[m_step_id_running]) == kernel);
-    if (m_vmem_free && m_kernel_private_memory_vaddr != 0) {
+    if (m_vmem_free && m_kernel_private_memory_vaddr != 0 && m_kernel_private_memory_size != 0) {
         m_vmem_free(m_kernel_private_memory_vaddr, m_kernel_private_memory_size);
         assert(m_vmem_allocated.contains(m_kernel_private_memory_vaddr));
         assert(m_vmem_allocated.at(m_kernel_private_memory_vaddr) == m_kernel_private_memory_size);
