@@ -13,14 +13,20 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # use ccache
 set(CMAKE_C_COMPILER_LAUNCHER "ccache")
 set(CMAKE_CXX_COMPILER_LAUNCHER "ccache")
-# use -O2 & enable assert & LTO for release build
+# use -O2 & keep assert enabled for release build
 set(CMAKE_CXX_FLAGS_RELEASE "-O2")
 set(CMAKE_C_FLAGS_RELEASE "-O2")
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g")
+set(CMAKE_C_FLAGS_RELWITHDEBINFO "-O2 -g")
+set(CMAKE_CXX_FLAGS_MINSIZEREL "-Os")
+set(CMAKE_C_FLAGS_MINSIZEREL "-Os")
 add_compile_options(
   $<$<AND:$<CONFIG:Release>,$<NOT:$<CXX_COMPILER_ID:MSVC>>>:-UNDEBUG>
   $<$<AND:$<CONFIG:RelWithDebInfo>,$<NOT:$<CXX_COMPILER_ID:MSVC>>>:-UNDEBUG>
+  $<$<AND:$<CONFIG:MinSizeRel>,$<NOT:$<CXX_COMPILER_ID:MSVC>>>:-UNDEBUG>
   $<$<AND:$<CONFIG:Release>,$<CXX_COMPILER_ID:MSVC>>:/U"NDEBUG">
   $<$<AND:$<CONFIG:RelWithDebInfo>,$<CXX_COMPILER_ID:MSVC>>:/U"NDEBUG">
+  $<$<AND:$<CONFIG:MinSizeRel>,$<CXX_COMPILER_ID:MSVC>>:/U"NDEBUG">
 )
 # set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
 # use spdlog trace level for debug build

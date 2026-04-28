@@ -442,9 +442,8 @@ private:
     sc_signal<bool> execpop_tc { "execpop_tc" };
 
     // warp_scheduler exec part (barrier & endprg)
-    sc_vector<sc_signal<bool, SC_MANY_WRITERS>> wait_barrier {
-        "wait_barrier_subcorewarp", SUBCORE_WARP_NUM
-    }; // warp触及barrier正在等待。最后一个到达barrier的warp的线程会解放所有其他线程，因此需要SC_MANY_WRITERS
+    // Scheduler-local state: barrier set/release must be visible in the same dispatch phase.
+    std::array<bool, SUBCORE_WARP_NUM> wait_barrier {};
     sc_signal<bool> emito_warpscheduler { "emito_wrpschdler" };
     warp_barrier_req_interface f_warp_barrier_req;
     warp_endprg_interface f_warp_endprg;

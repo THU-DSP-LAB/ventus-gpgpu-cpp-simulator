@@ -19,7 +19,7 @@ void Subcore::WARP_SCHEDULER() {
             if (hwarp->endprg_flush_pipe) { // a warp endprg && flush_pipe finished
                 hwarp->endprg_flush_pipe.write(false);
                 hwarp->will_warp_activate = false;
-                wait_barrier[warpidx].write(false);
+                wait_barrier[warpidx] = false;
                 // clear block_slot & callback to CTA scheduler
                 f_warp_endprg(warpidx, hwarp->blk_slot_idx, hwarp->warp_idx_in_blk);
             }
