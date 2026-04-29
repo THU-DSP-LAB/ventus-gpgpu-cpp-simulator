@@ -2,16 +2,28 @@
 #include <memory>
 #include <spdlog/spdlog.h>
 
+namespace {
+constexpr unsigned VECTOR_IMM_LOW_BITS = 5;
+constexpr unsigned VECTOR_IMM_EXT_BITS = 6;
+constexpr unsigned VECTOR_IMM_BITS = VECTOR_IMM_LOW_BITS + VECTOR_IMM_EXT_BITS;
+
+int sign_extend(uint32_t value, unsigned bits) {
+    const uint32_t mask = (1u << bits) - 1u;
+    const uint32_t sign_bit = 1u << (bits - 1u);
+    value &= mask;
+    return static_cast<int>((value ^ sign_bit) - sign_bit);
+}
+}
+
 void Subcore::DECODE() {
     sc_bv<32> scinsbit;
     while (true) {
         wait(clk.posedge_event());
         decode_output = decode_t { -1, nullptr }; // default: no valid instruction decoded
 
-        // pipeline flush: regext
+        // REGEXT is a decoded prefix. Fetch replay must not clear it.
         for (int warp_id = 0; warp_id < m_hw_warps.size(); warp_id++) {
-            if (fetch_need_flush(warp_id)) {
-                // pipeline flushed, regext cleared
+            if (regext_need_clear(warp_id)) {
                 m_hw_warps[warp_id]->regext.valid = false;
             }
         }
@@ -29,10 +41,16 @@ void Subcore::DECODE() {
         // check before instruction decode
         auto& hwarp = m_hw_warps.at(warp_id);
         auto& regext = hwarp->regext;
-        if (fetch_need_flush(warp_id)) {
-            // pipeline flushed, do not decode
+        if (regext_need_clear(warp_id)) {
+            // control/lifecycle flush: prefix state was cleared above
             decode_output = decode_t { -1, nullptr };
             assert(!regext.valid); // cleared above
+            ev_decode_finish.notify();
+            continue;
+        }
+        if (pc_need_rewind(warp_id)) {
+            // I-cache miss / IBUF full replay: skip decode but preserve REGEXT.
+            decode_output = decode_t { -1, nullptr };
             ev_decode_finish.notify();
             continue;
         }
@@ -88,6 +106,7 @@ void Subcore::DECODE() {
             decode_output.instr = nullptr; // regext ends here in decode
             regext.valid = true;
 
+            regext.extimm_valid = false;
             regext.extimm = 0;
             regext.ext3 = extractBits32(instr->origin32bit, 31, 29);
             regext.ext2 = extractBits32(instr->origin32bit, 28, 26);
@@ -105,6 +124,7 @@ void Subcore::DECODE() {
             decode_output.instr = nullptr; // regext ends here in decode
             regext.valid = true;
 
+            regext.extimm_valid = true;
             regext.extimm = extractBits32(instr->origin32bit, 31, 26);
             regext.ext3 = 0;
             regext.ext2 = extractBits32(instr->origin32bit, 25, 23);
@@ -170,9 +190,11 @@ void Subcore::DECODE() {
                 ? extractBits32(instr->origin32bit, 31, 27)
                 : extractBits32(instr->origin32bit, 11, 7);
             instr->d = extractBits32(instr->origin32bit, 11, 7);
+            const bool has_regext = regext.valid;
+            const bool has_regext_imm = has_regext && regext.extimm_valid;
+            const int regext_extimm = regext.extimm;
             if (regext.valid) {
                 instr->is_extended = true;
-                instr->imm += regext.extimm << 5;
                 instr->s1 += regext.ext1 << 5;
                 instr->s2 += regext.ext2 << 5;
                 // 这里与Chisel实现有所不同，Chisel要么使用extd，要么就不扩展（认定ext3=0）
@@ -225,7 +247,16 @@ void Subcore::DECODE() {
                 instr->imm = (scinsbit.range(24, 20)).to_int();
                 break;
             case DecodeParams::sel_imm_t::IMM_V: // 和scala不一样，需要修改，加位拓展
-                instr->imm = (scinsbit.range(19, 15)).to_int();
+                if (has_regext_imm) {
+                    const uint32_t imm11 = (static_cast<uint32_t>(regext_extimm)
+                                            << VECTOR_IMM_LOW_BITS)
+                        | scinsbit.range(19, 15).to_uint();
+                    instr->imm = sign_extend(imm11, VECTOR_IMM_BITS);
+                } else {
+                    instr->imm = sign_extend(
+                        scinsbit.range(19, 15).to_uint(), VECTOR_IMM_LOW_BITS
+                    );
+                }
                 break;
             case DecodeParams::sel_imm_t::IMM_L11:
                 instr->imm = (scinsbit.range(30, 20)).to_int();

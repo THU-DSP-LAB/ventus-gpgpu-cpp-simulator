@@ -363,11 +363,12 @@ void gvm_t::getDutXRegWbFinish() {
     auto insn_it = warp->insns.find(item.dispatch_id);
     if ((insn_it != warp->insns.end()) && (insn_it->second.done != 1)) {
       if (insn_it->second.pc != item.pc || insn_it->second.insn != item.insn || !insn_it->second.care) {
-        logger->error(
-            "GVM ERROR[XREG_WB_META]: xreg wb metadata mismatch sm_id={}, hw_warp_id={}, dispatch_id={}, dut_pc=0x{:08x}, dut_insn=0x{:08x}, wb_pc=0x{:08x}, wb_insn=0x{:08x}",
+        setFatalMismatch(fmt::format(
+            "XREG_WB_META xreg wb metadata mismatch sm_id={}, hw_warp_id={}, dispatch_id={}, dut_pc=0x{:08x}, dut_insn=0x{:08x}, wb_pc=0x{:08x}, wb_insn=0x{:08x}",
             item.sm_id, item.hardware_warp_id, item.dispatch_id, insn_it->second.pc, insn_it->second.insn, item.pc,
             item.insn
-        );
+        ));
+        return;
       }
       // 维护 retire 相关变量
       insn_it->second.done = true;
@@ -410,11 +411,12 @@ void gvm_t::getDutVRegWbFinish() {
       auto insn_it = warp->insns.find(item.second.dispatch_id);
       if (insn_it != warp->insns.end() && (insn_it->second.single_insn_cmp.dut_done != 1)) {
         if (insn_it->second.pc != item.second.pc || insn_it->second.insn != item.second.insn || insn_it->second.care) {
-          logger->error(
-              "GVM ERROR[VREG_WB_META]: vreg wb metadata mismatch sm_id={}, hw_warp_id={}, dispatch_id={}, dut_pc=0x{:08x}, dut_insn=0x{:08x}, wb_pc=0x{:08x}, wb_insn=0x{:08x}",
+          setFatalMismatch(fmt::format(
+              "VREG_WB_META vreg wb metadata mismatch sm_id={}, hw_warp_id={}, dispatch_id={}, dut_pc=0x{:08x}, dut_insn=0x{:08x}, wb_pc=0x{:08x}, wb_insn=0x{:08x}",
               item.second.sm_id, item.second.hardware_warp_id, item.second.dispatch_id, insn_it->second.pc,
               insn_it->second.insn, item.second.pc, item.second.insn
-          );
+          ));
+          return;
         }
         // 维护 single insn cmp 相关变量
         if (insn_it->second.single_insn_cmp.care == true) {

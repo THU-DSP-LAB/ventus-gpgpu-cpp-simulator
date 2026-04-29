@@ -68,6 +68,14 @@ void Subcore::WRITE_BACK() {
         execpop_mul = false;
         execpop_sfu = false;
         execpop_tc = false;
+
+        bool selected_wb_ena = false;
+        bool selected_write_s = false;
+        bool selected_write_v = false;
+        I_TYPE selected_wb_ins;
+        vector_t selected_wb_data {};
+        int selected_wb_reg_idx = 0;
+        int selected_wb_warpid = 0;
         
         if (salufifo_empty == false) {
             // if (sm_id == 0)
@@ -82,6 +90,13 @@ void Subcore::WRITE_BACK() {
             rdv1_addr = salutop_dat.ins.d;
             rdv1_data = {salutop_dat.data};
             wb_warpid = salutop_dat.warp_id;
+            selected_wb_ena = true;
+            selected_write_s = true;
+            selected_wb_ins = salutop_dat.ins;
+            selected_wb_reg_idx = salutop_dat.ins.d;
+            selected_wb_data.fill(0);
+            selected_wb_data[0] = salutop_dat.data;
+            selected_wb_warpid = salutop_dat.warp_id;
         } else if (valufifo_empty == false) {
             // if (sm_id == 0)
             //     std::cout << "SM" << sm_id << " WB judge popvalu, write_v=true at " <<
@@ -94,10 +109,20 @@ void Subcore::WRITE_BACK() {
             rdv1_addr = valutop_dat.ins.d;
             rdv1_data = valutop_dat.rdv1_data;
             wb_warpid = valutop_dat.warp_id;
+            selected_wb_ena = true;
+            selected_write_v = true;
+            selected_wb_ins = valutop_dat.ins;
+            selected_wb_reg_idx = valutop_dat.ins.d;
+            selected_wb_data = valutop_dat.rdv1_data;
+            selected_wb_warpid = valutop_dat.warp_id;
         } else if (vfpufifo_empty == false) {
             wb_ena = true;
             execpop_vfpu = true;
             wb_ins = vfputop_dat.ins;
+            selected_wb_ena = true;
+            selected_wb_ins = vfputop_dat.ins;
+            selected_wb_reg_idx = vfputop_dat.ins.d;
+            selected_wb_warpid = vfputop_dat.warp_id;
             if (vfputop_dat.ins.ddd.wxd) // FEQ_S_等指令
             {
                 // if (sm_id == 0)
@@ -107,6 +132,9 @@ void Subcore::WRITE_BACK() {
                 write_v = false;
                 rdv1_addr = vfputop_dat.ins.d;
                 rdv1_data.write({vfputop_dat.rds1_data});
+                selected_write_s = true;
+                selected_wb_data.fill(0);
+                selected_wb_data[0] = vfputop_dat.rds1_data;
             } else {
                 // if (sm_id == 0)
                 //     std::cout << "SM" << sm_id << " WB judge popvfpu, write_v=true at " <<
@@ -117,6 +145,8 @@ void Subcore::WRITE_BACK() {
                 // std::cout << "WB: let wb_ins=" << vfputop_dat.ins << "warp" <<
                 // vfputop_dat.warp_id << ", rdf1_data={";
                 rdv1_data = vfputop_dat.rdf1_data;
+                selected_write_v = true;
+                selected_wb_data = vfputop_dat.rdf1_data;
             }
             wb_warpid = vfputop_dat.warp_id;
             // std::cout << "} at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() <<
@@ -137,6 +167,13 @@ void Subcore::WRITE_BACK() {
             rdv1_addr = lsutop_dat.ins.d;
             rdv1_data = *lsutop_dat.rdv1_data;
             wb_warpid = lsutop_dat.warp_id;
+            selected_wb_ena = true;
+            selected_write_s = lsutop_dat.ins.ddd.wxd;
+            selected_write_v = lsutop_dat.ins.ddd.wvd;
+            selected_wb_ins = lsutop_dat.ins;
+            selected_wb_reg_idx = lsutop_dat.ins.d;
+            selected_wb_data = *lsutop_dat.rdv1_data;
+            selected_wb_warpid = lsutop_dat.warp_id;
         } else if (csrfifo_empty == false) {
             // if (sm_id == 0)
             //     std::cout << "SM" << sm_id << " WB judge popcsr, write_s=true, csrtop.ins=" <<
@@ -150,6 +187,13 @@ void Subcore::WRITE_BACK() {
             rdv1_addr = csrtop_dat.ins.d;
             rdv1_data = csrtop_dat.data;
             wb_warpid = csrtop_dat.warp_id;
+            selected_wb_ena = true;
+            selected_write_s = csrtop_dat.ins.ddd.wxd;
+            selected_write_v = csrtop_dat.ins.ddd.wvd;
+            selected_wb_ins = csrtop_dat.ins;
+            selected_wb_reg_idx = csrtop_dat.ins.d;
+            selected_wb_data = csrtop_dat.data;
+            selected_wb_warpid = csrtop_dat.warp_id;
         } else if (mulfifo_empty == false) {
             // if (sm_id == 0)
             //     std::cout << "SM" << sm_id << " WB judge popmul, at " << sc_time_stamp() << ","
@@ -158,16 +202,25 @@ void Subcore::WRITE_BACK() {
             execpop_mul = true;
             wb_ins = multop_dat.ins;
             wb_warpid = multop_dat.warp_id;
+            selected_wb_ena = true;
+            selected_wb_ins = multop_dat.ins;
+            selected_wb_reg_idx = multop_dat.ins.d;
+            selected_wb_warpid = multop_dat.warp_id;
             if (multop_dat.ins.ddd.wxd) {
                 write_s = true;
                 write_v = false;
                 rdv1_addr = multop_dat.ins.d;
                 rdv1_data = {multop_dat.rdv1_data[0]};
+                selected_write_s = true;
+                selected_wb_data.fill(0);
+                selected_wb_data[0] = multop_dat.rdv1_data[0];
             } else if (multop_dat.ins.ddd.wvd) {
                 write_s = false;
                 write_v = true;
                 rdv1_addr = multop_dat.ins.d;
                 rdv1_data = multop_dat.rdv1_data;
+                selected_write_v = true;
+                selected_wb_data = multop_dat.rdv1_data;
             }
         } else if (sfufifo_empty == false) {
             // if (sm_id == 0)
@@ -177,16 +230,25 @@ void Subcore::WRITE_BACK() {
             execpop_sfu = true;
             wb_ins = sfutop_dat.ins;
             wb_warpid = sfutop_dat.warp_id;
+            selected_wb_ena = true;
+            selected_wb_ins = sfutop_dat.ins;
+            selected_wb_reg_idx = sfutop_dat.ins.d;
+            selected_wb_warpid = sfutop_dat.warp_id;
             if (sfutop_dat.ins.ddd.wxd) {
                 write_s = true;
                 write_v = false;
                 rdv1_addr = sfutop_dat.ins.d;
                 rdv1_data = {sfutop_dat.rdv1_data[0]};
+                selected_write_s = true;
+                selected_wb_data.fill(0);
+                selected_wb_data[0] = sfutop_dat.rdv1_data[0];
             } else if (sfutop_dat.ins.ddd.wvd) {
                 write_s = false;
                 write_v = true;
                 rdv1_addr = sfutop_dat.ins.d;
                 rdv1_data = sfutop_dat.rdv1_data;
+                selected_write_v = true;
+                selected_wb_data = sfutop_dat.rdv1_data;
             }
         } else if (tcfifo_empty == false) {
             write_s = false;
@@ -197,6 +259,12 @@ void Subcore::WRITE_BACK() {
             rdv1_addr = tctop_dat.ins.d;
             rdv1_data = tctop_dat.rdv1_data;
             wb_warpid = tctop_dat.warp_id;
+            selected_wb_ena = true;
+            selected_write_v = true;
+            selected_wb_ins = tctop_dat.ins;
+            selected_wb_reg_idx = tctop_dat.ins.d;
+            selected_wb_data = tctop_dat.rdv1_data;
+            selected_wb_warpid = tctop_dat.warp_id;
         } else {
             // if (sm_id == 0)
             //     std::cout << "SM" << sm_id << " WB judge not writeback, at " << sc_time_stamp()
@@ -206,27 +274,26 @@ void Subcore::WRITE_BACK() {
             wb_ena = false;
         }
 
-        if (wb_ena && cyclesim_gvm_enabled()) {
-            const auto wb_ins_value = wb_ins.read();
-            const auto wb_data = rdv1_data.read();
-            const auto hw_warp_id = warpid_convert(m_subcore_id, wb_warpid);
-            const int reg_idx = rdv1_addr.read();
-            if (write_s) {
+        if (selected_wb_ena && cyclesim_gvm_enabled()) {
+            const auto hw_warp_id = warpid_convert(m_subcore_id, selected_wb_warpid);
+            if (selected_write_s) {
                 c_GvmDutXRegWriteback(
-                    static_cast<int>(m_sm_id), static_cast<int>(wb_data[0]), true, reg_idx,
-                    static_cast<int>(hw_warp_id), static_cast<int>(wb_ins_value.currentpc),
-                    static_cast<int>(wb_ins_value.origin32bit),
-                    static_cast<int>(wb_ins_value.dispatch_id)
+                    static_cast<int>(m_sm_id), static_cast<int>(selected_wb_data[0]), true,
+                    selected_wb_reg_idx, static_cast<int>(hw_warp_id),
+                    static_cast<int>(selected_wb_ins.currentpc),
+                    static_cast<int>(selected_wb_ins.origin32bit),
+                    static_cast<int>(selected_wb_ins.dispatch_id)
                 );
-            } else if (write_v) {
+            } else if (selected_write_v) {
                 for (int thread_idx = 0; thread_idx < hw_num_thread; ++thread_idx) {
                     c_GvmDutVRegWriteback(
-                        static_cast<int>(m_sm_id), static_cast<int>(wb_data[thread_idx]),
-                        true, reg_idx, static_cast<int>(hw_warp_id),
-                        static_cast<int>(wb_ins_value.currentpc),
-                        static_cast<int>(wb_ins_value.origin32bit),
-                        static_cast<int>(wb_ins_value.dispatch_id),
-                        wb_ins_value.mask[thread_idx] == 1,
+                        static_cast<int>(m_sm_id),
+                        static_cast<int>(selected_wb_data[thread_idx]), true,
+                        selected_wb_reg_idx, static_cast<int>(hw_warp_id),
+                        static_cast<int>(selected_wb_ins.currentpc),
+                        static_cast<int>(selected_wb_ins.origin32bit),
+                        static_cast<int>(selected_wb_ins.dispatch_id),
+                        selected_wb_ins.mask[thread_idx] == 1,
                         thread_idx
                     );
                 }

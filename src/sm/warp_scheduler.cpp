@@ -6,11 +6,8 @@ void Subcore::WARP_SCHEDULER() {
     bool find_dispatchwarp = 0;
     last_dispatch_warpid = 0;
     I_TYPE _newissueins;
-    uint32_t wait_barrier_ins_pc;
     I_TYPE new_ins; // from opc, barrier ins
     int new_ins_warpid;
-    bool end_this_kernel;
-    bool reset_endprg_flush_pipe[hw_num_warp] = { false };
     while (true) {
         wait(clk.posedge_event());
 
@@ -19,7 +16,7 @@ void Subcore::WARP_SCHEDULER() {
             if (hwarp->endprg_flush_pipe) { // a warp endprg && flush_pipe finished
                 hwarp->endprg_flush_pipe.write(false);
                 hwarp->will_warp_activate = false;
-                wait_barrier[warpidx] = false;
+                warp_barrier_set(warpidx, false);
                 // clear block_slot & callback to CTA scheduler
                 f_warp_endprg(warpidx, hwarp->blk_slot_idx, hwarp->warp_idx_in_blk);
             }
@@ -47,7 +44,6 @@ void Subcore::WARP_SCHEDULER() {
             case OP_TYPE::ENDPRG_:
                 hwarp->is_warp_activated = false;
                 hwarp->initwarp(); // need 1 more cycle to flush pipe
-                reset_endprg_flush_pipe[new_ins_warpid] = true;
 #ifdef SPIKE_OUTPUT
                 SPDLOG_LOGGER_TRACE(
                     m_logger, "SM {} warp {} 0x{:x} {} endprg", m_sm_id,
@@ -78,7 +74,7 @@ void Subcore::WARP_SCHEDULER() {
             for (int i = 0; i < m_hw_warps.size(); i++) {
                 int idx = (i + last_dispatch_warpid + 1) % m_hw_warps.size();
                 auto& hwarp = m_hw_warps.at(idx);
-                if (!find_dispatchwarp && hwarp->can_dispatch && !wait_barrier[idx]
+                if (!find_dispatchwarp && hwarp->can_dispatch && !warp_barrier_blocks_dispatch(idx)
                     && hwarp->is_warp_activated) {
                     hwarp->dispatch_warp_valid = true;
                     dispatch_valid = true;

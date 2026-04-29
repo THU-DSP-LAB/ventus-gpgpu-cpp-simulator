@@ -349,6 +349,12 @@ bool Subcore::fetch_need_flush(int warp_id) const {
         || hwarp->endprg_flush_pipe || pc_need_rewind(warp_id);
 }
 
+bool Subcore::regext_need_clear(int warp_id) const {
+    auto& hwarp = m_hw_warps.at(warp_id);
+    return !hwarp->is_warp_activated.read() || hwarp->jump || hwarp->simtstk_jump
+        || hwarp->endprg_flush_pipe;
+}
+
 // warp scheduler combinational logic,
 // determining which warp to fetch from icache this cycle
 int Subcore::warp_scheduler_fetch_select() const {
@@ -366,7 +372,7 @@ int Subcore::warp_scheduler_fetch_select() const {
     auto& hwarp = m_hw_warps.at(warp_id);
     auto icache_miss_warp = get_icache_miss_warp(fetch2_reg.read());
     if (!hwarp->is_warp_activated.read() || !hwarp->pc_valid.read() || icache_miss_warp == warp_id
-        || wait_barrier[warp_id]) {
+        || warp_barrier_blocks_dispatch(warp_id)) {
         // @pc_invalid,@icache_miss: change to another warp
         // if there are not-barriered warps that can fetch, select them first
         // else we select barriered warps (prefill their ibuf)
@@ -374,7 +380,7 @@ int Subcore::warp_scheduler_fetch_select() const {
         for (int i = 0; i < SUBCORE_WARP_NUM; i++) {
             int wid = (i + warp_id + 1) % SUBCORE_WARP_NUM;
             if (m_hw_warps.at(wid)->pc_valid.read() && !fetch_need_flush(wid)) {
-                if (!wait_barrier[wid]) {
+                if (!warp_barrier_blocks_dispatch(wid)) {
                     return wid;
                 } else {
                     barriered_warp_id = wid;
@@ -495,6 +501,11 @@ void Subcore::cycle_IBUF_ACTION(const int warp_id) {
         if (hwarp->dispatch_warp_valid && opc_in_ready()) {
             // std::cout << "before dispatch, ififo has " << ififo.used() << " elems at " <<
             // sc_time_stamp() <<","<< sc_delta_count_at_current_time() << std::endl;
+            const auto& dispatched_ins = *hwarp->ififo.front();
+            if (dispatched_ins.op == OP_TYPE::BARRIER_) {
+                // Mark the barrier only after the OPC ready/valid handshake is accepted.
+                warp_barrier_dispatch_to_opc(warp_id);
+            }
             hwarp->ififo.pop();
             // std::cout << "IBUF: after dispatch, ififo has " << ififo.used() << " elems at " <<
             // sc_time_stamp()
@@ -776,7 +787,23 @@ void Subcore::lsu_writeback(
 }
 
 void Subcore::warp_barrier_set(int subcore_warp_id, bool val) {
-    wait_barrier.at(subcore_warp_id) = val;
+    auto& state = warp_barrier_state.at(subcore_warp_id);
+    if (val) {
+        assert(state == WarpBarrierState::DispatchedToOpc);
+        state = WarpBarrierState::WaitingAtBarrier;
+        return;
+    }
+    state = WarpBarrierState::None;
+}
+
+bool Subcore::warp_barrier_blocks_dispatch(int subcore_warp_id) const {
+    return warp_barrier_state.at(subcore_warp_id) != WarpBarrierState::None;
+}
+
+void Subcore::warp_barrier_dispatch_to_opc(int subcore_warp_id) {
+    auto& state = warp_barrier_state.at(subcore_warp_id);
+    assert(state == WarpBarrierState::None);
+    state = WarpBarrierState::DispatchedToOpc;
 }
 
 void Subcore::receive_warp(
@@ -786,6 +813,7 @@ void Subcore::receive_warp(
     (void)blk_idx_in_kernel;
     auto& hwarp = m_hw_warps.at(subcore_warp_idx);
     assert(hwarp && !hwarp->is_warp_activated && !hwarp->will_warp_activate);
+    assert(warp_barrier_state.at(subcore_warp_idx) == WarpBarrierState::None);
 
     // SPDLOG_LOGGER_TRACE(
     //     m_logger, "SM {} warp {} receive warp: kernel {}, blk_idx_in_kernel {}, warp_idx_in_blk

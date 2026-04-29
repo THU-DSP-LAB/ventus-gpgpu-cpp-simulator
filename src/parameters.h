@@ -382,7 +382,8 @@ public:
     bool operator==(const I_TYPE& rhs) const {
         // return rhs.origin32bit == origin32bit && rhs.op == op && rhs.s1 == s1 && rhs.s2 == s2 &&
         // rhs.s3 == s3 && rhs.d == d && rhs.currentpc == currentpc && rhs.mask == mask;
-        return rhs.origin32bit == origin32bit && rhs.currentpc == currentpc && rhs.mask == mask;
+        return rhs.origin32bit == origin32bit && rhs.is_extended == is_extended
+            && rhs.dispatch_id == dispatch_id && rhs.currentpc == currentpc && rhs.mask == mask;
     }
     I_TYPE& operator=(const I_TYPE& rhs) {
         currentpc = rhs.currentpc;
@@ -1005,6 +1006,7 @@ public:
             subarray.fill(0);
         CSR_reg.clear();
         dispatch_id = 0;
+        regext = {};
         std::stack<simtstack_t>().swap(IPDOM_stack);
 
         endprg_flush_pipe.write(true);
@@ -1015,8 +1017,13 @@ public:
 
     // fetch
     struct regext_t {
-        bool valid;
-        int ext1, ext2, ext3, extd, extimm;
+        bool valid = false;
+        bool extimm_valid = false;
+        int ext1 = 0;
+        int ext2 = 0;
+        int ext3 = 0;
+        int extd = 0;
+        int extimm = 0;
     } regext; // decode stage regext prefix-instruction info
 
     sc_signal<bool, SC_MANY_WRITERS> pc_valid; // PC to fetch

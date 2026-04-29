@@ -192,6 +192,7 @@ void BASE::warp_reach_barrier(
                 static_cast<int>(dispatch_id)
             );
         }
+        m_subcores[subcore_id]->warp_barrier_set(subcore_warp_id, false);
         return; // do not barrier
     } else if (std::all_of(
                    hblkslot.warp_reach_barrier.begin(),

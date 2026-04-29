@@ -7,7 +7,9 @@ int compareOnesInSCBV(
     const sc_bv<hw_num_thread>& ins_current_mask, int CSR_NUMT
 ) { // CSR_NUMT为当前有效的线程数
     int count1 = 0, count2 = 0;
-    for (int i = 0; (i < CSR_NUMT) && (ins_current_mask[i] == 1); ++i) {
+    for (int i = 0; i < CSR_NUMT; ++i) {
+        if (ins_current_mask[i] != 1)
+            continue;
         if (mask1[i] == 1)
             count1++;
         if (mask2[i] == 1)
@@ -89,7 +91,7 @@ void Subcore::SIMT_STACK(int warp_id) {
                 if (compareOnesInSCBV(
                         branch_ifmask, branch_elsemask, readins.mask, hwarp->CSR_reg[0x802]
                     )
-                    != 1) { // if_mask线程数更少，不跳转，pc+4
+                    == -1) { // if_mask线程数更少，不跳转，pc+4
                     hwarp->current_mask = branch_ifmask;
                     // 压栈两次
                     newstkelem.rpc = hwarp->CSR_reg[0x80c];
@@ -114,7 +116,7 @@ void Subcore::SIMT_STACK(int warp_id) {
                         branch_ifmask.read().to_uint(), hwarp->IPDOM_stack.size()
                     );
 #endif
-                } else { // else_mask线程数更少，先跳转到else path
+                } else { // else_mask线程数更少或相等，先跳转到else path
                     hwarp->simtstk_jumpaddr = branch_elsepc;
                     hwarp->current_mask = branch_elsemask;
                     hwarp->simtstk_jump = true;

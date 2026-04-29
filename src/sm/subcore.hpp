@@ -213,6 +213,8 @@ private:
     // combinational logic to check if PC/FETCH/FETCH2 pipeline stages need flush
     // (jump/pc_rewind/endprg)
     bool fetch_need_flush(int warp_id) const;
+    // REGEXT prefix survives fetch replay and is cleared only by real control/lifecycle flushes.
+    bool regext_need_clear(int warp_id) const;
 
     // interfaces to/from L0 icache and L1 icache
     int l0icache_access(paddr_t pagetable_root, vaddr_t addr) const;
@@ -442,12 +444,17 @@ private:
     sc_signal<bool> execpop_tc { "execpop_tc" };
 
     // warp_scheduler exec part (barrier & endprg)
-    // Scheduler-local state: barrier set/release must be visible in the same dispatch phase.
-    std::array<bool, SUBCORE_WARP_NUM> wait_barrier {};
+    enum class WarpBarrierState {
+        None,
+        DispatchedToOpc,
+        WaitingAtBarrier,
+    };
+    std::array<WarpBarrierState, SUBCORE_WARP_NUM> warp_barrier_state {};
     sc_signal<bool> emito_warpscheduler { "emito_wrpschdler" };
     warp_barrier_req_interface f_warp_barrier_req;
     warp_endprg_interface f_warp_endprg;
-    void warp_barrier_release(uint8_t subcore_warp_id);
+    bool warp_barrier_blocks_dispatch(int subcore_warp_id) const;
+    void warp_barrier_dispatch_to_opc(int subcore_warp_id);
 
     // writeback
     sc_signal<bool> write_s { "write_s" }, write_v { "write_v" }, write_f { "write_f" };
