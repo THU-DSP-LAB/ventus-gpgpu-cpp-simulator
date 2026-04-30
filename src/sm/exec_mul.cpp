@@ -1,4 +1,26 @@
 #include "subcore.hpp"
+#include <spdlog/spdlog.h>
+
+namespace {
+uint32_t high_unsigned_product(uint32_t lhs, uint32_t rhs) {
+    return static_cast<uint32_t>((static_cast<uint64_t>(lhs) * static_cast<uint64_t>(rhs)) >> 32);
+}
+
+uint32_t high_signed_product(int32_t lhs, int32_t rhs) {
+    return static_cast<uint32_t>((static_cast<__int128_t>(lhs) * static_cast<__int128_t>(rhs)) >> 32);
+}
+
+uint32_t high_signed_unsigned_product(int32_t lhs, uint32_t rhs) {
+    return static_cast<uint32_t>((static_cast<__int128_t>(lhs) * static_cast<__int128_t>(rhs)) >> 32);
+}
+
+uint32_t signed_unsigned_high(const I_TYPE& ins, reg_t src1, reg_t src2) {
+    if (ins.ddd.isvec) {
+        return high_signed_unsigned_product(static_cast<int32_t>(src2), src1);
+    }
+    return high_signed_unsigned_product(static_cast<int32_t>(src1), src2);
+}
+}
 
 void Subcore::MUL_IN() {
     mul_in_t new_data;
@@ -88,6 +110,54 @@ void Subcore::MUL_CALC() {
                 }
                 break;
 
+            case DecodeParams::alu_fn_t::FN_MULH:
+                for (int i = 0; i < hwarp->CSR_reg[0x802]; i++) {
+                    if (multmp2.ins.mask[i] == 1) {
+                        multmp2.rdv1_data[i] = high_signed_product(
+                            static_cast<int32_t>(multmp1.rsv1_data[i]),
+                            static_cast<int32_t>(multmp1.rsv2_data[i])
+                        );
+                    }
+                }
+                break;
+
+            case DecodeParams::alu_fn_t::FN_MULHU:
+                for (int i = 0; i < hwarp->CSR_reg[0x802]; i++) {
+                    if (multmp2.ins.mask[i] == 1) {
+                        multmp2.rdv1_data[i]
+                            = high_unsigned_product(multmp1.rsv1_data[i], multmp1.rsv2_data[i]);
+                    }
+                }
+                break;
+
+            case DecodeParams::alu_fn_t::FN_MULHSU:
+                for (int i = 0; i < hwarp->CSR_reg[0x802]; i++) {
+                    if (multmp2.ins.mask[i] == 1) {
+                        multmp2.rdv1_data[i] = signed_unsigned_high(
+                            multmp1.ins, multmp1.rsv1_data[i], multmp1.rsv2_data[i]
+                        );
+                    }
+                }
+                break;
+
+            case DecodeParams::alu_fn_t::FN_MACC:
+                for (int i = 0; i < hwarp->CSR_reg[0x802]; i++) {
+                    if (multmp2.ins.mask[i] == 1) {
+                        multmp2.rdv1_data[i]
+                            = multmp1.rsv1_data[i] * multmp1.rsv2_data[i] + multmp1.rsv3_data[i];
+                    }
+                }
+                break;
+
+            case DecodeParams::alu_fn_t::FN_NMSAC:
+                for (int i = 0; i < hwarp->CSR_reg[0x802]; i++) {
+                    if (multmp2.ins.mask[i] == 1) {
+                        multmp2.rdv1_data[i]
+                            = multmp1.rsv3_data[i] - multmp1.rsv1_data[i] * multmp1.rsv2_data[i];
+                    }
+                }
+                break;
+
             case DecodeParams::alu_fn_t::FN_MADD:
                 // VMADD
                 // std::cout << "EXEC_MUL: FN_MADD,{thread,s1,s2,s3}: " << std::hex;
@@ -102,9 +172,21 @@ void Subcore::MUL_CALC() {
                 // std::cout << std::dec << "\n";
                 break;
 
+            case DecodeParams::alu_fn_t::FN_NMSUB:
+                for (int i = 0; i < hwarp->CSR_reg[0x802]; i++) {
+                    if (multmp2.ins.mask[i] == 1) {
+                        multmp2.rdv1_data[i]
+                            = multmp1.rsv2_data[i] - multmp1.rsv1_data[i] * multmp1.rsv3_data[i];
+                    }
+                }
+                break;
+
             default:
-                std::cout << "MUL_CALC warning: switch to unrecognized ins" << multmp1.ins << " at "
-                          << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                SPDLOG_LOGGER_ERROR(
+                    m_logger, "MUL_CALC unrecognized ins {} alu_fn={} @ {},{}", multmp1.ins,
+                    static_cast<int>(multmp1.ins.ddd.alu_fn), sc_time_stamp().to_string(),
+                    sc_delta_count_at_current_time()
+                );
                 assert(0);
                 break;
             }
@@ -113,8 +195,10 @@ void Subcore::MUL_CALC() {
             switch (multmp1.ins.op) {
 
             default:
-                std::cout << "MUL_CALC warning: switch to unrecognized ins" << multmp1.ins << " at "
-                          << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+                SPDLOG_LOGGER_ERROR(
+                    m_logger, "MUL_CALC unrecognized no-write ins {} @ {},{}", multmp1.ins,
+                    sc_time_stamp().to_string(), sc_delta_count_at_current_time()
+                );
                 assert(0);
                 break;
             }

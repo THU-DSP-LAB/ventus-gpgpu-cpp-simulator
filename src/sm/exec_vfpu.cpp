@@ -1,5 +1,43 @@
 #include "subcore.hpp"
+#include <cmath>
+#include <limits>
 #include <spdlog/spdlog.h>
+
+namespace {
+int32_t f32_to_i32(float value) {
+    if (std::isnan(value)) {
+        return std::numeric_limits<int32_t>::max();
+    }
+    if (value >= 2147483648.0f) {
+        return std::numeric_limits<int32_t>::max();
+    }
+    if (value <= -2147483648.0f) {
+        return std::numeric_limits<int32_t>::min();
+    }
+    return static_cast<int32_t>(value);
+}
+
+uint32_t f32_to_u32(float value) {
+    if (std::isnan(value)) {
+        return std::numeric_limits<uint32_t>::max();
+    }
+    if (value <= 0.0f) {
+        return 0;
+    }
+    if (value >= 4294967296.0f) {
+        return std::numeric_limits<uint32_t>::max();
+    }
+    return static_cast<uint32_t>(value);
+}
+
+float select_f32_source(bool is_vec, iuf32_t op1, iuf32_t op2) {
+    return is_vec ? op2.f32 : op1.f32;
+}
+
+iuf32_t select_int_source(bool is_vec, iuf32_t op1, iuf32_t op2) {
+    return is_vec ? op2 : op1;
+}
+}
 
 void Subcore::VFPU_IN() {
     vfpu_in_t new_data;
@@ -112,6 +150,21 @@ void Subcore::VFPU_CALC() {
                     return iuf32_t { .i32 = (op1.f32 < op2.f32) };
                 });
                 break;
+            case DecodeParams::alu_fn_t::FN_FEQ: // VMFEQ.VF, VMFEQ.VV, FEQ.S
+                calc_helper([](iuf32_t op1, iuf32_t op2, iuf32_t op3) {
+                    return iuf32_t { .i32 = (op1.f32 == op2.f32) };
+                });
+                break;
+            case DecodeParams::alu_fn_t::FN_FLE: // VMFGE.VF, VMFLE.VF, VMFLE.VV, FLE.S
+                calc_helper([](iuf32_t op1, iuf32_t op2, iuf32_t op3) {
+                    return iuf32_t { .i32 = (op1.f32 <= op2.f32) };
+                });
+                break;
+            case DecodeParams::alu_fn_t::FN_FNE: // VMFNE.VF, VMFNE.VV
+                calc_helper([](iuf32_t op1, iuf32_t op2, iuf32_t op3) {
+                    return iuf32_t { .i32 = (op1.f32 != op2.f32) };
+                });
+                break;
             case DecodeParams::alu_fn_t::FN_FSGNJ: // VFSGNJ.VF, VFSGNJ.VV, FSGNJ.S
                 calc_helper([](iuf32_t op1, iuf32_t op2, iuf32_t op3) {
                     return iuf32_t { .u32 = (op1.u32 & 0x7fffffffu) | (op2.u32 & 0x80000000u) };
@@ -137,6 +190,46 @@ void Subcore::VFPU_CALC() {
                     return iuf32_t { .f32 = (op1.f32 < op2.f32) ? op1.f32 : op2.f32 };
                 });
                 break;
+            case DecodeParams::alu_fn_t::FN_F2I: {
+                const bool is_vec = vfputmp1.ins.ddd.isvec;
+                const bool force_rm_rtz = vfputmp1.ins.ddd.force_rm_rtz;
+                calc_helper([is_vec, force_rm_rtz](iuf32_t op1, iuf32_t op2, iuf32_t op3) {
+                    float value = select_f32_source(is_vec, op1, op2);
+                    if (!force_rm_rtz) {
+                        value = std::nearbyint(value);
+                    }
+                    return iuf32_t { .i32 = f32_to_i32(value) };
+                });
+                break;
+            }
+            case DecodeParams::alu_fn_t::FN_F2IU: {
+                const bool is_vec = vfputmp1.ins.ddd.isvec;
+                const bool force_rm_rtz = vfputmp1.ins.ddd.force_rm_rtz;
+                calc_helper([is_vec, force_rm_rtz](iuf32_t op1, iuf32_t op2, iuf32_t op3) {
+                    float value = select_f32_source(is_vec, op1, op2);
+                    if (!force_rm_rtz) {
+                        value = std::nearbyint(value);
+                    }
+                    return iuf32_t { .u32 = f32_to_u32(value) };
+                });
+                break;
+            }
+            case DecodeParams::alu_fn_t::FN_I2F: {
+                const bool is_vec = vfputmp1.ins.ddd.isvec;
+                calc_helper([is_vec](iuf32_t op1, iuf32_t op2, iuf32_t op3) {
+                    const iuf32_t value = select_int_source(is_vec, op1, op2);
+                    return iuf32_t { .f32 = static_cast<float>(value.i32) };
+                });
+                break;
+            }
+            case DecodeParams::alu_fn_t::FN_IU2F: {
+                const bool is_vec = vfputmp1.ins.ddd.isvec;
+                calc_helper([is_vec](iuf32_t op1, iuf32_t op2, iuf32_t op3) {
+                    const iuf32_t value = select_int_source(is_vec, op1, op2);
+                    return iuf32_t { .f32 = static_cast<float>(value.u32) };
+                });
+                break;
+            }
             // case FSQRT_S_:
             //     vfputmp2.rdf1_data[0]
             //         = std::bit_cast<int>(sqrtf32(std::bit_cast<float>(vfputmp1.vfpuSdata1[0])));
@@ -339,8 +432,12 @@ void Subcore::VFPU_CALC() {
                 assert(0);
                 break;
             }
-            for (int i = 0; i < hwarp->CSR_reg[0x802]; i++) {
-                vfputmp2.rdf1_data[i] = std::bit_cast<int>(dst[i]);
+            if (vfputmp1.ins.ddd.wxd) {
+                vfputmp2.rds1_data = std::bit_cast<int>(dst[0]);
+            } else if (vfputmp1.ins.ddd.wvd) {
+                for (int i = 0; i < hwarp->CSR_reg[0x802]; i++) {
+                    vfputmp2.rdf1_data[i] = std::bit_cast<int>(dst[i]);
+                }
             }
             vfpufifo.push(vfputmp2);
         } else {
