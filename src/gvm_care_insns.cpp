@@ -33,6 +33,8 @@
   {0x0000707f, 0x00003073, "CSRRC"               },\
   {0x0000707f, 0x00007073, "CSRRCI"              },\
   {0x0000707f, 0x00002003, "LW"                  },\
+  {0xfe00007f, 0x00000053, "FADD_S"              },\
+  {0xfe00007f, 0x10000053, "FMUL_S"              },\
   {0x0000707f, 0x0000305b, "SETRPC"              },\
 
 #define SCALAR_SINGLE_CMP_INSNS \
@@ -66,6 +68,8 @@
   {0x0000707f, 0x00003073, "CSRRC"               },\
   {0x0000707f, 0x00007073, "CSRRCI"              },\
   {0x0000707f, 0x00002003, "LW"                  },\
+  {0xfe00007f, 0x00000053, "FADD_S"              },\
+  {0xfe00007f, 0x10000053, "FMUL_S"              },\
 
 #define VREG_INSNS \
   {0xfff0707f, 0x5e004057, "VMV_V_X_              "},\
@@ -89,6 +93,8 @@
   {0x0000707f, 0x0000407b, "VLBU12_V_             "},\
   {0xfc00707f, 0xa4006057, "VMADD_VX_             "},\
   {0xfc00707f, 0x24000057, "VAND_VV_              "},\
+  {0xfc00707f, 0x24004057, "VAND_VX_              "},\
+  {0xfc00707f, 0x24003057, "VAND_VI_              "},\
   {0xfc00707f, 0x80006057, "VDIVU_VX_             "},\
   {0xfc00707f, 0x6c004057, "VMSLT_VX_             "},\
   {0xfc00707f, 0x6c001057, "VMFLT_VV_             "},\
@@ -98,7 +104,10 @@
   {0xfc00707f, 0xa4002057, "VMADD_VV_             "},\
   {0xfc00707f, 0xa4003057, "VSRA_VI_              "},\
   {0xfc00707f, 0x74003057, "VMSLE_VI_             "},\
-  {0xfc00707f, 0x08004057, "VSUB_VX_              "},
+  {0xfc00707f, 0x08004057, "VSUB_VX_              "},\
+  {0xfc00707f, 0x80001057, "VFDIV_VV_             "},\
+  {0xfc00707f, 0x80005057, "VFDIV_VF_             "},\
+  {0xfc00707f, 0x84005057, "VFRDIV_VF_            "},
 
 
 
@@ -114,6 +123,9 @@
   {0xfc00707f, 0xa0001057, "VFMADD_VV_            "},\
   {0xfc00707f, 0x18001057, "VFMAX_VV_             "},\
   {0xfc00707f, 0x00001057, "VFADD_VV_             "},\
+  {0xfc00707f, 0x80001057, "VFDIV_VV_             "},\
+  {0xfc00707f, 0x80005057, "VFDIV_VF_             "},\
+  {0xfc00707f, 0x84005057, "VFRDIV_VF_            "},\
   
   
 

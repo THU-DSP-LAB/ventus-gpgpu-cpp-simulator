@@ -767,11 +767,12 @@ struct vfpu_out_t {
     std::array<reg_t, hw_num_thread> rdf1_data;
     reg_t rds1_data; // FCVT_W_S等指令使用
     bool operator==(const vfpu_out_t& rhs) const {
-        return rhs.ins == ins && rhs.rdf1_data == rdf1_data;
+        return rhs.ins == ins && rhs.rdf1_data == rdf1_data && rhs.rds1_data == rds1_data;
     }
     vfpu_out_t& operator=(const vfpu_out_t& rhs) {
         ins = rhs.ins;
         rdf1_data = rhs.rdf1_data;
+        rds1_data = rhs.rds1_data;
         warp_id = rhs.warp_id;
         return *this;
     }
@@ -789,6 +790,7 @@ struct vfpu_out_t {
         sc_trace(tf, v.ins, NAME + ".ins");
         for (int i = 0; i < hw_num_thread; i++)
             sc_trace(tf, v.rdf1_data[i], NAME + ".rdf1_data(" + std::to_string(i) + ")");
+        sc_trace(tf, v.rds1_data, NAME + ".rds1_data");
         sc_trace(tf, v.warp_id, NAME + ".warp_id");
     }
 };
