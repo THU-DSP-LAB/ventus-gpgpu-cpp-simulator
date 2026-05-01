@@ -14,11 +14,20 @@ uint32_t high_signed_unsigned_product(int32_t lhs, uint32_t rhs) {
     return static_cast<uint32_t>((static_cast<__int128_t>(lhs) * static_cast<__int128_t>(rhs)) >> 32);
 }
 
-uint32_t signed_unsigned_high(const I_TYPE& ins, reg_t src1, reg_t src2) {
-    if (ins.ddd.isvec) {
-        return high_signed_unsigned_product(static_cast<int32_t>(src2), src1);
-    }
-    return high_signed_unsigned_product(static_cast<int32_t>(src1), src2);
+uint32_t low_product(uint32_t lhs, uint32_t rhs) {
+    return lhs * rhs;
+}
+
+uint32_t low_madd(uint32_t lhs, uint32_t rhs, uint32_t addend) {
+    return low_product(lhs, rhs) + addend;
+}
+
+uint32_t low_msub(uint32_t lhs, uint32_t rhs, uint32_t minuend) {
+    return minuend - low_product(lhs, rhs);
+}
+
+uint32_t signed_unsigned_high(int32_t lhs, uint32_t rhs) {
+    return high_signed_unsigned_product(lhs, rhs);
 }
 }
 
@@ -97,88 +106,70 @@ void Subcore::MUL_CALC() {
         multmp1 = mul_dq.front();
         mul_dq.pop();
         auto& hwarp = m_hw_warps[multmp1.warp_id];
+        std::array<iuf32_t, hw_num_thread> src1, src2, src3, dst;
+        for (int i = 0; i < hwarp->CSR_reg[0x802]; i++) {
+            src1[i].i32 = multmp1.rsv1_data[i];
+            src2[i].i32 = multmp1.rsv2_data[i];
+            src3[i].i32 = multmp1.rsv3_data[i];
+        }
         if (multmp1.ins.ddd.wxd | multmp1.ins.ddd.wvd) {
             multmp2.ins = multmp1.ins;
             multmp2.warp_id = multmp1.warp_id;
+
+            auto calc_helper
+                = [&multmp1, num_thread = hwarp->CSR_reg[0x802], &src1, &src2, &src3,
+                   &dst](std::function<iuf32_t(iuf32_t op1, iuf32_t op2, iuf32_t op3)> calc) {
+                      exec_calc_helper(multmp1.ins, num_thread, src1, src2, src3, dst, calc);
+                  };
+
             switch (multmp1.ins.ddd.alu_fn) {
 
-            case DecodeParams::alu_fn_t::FN_MUL:
-                // VMUL.VV, VMUL.VX
-                for (int i = 0; i < hwarp->CSR_reg[0x802]; i++) {
-                    if (multmp2.ins.mask[i] == 1)
-                        multmp2.rdv1_data[i] = multmp1.rsv1_data[i] * multmp1.rsv2_data[i];
-                }
+            case DecodeParams::alu_fn_t::FN_MUL: // VMUL.VV, VMUL.VX
+                calc_helper([](iuf32_t op1, iuf32_t op2, iuf32_t op3) {
+                    return iuf32_t { .u32 = low_product(op1.u32, op2.u32) };
+                });
                 break;
 
             case DecodeParams::alu_fn_t::FN_MULH:
-                for (int i = 0; i < hwarp->CSR_reg[0x802]; i++) {
-                    if (multmp2.ins.mask[i] == 1) {
-                        multmp2.rdv1_data[i] = high_signed_product(
-                            static_cast<int32_t>(multmp1.rsv1_data[i]),
-                            static_cast<int32_t>(multmp1.rsv2_data[i])
-                        );
-                    }
-                }
+                calc_helper([](iuf32_t op1, iuf32_t op2, iuf32_t op3) {
+                    return iuf32_t { .u32 = high_signed_product(op1.i32, op2.i32) };
+                });
                 break;
 
             case DecodeParams::alu_fn_t::FN_MULHU:
-                for (int i = 0; i < hwarp->CSR_reg[0x802]; i++) {
-                    if (multmp2.ins.mask[i] == 1) {
-                        multmp2.rdv1_data[i]
-                            = high_unsigned_product(multmp1.rsv1_data[i], multmp1.rsv2_data[i]);
-                    }
-                }
+                calc_helper([](iuf32_t op1, iuf32_t op2, iuf32_t op3) {
+                    return iuf32_t { .u32 = high_unsigned_product(op1.u32, op2.u32) };
+                });
                 break;
 
             case DecodeParams::alu_fn_t::FN_MULHSU:
-                for (int i = 0; i < hwarp->CSR_reg[0x802]; i++) {
-                    if (multmp2.ins.mask[i] == 1) {
-                        multmp2.rdv1_data[i] = signed_unsigned_high(
-                            multmp1.ins, multmp1.rsv1_data[i], multmp1.rsv2_data[i]
-                        );
-                    }
-                }
+                calc_helper([](iuf32_t op1, iuf32_t op2, iuf32_t op3) {
+                    return iuf32_t { .u32 = signed_unsigned_high(op1.i32, op2.u32) };
+                });
                 break;
 
             case DecodeParams::alu_fn_t::FN_MACC:
-                for (int i = 0; i < hwarp->CSR_reg[0x802]; i++) {
-                    if (multmp2.ins.mask[i] == 1) {
-                        multmp2.rdv1_data[i]
-                            = multmp1.rsv1_data[i] * multmp1.rsv2_data[i] + multmp1.rsv3_data[i];
-                    }
-                }
+                calc_helper([](iuf32_t op1, iuf32_t op2, iuf32_t op3) {
+                    return iuf32_t { .u32 = low_madd(op1.u32, op2.u32, op3.u32) };
+                });
                 break;
 
             case DecodeParams::alu_fn_t::FN_NMSAC:
-                for (int i = 0; i < hwarp->CSR_reg[0x802]; i++) {
-                    if (multmp2.ins.mask[i] == 1) {
-                        multmp2.rdv1_data[i]
-                            = multmp1.rsv3_data[i] - multmp1.rsv1_data[i] * multmp1.rsv2_data[i];
-                    }
-                }
+                calc_helper([](iuf32_t op1, iuf32_t op2, iuf32_t op3) {
+                    return iuf32_t { .u32 = low_msub(op1.u32, op2.u32, op3.u32) };
+                });
                 break;
 
-            case DecodeParams::alu_fn_t::FN_MADD:
-                // VMADD
-                // std::cout << "EXEC_MUL: FN_MADD,{thread,s1,s2,s3}: " << std::hex;
-                for (int i = 0; i < hwarp->CSR_reg[0x802]; i++) {
-                    if (multmp2.ins.mask[i] == 1) {
-                        // std::cout << "{" << i << "," << multmp1.rsv1_data[i] << ","
-                        //           << multmp1.rsv2_data[i] << "," << multmp1.rsv3_data[i] << "};";
-                        multmp2.rdv1_data[i]
-                            = multmp1.rsv1_data[i] * multmp1.rsv3_data[i] + multmp1.rsv2_data[i];
-                    }
-                }
-                // std::cout << std::dec << "\n";
+            case DecodeParams::alu_fn_t::FN_MADD: // VMADD
+                calc_helper([](iuf32_t op1, iuf32_t op2, iuf32_t op3) {
+                    return iuf32_t { .u32 = low_madd(op2.u32, op3.u32, op1.u32) };
+                });
                 break;
 
             case DecodeParams::alu_fn_t::FN_NMSUB:
-                for (int i = 0; i < hwarp->CSR_reg[0x802]; i++) {
-                    if (multmp2.ins.mask[i] == 1) {
-                        multmp2.rdv1_data[i]
-                            = multmp1.rsv2_data[i] - multmp1.rsv1_data[i] * multmp1.rsv3_data[i];
-                    }
-                }
+                calc_helper([](iuf32_t op1, iuf32_t op2, iuf32_t op3) {
+                    return iuf32_t { .u32 = low_msub(op2.u32, op3.u32, op1.u32) };
+                });
                 break;
 
             default:
@@ -189,6 +180,9 @@ void Subcore::MUL_CALC() {
                 );
                 assert(0);
                 break;
+            }
+            for (int i = 0; i < hwarp->CSR_reg[0x802]; i++) {
+                multmp2.rdv1_data[i] = dst[i].i32;
             }
             mulfifo.push(multmp2);
         } else {

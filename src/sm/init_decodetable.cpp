@@ -279,6 +279,6 @@ return std::make_shared<std::map<OP_TYPE, decodedat>>(std::map<OP_TYPE, decodeda
 {VADD12_VI_, {1, 0, 0, DecodeParams::B_N, 0, 0, DecodeParams::CSR_N, 1, DecodeParams::A3_X, DecodeParams::A2_IMM, DecodeParams::A1_VRS1, DecodeParams::IMM_I, DecodeParams::MEM_X, DecodeParams::FN_ADD, 0, DecodeParams::M_X, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0}}, 
 {VSUB12_VI_, {1, 0, 0, DecodeParams::B_N, 0, 0, DecodeParams::CSR_N, 0, DecodeParams::A3_X, DecodeParams::A2_IMM, DecodeParams::A1_VRS1, DecodeParams::IMM_I, DecodeParams::MEM_X, DecodeParams::FN_SUB, 0, DecodeParams::M_X, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0}}, 
 {VFTTA_VV_, {1, 1, 0, DecodeParams::B_N, 0, 0, DecodeParams::CSR_N, 0, DecodeParams::A3_VRS3, DecodeParams::A2_VRS2, DecodeParams::A1_VRS1, DecodeParams::IMM_X, DecodeParams::MEM_X, DecodeParams::FN_TTF, 0, DecodeParams::M_X, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0}}, 
-{VFEXP_V_, {1, 1, 0, DecodeParams::B_N, 0, 0, DecodeParams::CSR_N, 0, DecodeParams::A3_X, DecodeParams::A2_VRS2, DecodeParams::A1_X, DecodeParams::IMM_X, DecodeParams::MEM_X, DecodeParams::FN_EXP, 0, DecodeParams::M_X, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0}}, 
+{VFEXP_V_, {1, 1, 0, DecodeParams::B_N, 0, 0, DecodeParams::CSR_N, 1, DecodeParams::A3_X, DecodeParams::A2_VRS2, DecodeParams::A1_X, DecodeParams::IMM_X, DecodeParams::MEM_X, DecodeParams::FN_EXP, 0, DecodeParams::M_X, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0}},
 }));
 }

@@ -117,23 +117,14 @@ void Subcore::SFU_CALC() {
                 });
                 break;
             case DecodeParams::alu_fn_t::FN_EXP: // VFEXP.V
-                for (int i = 0; i < hwarp->CSR_reg[0x802]; i++) {
-                    if (sfutmp1.ins.mask[i] == 1) {
-                        dst[i].f32 = expf(src2[i].f32);
-                    }
-                }
+                calc_helper([](iuf32_t op1, iuf32_t op2, iuf32_t op3) {
+                    return iuf32_t { .f32 = expf(op1.f32) };
+                });
                 break;
-            case DecodeParams::alu_fn_t::FN_FSQRT: // VFSQRT.V, FSQRT.S
-                if (sfutmp1.ins.ddd.isvec) {       // VFSQRT.V
-                    assert(sfutmp1.ins.ddd.reverse);
-                    for (int i = 0; i < hwarp->CSR_reg[0x802]; i++) {
-                        if (sfutmp1.ins.mask[i] == 1) {
-                            dst[i].f32 = sqrtf(src2[i].f32);
-                        }
-                    }
-                } else { // FSQRT.S
-                    dst[0].f32 = sqrtf(src1[0].f32);
-                }
+            case DecodeParams::alu_fn_t::FN_FSQRT: // VFSQRT.V, FSQRT.S, VFSQRT.V
+                calc_helper([](iuf32_t op1, iuf32_t op2, iuf32_t op3) {
+                    return iuf32_t { .f32 = sqrtf(op1.f32) };
+                });
                 break;
             default:
                 std::cout << "SFU_CALC warning: switch to unrecognized ins" << sfutmp1.ins << " at "
