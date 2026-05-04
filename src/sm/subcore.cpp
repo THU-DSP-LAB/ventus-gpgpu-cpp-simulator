@@ -766,8 +766,11 @@ bool Subcore::opc_in_ready() const {
 bool Subcore::opc_in_ready(int warp_id) const {
     if (!opc_in_ready())
         return false;
-    for (int i = 0; i < opcfifo.get_size(); i++) {
-        if (opcfifo[i].warp_id == warp_id && opcfifo.tag_valid(i)) {
+    for (int i = 0; i < OPCFIFO_SIZE; i++) {
+        if (doemit.read() && i == emit_idx.read()) {
+            continue;
+        }
+        if (opcfifo.tag_valid(i) && opcfifo[i].warp_id == warp_id) {
             return false;
         }
     }
