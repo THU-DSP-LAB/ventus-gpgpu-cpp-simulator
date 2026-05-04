@@ -133,12 +133,12 @@ void Subcore::VFPU_CALC() {
                 break;
             case DecodeParams::alu_fn_t::FN_FMADD: // VFMACC.VF, VFMACC.VV, FMADD.S
                 calc_helper([](iuf32_t op1, iuf32_t op2, iuf32_t op3) {
-                    return iuf32_t { .f32 = +(op1.f32 * op2.f32) + op3.f32 };
+                    return iuf32_t { .f32 = std::fma(op1.f32, op2.f32, op3.f32) };
                 });
                 break;
             case DecodeParams::alu_fn_t::FN_VFMADD: // VFMADD.VF, VFMADD.VV
                 calc_helper([](iuf32_t op1, iuf32_t op2, iuf32_t op3) {
-                    return iuf32_t { .f32 = +(op1.f32 * op3.f32) + op2.f32 };
+                    return iuf32_t { .f32 = std::fma(op1.f32, op3.f32, op2.f32) };
                 });
                 break;
             case DecodeParams::alu_fn_t::FN_FLT: // VMFGT.VF, VMFLT.VF, VMFLT.VV , FLT.S
