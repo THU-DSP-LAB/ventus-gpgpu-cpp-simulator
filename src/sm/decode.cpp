@@ -3,15 +3,27 @@
 #include <spdlog/spdlog.h>
 
 namespace {
+constexpr unsigned I_IMM_BITS = 12;
+constexpr unsigned S_IMM_BITS = 12;
+constexpr unsigned B_IMM_BITS = 13;
+constexpr unsigned U_IMM_MASK = 0xfffff000u;
+constexpr unsigned J_IMM_BITS = 21;
+constexpr unsigned SHIFT_IMM_BITS = 5;
 constexpr unsigned VECTOR_IMM_LOW_BITS = 5;
 constexpr unsigned VECTOR_IMM_EXT_BITS = 6;
 constexpr unsigned VECTOR_IMM_BITS = VECTOR_IMM_LOW_BITS + VECTOR_IMM_EXT_BITS;
+constexpr unsigned L11_IMM_BITS = 11;
+constexpr unsigned S11_IMM_BITS = 11;
 
 int sign_extend(uint32_t value, unsigned bits) {
     const uint32_t mask = (1u << bits) - 1u;
     const uint32_t sign_bit = 1u << (bits - 1u);
     value &= mask;
     return static_cast<int>((value ^ sign_bit) - sign_bit);
+}
+
+uint32_t u_imm(uint32_t instr) {
+    return instr & U_IMM_MASK;
 }
 }
 
@@ -220,31 +232,40 @@ void Subcore::DECODE() {
             scinsbit = instr->origin32bit;
             switch (instr->ddd.sel_imm) {
             case DecodeParams::sel_imm_t::IMM_I:
-                instr->imm = scinsbit.range(31, 20).to_int(); // to_int() sign-extend
+                instr->imm = sign_extend(scinsbit.range(31, 20).to_uint(), I_IMM_BITS);
                 break;
             case DecodeParams::sel_imm_t::IMM_S:
-                instr->imm = (scinsbit.range(31, 25), scinsbit.range(11, 7)).to_int();
+                instr->imm = sign_extend(
+                    (scinsbit.range(31, 25).to_uint() << 5) | scinsbit.range(11, 7).to_uint(),
+                    S_IMM_BITS
+                );
                 break;
             case DecodeParams::sel_imm_t::IMM_B:
-                instr->imm = (scinsbit.range(31, 31), scinsbit.range(7, 7), scinsbit.range(30, 25),
-                              scinsbit.range(11, 8))
-                                 .to_int()
-                    << 1;
+                instr->imm = sign_extend(
+                    (scinsbit.range(31, 31).to_uint() << 12)
+                        | (scinsbit.range(7, 7).to_uint() << 11)
+                        | (scinsbit.range(30, 25).to_uint() << 5)
+                        | (scinsbit.range(11, 8).to_uint() << 1),
+                    B_IMM_BITS
+                );
                 break;
             case DecodeParams::sel_imm_t::IMM_U:
-                instr->imm = (scinsbit.range(31, 12)).to_int() << 12;
+                instr->imm = static_cast<int32_t>(u_imm(instr->origin32bit));
                 break;
             case DecodeParams::sel_imm_t::IMM_J:
-                instr->imm = (scinsbit.range(31, 31), scinsbit.range(19, 12),
-                              scinsbit.range(20, 20), scinsbit.range(30, 21))
-                                 .to_int()
-                    << 1;
+                instr->imm = sign_extend(
+                    (scinsbit.range(31, 31).to_uint() << 20)
+                        | (scinsbit.range(19, 12).to_uint() << 12)
+                        | (scinsbit.range(20, 20).to_uint() << 11)
+                        | (scinsbit.range(30, 21).to_uint() << 1),
+                    J_IMM_BITS
+                );
                 break;
             case DecodeParams::sel_imm_t::IMM_Z:
                 instr->imm = (scinsbit.range(19, 15)).to_uint();
                 break;
             case DecodeParams::sel_imm_t::IMM_2:
-                instr->imm = (scinsbit.range(24, 20)).to_int();
+                instr->imm = scinsbit.range(24, 20).to_uint() & ((1u << SHIFT_IMM_BITS) - 1u);
                 break;
             case DecodeParams::sel_imm_t::IMM_V: // 和scala不一样，需要修改，加位拓展
                 if (has_regext_imm) {
@@ -259,10 +280,13 @@ void Subcore::DECODE() {
                 }
                 break;
             case DecodeParams::sel_imm_t::IMM_L11:
-                instr->imm = (scinsbit.range(30, 20)).to_int();
+                instr->imm = sign_extend(scinsbit.range(30, 20).to_uint(), L11_IMM_BITS);
                 break;
             case DecodeParams::sel_imm_t::IMM_S11:
-                instr->imm = (scinsbit.range(30, 25), scinsbit.range(11, 7)).to_int();
+                instr->imm = sign_extend(
+                    (scinsbit.range(30, 25).to_uint() << 5) | scinsbit.range(11, 7).to_uint(),
+                    S11_IMM_BITS
+                );
                 break;
             default:
                 break;

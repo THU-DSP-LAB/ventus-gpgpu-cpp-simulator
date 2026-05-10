@@ -2,12 +2,18 @@
 #include <spdlog/spdlog.h>
 
 namespace {
+constexpr uint32_t WORD_SHIFT_MASK = 0x1f;
+
 bool signed_ge(reg_t lhs, reg_t rhs) {
     return static_cast<int32_t>(lhs) >= static_cast<int32_t>(rhs);
 }
 
 bool signed_lt(reg_t lhs, reg_t rhs) {
     return static_cast<int32_t>(lhs) < static_cast<int32_t>(rhs);
+}
+
+uint32_t word_shift_amount(reg_t value) {
+    return value & WORD_SHIFT_MASK;
 }
 }
 
@@ -180,7 +186,7 @@ void Subcore::SALU_CALC() {
             // case SLL_:
             // case SLLI_:
             case DecodeParams::alu_fn_t::FN_SL:
-                salutmp2.data = salutmp1.rss1_data << salutmp1.rss2_data;
+                salutmp2.data = salutmp1.rss1_data << word_shift_amount(salutmp1.rss2_data);
                 break;
 
             // case SLT_:
@@ -205,13 +211,15 @@ void Subcore::SALU_CALC() {
             // case SRA_:
             // case SRAI_:
             case DecodeParams::alu_fn_t::FN_SRA:
-                salutmp2.data = salutmp1.rss1_data >> salutmp1.rss2_data;
+                salutmp2.data = static_cast<int32_t>(salutmp1.rss1_data)
+                    >> word_shift_amount(salutmp1.rss2_data);
                 break;
 
             // case SRL_:
             // case SRLI_:
             case DecodeParams::alu_fn_t::FN_SR:
-                salutmp2.data = static_cast<unsigned int>(salutmp1.rss1_data) >> salutmp1.rss2_data;
+                salutmp2.data = static_cast<uint32_t>(salutmp1.rss1_data)
+                    >> word_shift_amount(salutmp1.rss2_data);
                 break;
 
             // case SUB_:

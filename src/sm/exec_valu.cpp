@@ -1,12 +1,18 @@
 #include "subcore.hpp"
 
 namespace {
+constexpr uint32_t WORD_SHIFT_MASK = 0x1f;
+
 bool signed_ge(reg_t lhs, reg_t rhs) {
     return static_cast<int32_t>(lhs) >= static_cast<int32_t>(rhs);
 }
 
 bool signed_lt(reg_t lhs, reg_t rhs) {
     return static_cast<int32_t>(lhs) < static_cast<int32_t>(rhs);
+}
+
+uint32_t word_shift_amount(iuf32_t value) {
+    return value.u32 & WORD_SHIFT_MASK;
 }
 }
 
@@ -200,17 +206,17 @@ void Subcore::VALU_CALC() {
                 break;
             case DecodeParams::alu_fn_t::FN_SL: // VSLL.VI, VSLL.VV, VSLL.VX
                 calc_helper([](iuf32_t op1, iuf32_t op2, iuf32_t op3) {
-                    return iuf32_t { .u32 = op1.u32 << op2.u32 };
+                    return iuf32_t { .u32 = op1.u32 << word_shift_amount(op2) };
                 });
                 break;
             case DecodeParams::alu_fn_t::FN_SR: // VSRL.VI, VSRL.VV, VSRL.VX
                 calc_helper([](iuf32_t op1, iuf32_t op2, iuf32_t op3) {
-                    return iuf32_t { .u32 = op1.u32 >> op2.u32 };
+                    return iuf32_t { .u32 = op1.u32 >> word_shift_amount(op2) };
                 });
                 break;
             case DecodeParams::alu_fn_t::FN_SRA: // VSRA.VI, VSRA.VV, VSRA.VX
                 calc_helper([](iuf32_t op1, iuf32_t op2, iuf32_t op3) {
-                    return iuf32_t { .i32 = op1.i32 >> op2.i32 };
+                    return iuf32_t { .i32 = op1.i32 >> word_shift_amount(op2) };
                 });
                 break;
             default:
