@@ -67,6 +67,7 @@ int BASE::sharedMem_request(const std::unique_ptr<lsu_mem_cmd_t>& cmd) {
         sc_bv<4> wordOffset1H = cmd->wordOffset1H->at(threadidx);
         uint32_t addr = (cmd->addr->at(threadidx) & ~0b11); // {tag,setIdx,blockOffset} in RTL
         data = cmd->data[threadidx];
+        int dataOffset = 0;
         for (int i = 0; i < 4; i++) { // a word
             if (addr + i < ldsBaseAddr_core || addr + i >= ldsBaseAddr_core + hw_lds_size) {
                 SPDLOG_LOGGER_ERROR(
@@ -79,7 +80,8 @@ int BASE::sharedMem_request(const std::unique_ptr<lsu_mem_cmd_t>& cmd) {
                 data_bytes[i] = m_local_mem[addr - ldsBaseAddr_core + i];
             } else if (cmd->opcode == L1D_OPCODE_WRITE) { // store
                 if (wordOffset1H[i]) {
-                    m_local_mem[addr - ldsBaseAddr_core + i] = data_bytes[i];
+                    m_local_mem[addr - ldsBaseAddr_core + i] = data_bytes[dataOffset];
+                    dataOffset++;
                 }
             } else { // unknown opcode
                 SPDLOG_LOGGER_ERROR(

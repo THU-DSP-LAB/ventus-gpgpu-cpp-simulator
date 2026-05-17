@@ -1,7 +1,9 @@
 #include "subcore.hpp"
 
 namespace {
+constexpr uint32_t WORD_SIGN_BIT = 0x80000000u;
 constexpr uint32_t WORD_SHIFT_MASK = 0x1f;
+constexpr uint32_t WORD_BITS = 32;
 
 bool signed_ge(reg_t lhs, reg_t rhs) {
     return static_cast<int32_t>(lhs) >= static_cast<int32_t>(rhs);
@@ -13,6 +15,14 @@ bool signed_lt(reg_t lhs, reg_t rhs) {
 
 uint32_t word_shift_amount(iuf32_t value) {
     return value.u32 & WORD_SHIFT_MASK;
+}
+
+uint32_t arithmetic_right_shift_word(uint32_t value, uint32_t amount) {
+    if (amount == 0 || (value & WORD_SIGN_BIT) == 0) {
+        return value >> amount;
+    }
+    const uint32_t sign_fill = ~0u << (WORD_BITS - amount);
+    return (value >> amount) | sign_fill;
 }
 }
 
@@ -151,12 +161,12 @@ void Subcore::VALU_CALC() {
                 break;
             case DecodeParams::alu_fn_t::FN_ADD: // VADD12.VI, VADD.VI, VADD.VV, VADD.VX
                 calc_helper([](iuf32_t op1, iuf32_t op2, iuf32_t op3) {
-                    return iuf32_t { .i32 = op1.i32 + op2.i32 };
+                    return iuf32_t { .u32 = op1.u32 + op2.u32 };
                 });
                 break;
             case DecodeParams::alu_fn_t::FN_SUB: // VSUB12.VI, VSUB.VV, VSUB.VX
                 calc_helper([](iuf32_t op1, iuf32_t op2, iuf32_t op3) {
-                    return iuf32_t { .i32 = op1.i32 - op2.i32 };
+                    return iuf32_t { .u32 = op1.u32 - op2.u32 };
                 });
                 break;
             case DecodeParams::alu_fn_t::FN_SEQ: // VMSEQ.VV, VMSEQ.VX, VMSEQ.VI
@@ -216,7 +226,9 @@ void Subcore::VALU_CALC() {
                 break;
             case DecodeParams::alu_fn_t::FN_SRA: // VSRA.VI, VSRA.VV, VSRA.VX
                 calc_helper([](iuf32_t op1, iuf32_t op2, iuf32_t op3) {
-                    return iuf32_t { .i32 = op1.i32 >> word_shift_amount(op2) };
+                    return iuf32_t {
+                        .u32 = arithmetic_right_shift_word(op1.u32, word_shift_amount(op2))
+                    };
                 });
                 break;
             default:
