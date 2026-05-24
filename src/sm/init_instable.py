@@ -41,11 +41,17 @@ with open(allins_path, 'w') as allins_file:
 cpp_path = os.path.join(current_dir, "init_instable.cpp")
 
 with open(cpp_path, 'w') as cpp_file:
-    cpp_file.write('#include <vector>\n')
-    cpp_file.write('#include <unordered_map>\n')
-    cpp_file.write('#include "BASE.h"\n\n')
-    cpp_file.write('void BASE::INIT_INSTABLE()\n')
-    cpp_file.write('{\n')
+    cpp_file.write(
+        '#include "../parameters.h"\n' +
+        '#include <memory>\n' +
+        '#include <unordered_map>\n' +
+        '#include <vector>\n' +
+        '\n' +
+        'std::shared_ptr<std::vector<instable_t>> gen_instruction_table() {\n' +
+        '    std::shared_ptr<std::vector<instable_t>> instruction_table\n' +
+        '        = std::make_shared<std::vector<instable_t>>();\n' +
+        '    auto& instable_vec = *instruction_table;\n'
+    )
 
     # 根据 mask 进行分组
     groups = {}
@@ -68,4 +74,5 @@ with open(cpp_path, 'w') as cpp_file:
             cpp_file.write(f'    map_{key}.insert(std::make_pair(std::bitset<32>("{masked_pattern}"), {op}));\n')
         cpp_file.write(f'    instable_vec.push_back(instable_t{{std::bitset<32>("{key}"), map_{key}}});\n')
 
+    cpp_file.write('    return instruction_table;\n')
     cpp_file.write('};\n')

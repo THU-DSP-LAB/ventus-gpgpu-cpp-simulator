@@ -62,7 +62,38 @@ $(BINARY): $(OBJS)
 	@mkdir -p $(dir $@)
 	@$(LD) -o $@ $(OBJS) $(LDFLAGS)
 
-RUNFLAGS = --numkernel 2 vecadd adv_vecadd/vecadd4x4.metadata adv_vecadd/vecadd4x4.data matadd multiblock/matadd/matadd.metadata multiblock/matadd/matadd.data --numcycle 1000000
+RUNFLAGS = --task name=MNIST \
+	   --kernel taskid=0,name=MNIST_0,metafile=testcase/mnist/conv_0.metadata,datafile=testcase/mnist/conv_0.data \
+	   --kernel taskid=0,name=MNIST_1,metafile=testcase/mnist/conv_1.metadata,datafile=testcase/mnist/conv_1.data \
+	   --kernel taskid=0,name=MNIST_2,metafile=testcase/mnist/conv_2.metadata,datafile=testcase/mnist/conv_2.data \
+	   --numcycle 30000000
+RUNFLAGS = --task name=BFS \
+	   --kernel taskid=0,name=BFS_1_0,metafile=testcase/gpu-rodinia/bfs/BFS_1_0.metadata,datafile=testcase/gpu-rodinia/bfs/BFS_1_0.data \
+	   --kernel taskid=0,name=BFS_2_0,metafile=testcase/gpu-rodinia/bfs/BFS_2_0.metadata,datafile=testcase/gpu-rodinia/bfs/BFS_2_0.data \
+	   --kernel taskid=0,name=BFS_1_1,metafile=testcase/gpu-rodinia/bfs/BFS_1_1.metadata,datafile=testcase/gpu-rodinia/bfs/BFS_1_1.data \
+	   --kernel taskid=0,name=BFS_2_1,metafile=testcase/gpu-rodinia/bfs/BFS_2_1.metadata,datafile=testcase/gpu-rodinia/bfs/BFS_2_1.data \
+	   --kernel taskid=0,name=BFS_1_2,metafile=testcase/gpu-rodinia/bfs/BFS_1_2.metadata,datafile=testcase/gpu-rodinia/bfs/BFS_1_2.data \
+	   --kernel taskid=0,name=BFS_2_2,metafile=testcase/gpu-rodinia/bfs/BFS_2_2.metadata,datafile=testcase/gpu-rodinia/bfs/BFS_2_2.data \
+	   --kernel taskid=0,name=BFS_1_3,metafile=testcase/gpu-rodinia/bfs/BFS_1_3.metadata,datafile=testcase/gpu-rodinia/bfs/BFS_1_3.data \
+	   --kernel taskid=0,name=BFS_2_3,metafile=testcase/gpu-rodinia/bfs/BFS_2_3.metadata,datafile=testcase/gpu-rodinia/bfs/BFS_2_3.data \
+	   --kernel taskid=0,name=BFS_1_4,metafile=testcase/gpu-rodinia/bfs/BFS_1_4.metadata,datafile=testcase/gpu-rodinia/bfs/BFS_1_4.data \
+	   --kernel taskid=0,name=BFS_2_4,metafile=testcase/gpu-rodinia/bfs/BFS_2_4.metadata,datafile=testcase/gpu-rodinia/bfs/BFS_2_4.data \
+	   --task name=GAUSSIAN \
+	   --kernel taskid=1,name=FAN1_0,metafile=testcase/adv_gaussian/Fan1_0.metadata,datafile=testcase/adv_gaussian/Fan1_0.data \
+	   --kernel taskid=1,name=FAN2_0,metafile=testcase/adv_gaussian/Fan2_0.metadata,datafile=testcase/adv_gaussian/Fan2_0.data \
+	   --kernel taskid=1,name=FAN1_1,metafile=testcase/adv_gaussian/Fan1_1.metadata,datafile=testcase/adv_gaussian/Fan1_1.data \
+	   --kernel taskid=1,name=FAN2_1,metafile=testcase/adv_gaussian/Fan2_1.metadata,datafile=testcase/adv_gaussian/Fan2_1.data \
+	   --kernel taskid=1,name=FAN1_2,metafile=testcase/adv_gaussian/Fan1_2.metadata,datafile=testcase/adv_gaussian/Fan1_2.data \
+	   --kernel taskid=1,name=FAN2_2,metafile=testcase/adv_gaussian/Fan2_2.metadata,datafile=testcase/adv_gaussian/Fan2_2.data \
+	   --kernel name=vecadd,metafile=testcase/adv_vecadd/vecadd_1b4w4t.metadata,datafile=testcase/adv_vecadd/vecadd_1b4w4t.data \
+	   --numcycle 150000
+##RUNFLAGS = --task name=TNAME \
+##	   --kernel taskid=0,name=vecadd,metafile=testcase/adv_vecadd/vecadd4x4.metadata,datafile=testcase/adv_vecadd/vecadd4x4.data \
+##	   --kernel taskid=0,name=matadd,metafile=testcase/multiblock/matadd/matadd.metadata,datafile=testcase/multiblock/matadd/matadd.data \
+##	   --numcycle 500000
+#RUNFLAGS = --kernel name=vecadd,metafile=testcase/adv_vecadd/vecadd_1b4w4t.metadata,datafile=testcase/adv_vecadd/vecadd_1b4w4t.data \
+#	   --numcycle 100000
+#RUNFLAGS = --numkernel 2 matadd multiblock/matadd/matadd.metadata multiblock/matadd/matadd.data vecadd adv_vecadd/vecadd4x4.metadata adv_vecadd/vecadd4x4.data --numcycle 500000
 RUNFLAGS_tensor484 = --numkernel 1 tensor tensor/wmma484fp32/wmma484fp32.metadata tensor/wmma484fp32/wmma484fp32.data --numcycle 2000
 RUNFLAGS_tensor242 = --numkernel 1 tensor tensor/wmma424fp32/wmma424fp32.metadata tensor/wmma424fp32/wmma424fp32.data --numcycle 2000
 RUNFLAGS_vectormma = --numkernel 1 tensor tensor/wmma484fp32/vectormma.metadata tensor/wmma484fp32/vectormma.data --numcycle 6000

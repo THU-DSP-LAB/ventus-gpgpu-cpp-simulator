@@ -1,123 +1,59 @@
 #include "context_model.hpp"
+#include <functional>
+#include <memory>
+#include <spdlog/logger.h>
+#include <spdlog/spdlog.h>
 
-uint32_t kernel_info_t::getBufferData(unsigned int virtualAddress, bool &addrOutofRangeException, const I_TYPE &ins)
-{
-    addrOutofRangeException = 0;
-    int bufferIndex = -1;
-    for (int i = 0; i < m_metadata.num_buffer; i++)
-    {
-        // std::cout << std::hex << "getBufferData: ranging from " << buffer_base[i] << " to " << (buffer_base[i] + buffer_size[i]) << ", virtualAddr=" << virtualAddress << std::dec << "\n";
-        if (virtualAddress >= m_metadata.buffer_base[i] && virtualAddress < (m_metadata.buffer_base[i] + m_metadata.buffer_allocsize[i]))
-        {
-            bufferIndex = i;
-            break;
-        }
-    }
-
-    if (bufferIndex == -1)
-    {
-        std::cerr << "getBufferData Error: No buffer found for the given virtual address 0x" << std::hex << virtualAddress
-                  << " for ins pc=0x" << ins.currentpc << ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-        addrOutofRangeException = 1;
-        return 0;
-    }
-
-    int offset = virtualAddress - m_metadata.buffer_base[bufferIndex];
-    // std::cout << "getBufferData: offset=" << std::hex << offset << "\n";
-    int startIndex = offset;
-
-    uint32_t data = 0;
-
-    int bytesToRead = 0; // 将要读取的字节数
-
-    // 确定读取的字节数
-    if (ins.ddd.mem_whb == DecodeParams::MEM_W)
-        bytesToRead = 4;
-    else if (ins.ddd.mem_whb == DecodeParams::MEM_H)
-        bytesToRead = 2;
-    else if (ins.ddd.mem_whb == DecodeParams::MEM_B)
-        bytesToRead = 1;
-
-    for (int i = 0; i < bytesToRead; i++)
-    {
-        // std::cout << "getBufferData: fetching buffers[" << bufferIndex << "][" << (startIndex + i) << "], buffer size=" << buffers[bufferIndex].size() << "\n";
-        uint8_t byte = (*m_buffer_data)[bufferIndex][startIndex + i];
-        data |= static_cast<uint32_t>(byte) << (i * 8);
-    }
-
-    // 如果不是读取4个字节，则根据mem_unsigned来决定如何处理剩余的位
-    if (bytesToRead < 4)
-    {
-        if (ins.ddd.mem_unsigned == 1)
-        {
-            // 无需操作，data已正确设置
-        }
-        else
-        {
-            // 符号位扩展
-            int shift = (4 - bytesToRead) * 8;
-            int32_t signExtension = (static_cast<int32_t>(data) << shift) >> shift;
-            data = static_cast<uint32_t>(signExtension);
-        }
-    }
-
-    return data;
+kernel_info_t::kernel_info_t(
+    const meta_data_t& metadata, std::function<void(const meta_data_t*)> load_data_callback,
+    std::function<void(const meta_data_t*)> finish_callback, std::shared_ptr<spdlog::logger> logger
+)
+    : m_metadata(metadata)
+    , m_logger(logger ? logger : spdlog::default_logger()) {
+    m_grid_dim.x = metadata.kernel_size[0];
+    m_grid_dim.y = metadata.kernel_size[1];
+    m_grid_dim.z = metadata.kernel_size[2];
+    m_finish_callback
+        = finish_callback ? std::bind(finish_callback, &m_metadata) : std::function<void()>();
+    m_load_data_callback
+        = load_data_callback ? std::bind(load_data_callback, &m_metadata) : std::function<void()>();
+    m_status = kernel_info_t::KERNEL_STATUS_WAIT;
+    m_block_status.resize(get_num_block(), BLOCK_STATUS_WAIT);
+    m_block_sm_id.resize(get_num_block(), -1);
+    SPDLOG_LOGGER_INFO(
+        m_logger, "kernel {} {} initialized, size={{{},{},{}}}", m_metadata.kernel_id,
+        m_metadata.name, m_grid_dim.x, m_grid_dim.y, m_grid_dim.z
+    );
 }
 
-void kernel_info_t::writeBufferData(int writevalue, unsigned int virtualAddress, const I_TYPE &ins)
-{
-    int bufferIndex = -1;
-    for (int i = 0; i < m_metadata.num_buffer; i++)
-    {
-        if (virtualAddress >= m_metadata.buffer_base[i] &&
-            virtualAddress < (m_metadata.buffer_base[i] + m_metadata.buffer_allocsize[i]))
-        {
-            bufferIndex = i;
-            break;
-        }
+void kernel_info_t::finish() {
+    assert(m_status == KERNEL_STATUS_RUNNING);
+    m_status = KERNEL_STATUS_FINISHED;
+    SPDLOG_LOGGER_INFO(m_logger, "kernel {} {} finished", get_kid(), get_kname());
+    if (m_finish_callback) {
+        m_finish_callback();
     }
-
-    if (bufferIndex == -1)
-    {
-        std::cerr << "writeBufferData Error: No buffer found for the given virtual address 0x" << std::hex << virtualAddress << " for ins" << ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-        return;
-    }
-
-    int offset = virtualAddress - m_metadata.buffer_base[bufferIndex];
-    int startIndex = offset;
-
-    int bytesToWrite = 0; // 将要写入的字节数
-    if (ins.ddd.mem_whb == DecodeParams::MEM_W)
-        bytesToWrite = 4;
-    else if (ins.ddd.mem_whb == DecodeParams::MEM_H)
-        bytesToWrite = 2;
-    else if (ins.ddd.mem_whb == DecodeParams::MEM_B)
-        bytesToWrite = 1;
-
-    for (int i = 0; i < 4; i++)
-    {
-        uint8_t byte = static_cast<uint8_t>(writevalue >> (i * 8));
-        (*m_buffer_data)[bufferIndex][startIndex + i] = byte;
-    }
-
-    // std::cout << "SM" << sm_id << std::hex << " write extmem[" << virtualAddress << "]=" << writevalue << std::dec << ",ins=" << ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
 }
 
-uint32_t kernel_info_t::readInsBuffer(unsigned int virtualAddr, bool &addrOutofRangeException)
-{
-    addrOutofRangeException = 0;
-    int startIndex = virtualAddr - m_metadata.startaddr;
-    if (startIndex < 0 || startIndex > m_metadata.buffer_allocsize[m_metadata.insBufferIndex])
-    {
-        std::cout << "readInsBuffer Error: virtualAddr(pc)=0x" << std::hex << virtualAddr << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-        addrOutofRangeException = 1;
-        return 0;
+bool kernel_info_t::no_more_ctas_to_run() const {
+    return (
+        m_next_cta.x >= m_grid_dim.x || m_next_cta.y >= m_grid_dim.y || m_next_cta.z >= m_grid_dim.z
+    );
+}
+
+unsigned kernel_info_t::get_next_cta_id_single() const {
+    return m_next_cta.x + m_grid_dim.x * m_next_cta.y + m_grid_dim.x * m_grid_dim.y * m_next_cta.z;
+}
+
+// 激活Kernel，载入初始数据，随时开始运行
+void kernel_info_t::activate() {
+    assert(m_status == KERNEL_STATUS_WAIT);
+    if (m_load_data_callback) {
+        m_load_data_callback();
+        SPDLOG_LOGGER_DEBUG(
+            m_logger, "kernel {} {} load init data (callback)", m_metadata.kernel_id,
+            m_metadata.name
+        );
     }
-    uint32_t data = 0;
-    for (int i = 0; i < 4; i++)
-    {
-        uint8_t byte = (*m_buffer_data)[m_metadata.insBufferIndex][startIndex + i];
-        data |= static_cast<uint32_t>(byte) << (i * 8);
-    }
-    return data;
+    m_status = KERNEL_STATUS_RUNNING;
 }

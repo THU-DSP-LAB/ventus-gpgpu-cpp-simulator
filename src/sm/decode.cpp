@@ -1,173 +1,304 @@
-#include "BASE.h"
+#include "subcore.hpp"
+#include <memory>
+#include <spdlog/spdlog.h>
 
-void BASE::DECODE(int warp_id)
-{
-    I_TYPE tmpins;
+namespace {
+constexpr unsigned I_IMM_BITS = 12;
+constexpr unsigned S_IMM_BITS = 12;
+constexpr unsigned B_IMM_BITS = 13;
+constexpr unsigned U_IMM_MASK = 0xfffff000u;
+constexpr unsigned J_IMM_BITS = 21;
+constexpr unsigned SHIFT_IMM_BITS = 5;
+constexpr unsigned VECTOR_IMM_LOW_BITS = 5;
+constexpr unsigned VECTOR_IMM_EXT_BITS = 6;
+constexpr unsigned VECTOR_IMM_BITS = VECTOR_IMM_LOW_BITS + VECTOR_IMM_EXT_BITS;
+constexpr unsigned L11_IMM_BITS = 11;
+constexpr unsigned S11_IMM_BITS = 11;
+
+int sign_extend(uint32_t value, unsigned bits) {
+    const uint32_t mask = (1u << bits) - 1u;
+    const uint32_t sign_bit = 1u << (bits - 1u);
+    value &= mask;
+    return static_cast<int>((value ^ sign_bit) - sign_bit);
+}
+
+uint32_t u_imm(uint32_t instr) {
+    return instr & U_IMM_MASK;
+}
+}
+
+void Subcore::DECODE() {
     sc_bv<32> scinsbit;
-    bool WILLregext = false;
-    int ext1, ext2, ext3, extd, extimm;
-    while (true)
-    {
-        // std::cout << "SM" << sm_id << " warp" << warp_id << " DECODE: finish at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-        wait(m_hw_warps[warp_id]->ev_decode);
-            
-        if (m_hw_warps[warp_id]->jump == 1 ||
-            m_hw_warps[warp_id]->simtstk_jump == 1||
-            m_hw_warps[warp_id]->endprg_flush_pipe)
-        {
-            m_hw_warps[warp_id]->fetch_valid2 = false;
-            WILLregext = false;
-        }
-        else
-        { // std::cout << "SM" << sm_id << " warp" << warp_id << " DECODE: start at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-            tmpins = I_TYPE(m_hw_warps[warp_id]->fetch_ins, m_hw_warps[warp_id]->pc.read());
-            // if (sm_id == 0 && warp_id == 0)
-            //     std::cout << "SM" << sm_id << " warp" << warp_id << " DECODE ins.bit=" << std::hex << tmpins.origin32bit << std::dec << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+    while (true) {
+        wait(clk.posedge_event());
+        decode_output = decode_t { -1, nullptr }; // default: no valid instruction decoded
 
-            bool foundBitIns = 0;
-            for (const auto &instable_item : instable_vec)
-            {
-                std::bitset<32> masked_ins = std::bitset<32>(tmpins.origin32bit) & instable_item.mask;
-                // std::cout << "warp" << warp_id << " DECODE: mask=" << instable_item.mask << ", masked_ins=" << masked_ins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
+        // REGEXT is a decoded prefix. Fetch replay must not clear it.
+        for (int warp_id = 0; warp_id < m_hw_warps.size(); warp_id++) {
+            if (regext_need_clear(warp_id)) {
+                m_hw_warps[warp_id]->regext.valid = false;
+            }
+        }
+
+        // check previous fetch result
+        auto& fetch = fetch2_reg.read();
+        auto& warp_id = fetch.warp_id;
+        if (fetch.from == fetch_t::FETCH_FROM::NONE || !fetch.success) {
+            // no valid fetch, do not decode
+            decode_output = decode_t { -1, nullptr };
+            ev_decode_finish.notify();
+            continue;
+        }
+
+        // check before instruction decode
+        auto& hwarp = m_hw_warps.at(warp_id);
+        auto& regext = hwarp->regext;
+        if (regext_need_clear(warp_id)) {
+            // control/lifecycle flush: prefix state was cleared above
+            decode_output = decode_t { -1, nullptr };
+            assert(!regext.valid); // cleared above
+            ev_decode_finish.notify();
+            continue;
+        }
+        if (pc_need_rewind(warp_id)) {
+            // I-cache miss / IBUF full replay: skip decode but preserve REGEXT.
+            decode_output = decode_t { -1, nullptr };
+            ev_decode_finish.notify();
+            continue;
+        }
+
+        //
+        // instruction decode start
+        //
+
+        auto instr = std::make_shared<I_TYPE>(fetch2_instr.read(), fetch.pc);
+        decode_output.warp_id = warp_id;
+
+        // decode step 1: find instruction in decode table
+        bool foundBitIns = 0;
+        std::bitset<32> _ins = instr->origin32bit;
+        if ((_ins & std::bitset<32>(0x7f)) == 0) {
+            // Auxiliary self-defined debug/print instruction only for this simulator
+            // this is not in decode table
+            instr->op = (int)CUSTOM_PRINT_;
+            foundBitIns = true;
+        } else { // find instruction in decode table
+            for (const auto& instable_item : *m_instruction_table) {
+                std::bitset<32> masked_ins
+                    = std::bitset<32>(instr->origin32bit) & instable_item.mask;
+                // std::cout << "warp" << warp_id << " DECODE: mask=" << instable_item.mask <<
+                // ", masked_ins=" << masked_ins << " at " << sc_time_stamp() << "," <<
+                // sc_delta_count_at_current_time() << std::endl;
                 auto it = instable_item.itable.find(masked_ins);
-                if (it != instable_item.itable.end())
-                {
-                    tmpins.op = it->second;
+                if (it != instable_item.itable.end()) {
+                    instr->op = it->second;
                     foundBitIns = true;
                     break;
                 }
             }
-            if (!foundBitIns)
-            {
-                tmpins.op = INVALID_;
-                std::cout << "warp" << warp_id << " DECODE error: invalid bit ins " << tmpins << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-            }
-            else
-            {
-                // std::cout << "warp" << warp_id << " DECODE: match ins bit=" << std::bitset<32>(tmpins.origin32bit) << " with " << magic_enum::enum_name((OP_TYPE)tmpins.op) << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-            }
-
-            tmpins.ddd = decode_table[(OP_TYPE)tmpins.op];
-
-            if (tmpins.op == (int)REGEXT_)
-            {
-                m_hw_warps[warp_id]->fetch_valid2 = false;
-                WILLregext = true;
-
-                extimm = 0;
-                ext3 = extractBits32(tmpins.origin32bit, 31, 29);
-                ext2 = extractBits32(tmpins.origin32bit, 28, 26);
-                ext1 = extractBits32(tmpins.origin32bit, 25, 23);
-                extd = extractBits32(tmpins.origin32bit, 22, 20);
-#ifdef SPIKE_OUTPUT
-                std::cout << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex << tmpins.currentpc << tmpins
-                    << " DECODE: set regext(s3,s2,s1,d)=" << ext3 << "," << ext2 << "," << ext1 << "," << extd << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-#endif
-            }
-            else if (tmpins.op == (int)REGEXTI_)
-            {
-                m_hw_warps[warp_id]->fetch_valid2 = false;
-                WILLregext = true;
-
-                extimm = extractBits32(tmpins.origin32bit, 31, 26);
-                ext3 = 0;
-                ext2 = extractBits32(tmpins.origin32bit, 25, 23);
-                ext1 = 0;
-                extd = extractBits32(tmpins.origin32bit, 22, 20);
-#ifdef SPIKE_OUTPUT
-                std::cout << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex << tmpins.currentpc << tmpins
-                    << " DECODE: set regexti(s3,s2,s1,d)=" << ext3 << "," << ext2 << "," << ext1 << "," << extd << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-#endif
-            }
-            else
-            {
-                m_hw_warps[warp_id]->fetch_valid2 = m_hw_warps[warp_id]->fetch_valid12;
-                if (tmpins.ddd.tc)
-                    tmpins.ddd.sel_execunit = DecodeParams::TC;
-                else if (tmpins.ddd.sfu)
-                    tmpins.ddd.sel_execunit = DecodeParams::SFU;
-                else if (tmpins.ddd.fp)
-                    tmpins.ddd.sel_execunit = DecodeParams::VFPU;
-                else if (tmpins.ddd.csr != 0)
-                    tmpins.ddd.sel_execunit = DecodeParams::CSR;
-                else if (tmpins.ddd.mul)
-                    tmpins.ddd.sel_execunit = DecodeParams::MUL;
-                else if (tmpins.ddd.mem_cmd != 0)
-                    tmpins.ddd.sel_execunit = DecodeParams::LSU;
-                else if (tmpins.ddd.isvec)
-                {
-                    if (tmpins.op == JOIN_)
-                        tmpins.ddd.sel_execunit = DecodeParams::SIMTSTK;
-                    else
-                        tmpins.ddd.sel_execunit = DecodeParams::VALU;
-                }
-                else if (tmpins.ddd.barrier)
-                    tmpins.ddd.sel_execunit = DecodeParams::WPSCHEDLER;
-                else
-                    tmpins.ddd.sel_execunit = DecodeParams::SALU;
-
-                tmpins.s1 = extractBits32(tmpins.origin32bit, 19, 15);
-                tmpins.s2 = extractBits32(tmpins.origin32bit, 24, 20);
-                tmpins.s3 = (tmpins.ddd.fp & !tmpins.ddd.isvec)
-                                ? extractBits32(tmpins.origin32bit, 31, 27)
-                                : extractBits32(tmpins.origin32bit, 11, 7);
-                tmpins.d = extractBits32(tmpins.origin32bit, 11, 7);
-                if (WILLregext)
-                {
-                    tmpins.imm += extimm << 5;
-                    tmpins.s1 += ext1 << 5;
-                    tmpins.s2 += ext2 << 5;
-                    tmpins.s3 += ext3 << 5;
-                    tmpins.d += extd << 5;
-                    WILLregext = false;
-#ifdef SPIKE_OUTPUT
-                std::cout << "SM" << sm_id << " warp " << warp_id << " 0x" << std::hex << tmpins.currentpc << tmpins
-                    << " DECODE: regext(s3,s2,s1,d)=" << ext3 << "," << ext2 << "," << ext1 << "," << extd
-                    << " is used to set s3,s2,s1,d=" << tmpins.s3 << "," << tmpins.s2 << "," << tmpins.s1 << "," << tmpins.d
-                    << " at " << sc_time_stamp() << "," << sc_delta_count_at_current_time() << "\n";
-#endif
-                }
-                scinsbit = tmpins.origin32bit;
-                tmpins.ddd.mop = tmpins.ddd.readmask ? 3 : (scinsbit.range(27, 26)).to_uint();
-
-                switch (tmpins.ddd.sel_imm)
-                {
-                case DecodeParams::sel_imm_t::IMM_I:
-                    tmpins.imm = scinsbit.range(31, 20).to_int(); // to_int()会自动补符号位，to_uint()补0
-                    break;
-                case DecodeParams::sel_imm_t::IMM_S:
-                    tmpins.imm = (scinsbit.range(31, 25), scinsbit.range(11, 7)).to_int();
-                    break;
-                case DecodeParams::sel_imm_t::IMM_B:
-                    tmpins.imm = (scinsbit.range(31, 31), scinsbit.range(7, 7), scinsbit.range(30, 25), scinsbit.range(11, 8)).to_int() << 1;
-                    break;
-                case DecodeParams::sel_imm_t::IMM_U:
-                    tmpins.imm = (scinsbit.range(31, 12)).to_int() << 12;
-                    break;
-                case DecodeParams::sel_imm_t::IMM_J:
-                    tmpins.imm = (scinsbit.range(31, 31), scinsbit.range(19, 12), scinsbit.range(20, 20), scinsbit.range(30, 21)).to_int() << 1;
-                    break;
-                case DecodeParams::sel_imm_t::IMM_Z:
-                    tmpins.imm = (scinsbit.range(19, 15)).to_uint();
-                    break;
-                case DecodeParams::sel_imm_t::IMM_2:
-                    tmpins.imm = (scinsbit.range(24, 20)).to_int();
-                    break;
-                case DecodeParams::sel_imm_t::IMM_V: // 和scala不一样，需要修改，加位拓展
-                    tmpins.imm = (scinsbit.range(19, 15)).to_int();
-                    break;
-                case DecodeParams::sel_imm_t::IMM_L11:
-                    tmpins.imm = (scinsbit.range(30, 20)).to_int();
-                    break;
-                case DecodeParams::sel_imm_t::IMM_S11:
-                    tmpins.imm = (scinsbit.range(30, 25), scinsbit.range(11, 7)).to_int();
-                    break;
-                default:
-                    break;
-                }
-
-                m_hw_warps[warp_id]->decode_ins = tmpins;
-            }
         }
+        if (!foundBitIns) { // instruction not found in decode table
+            // 发现非法指令，但不能直接报错，因为这条指令可能后续不会实际发射执行
+            // 例如，可能是.text段之后的垃圾数据，在执行前就会跳转走
+            instr->op = INVALID_;
+            decode_output.instr = std::move(instr);
+            ev_decode_finish.notify();
+            continue;
+        } else {
+            // std::cout << "warp" << warp_id << " DECODE: match ins bit=" <<
+            // std::bitset<32>(instr->origin32bit) << " with " <<
+            // magic_enum::enum_name((OP_TYPE)instr->op) << " at " << sc_time_stamp() << "," <<
+            // sc_delta_count_at_current_time() << std::endl;
+        }
+
+        // decode step 2: extract fields from instruction bits
+        // firstly deal with some special instructions: regext(i) & custom_print
+        if (instr->op == (int)REGEXT_) {
+            // hwarp->decode_valid = false; // regext ends here
+            decode_output.instr = nullptr; // regext ends here in decode
+            regext.valid = true;
+
+            regext.extimm_valid = false;
+            regext.extimm = 0;
+            regext.ext3 = extractBits32(instr->origin32bit, 31, 29);
+            regext.ext2 = extractBits32(instr->origin32bit, 28, 26);
+            regext.ext1 = extractBits32(instr->origin32bit, 25, 23);
+            regext.extd = extractBits32(instr->origin32bit, 22, 20);
+#ifdef SPIKE_OUTPUT
+            SPDLOG_LOGGER_TRACE(
+                m_logger, "SM {} warp {} 0x{:x} {} REGEXT(s3,s2,s1,d)={},{},{},{}", m_sm_id,
+                warpid_convert(m_subcore_id, warp_id), instr->currentpc, *instr, regext.ext3,
+                regext.ext2, regext.ext1, regext.extd
+            );
+#endif
+        } else if (instr->op == (int)REGEXTI_) {
+            // hwarp->decode_valid = false; // regext ends here
+            decode_output.instr = nullptr; // regext ends here in decode
+            regext.valid = true;
+
+            regext.extimm_valid = true;
+            regext.extimm = extractBits32(instr->origin32bit, 31, 26);
+            regext.ext3 = 0;
+            regext.ext2 = extractBits32(instr->origin32bit, 25, 23);
+            regext.ext1 = 0;
+            regext.extd = extractBits32(instr->origin32bit, 22, 20);
+#ifdef SPIKE_OUTPUT
+            SPDLOG_LOGGER_TRACE(
+                m_logger, "SM {} warp {} 0x{:x} {} REGEXTI(s3,s2,s1,d)={},{},{},{}", m_sm_id,
+                warpid_convert(m_subcore_id, warp_id), instr->currentpc, *instr, regext.ext3,
+                regext.ext2, regext.ext1, regext.extd
+            );
+#endif
+        } else if (instr->op == (int)CUSTOM_PRINT_) {
+            // Auxiliary self-defined debug/print instruction only for this simulator
+            instr->ddd = m_decode_table->at(OP_TYPE::VADD_VX_); // they are similar
+            instr->ddd.sel_execunit = DecodeParams::INVALID_EXECUNIT;
+            instr->ddd.alu_fn = DecodeParams::FN_X;
+            instr->ddd.wvd = false;
+            instr->ddd.wxd = false;
+            instr->s1 = extractBits32(instr->origin32bit, 19, 15);
+            instr->s2 = extractBits32(instr->origin32bit, 24, 20);
+            instr->d = 0;
+            if (regext.valid) {
+                instr->is_extended = true;
+                instr->s1 += regext.ext1 << 5;
+                instr->s2 += regext.ext2 << 5;
+                instr->s3 += ((instr->ddd.fp && !instr->ddd.isvec) ? regext.ext3 : regext.extd)
+                    << 5;
+                instr->d += regext.extd << 5;
+                regext.valid = false;
+            }
+            decode_output.instr = std::move(instr);
+        } else if (m_decode_table->contains((OP_TYPE)instr->op)) {
+            // normal instruction: op != REGEXT_ && op != REGEXTI_
+            instr->ddd = m_decode_table->at((OP_TYPE)instr->op);
+            instr->ddd.decode_ext(instr->origin32bit);
+            // hwarp->decode_valid = hwarp->fetch_valid;
+            if (instr->ddd.tc)
+                instr->ddd.sel_execunit = DecodeParams::TC;
+            else if (instr->ddd.sfu)
+                instr->ddd.sel_execunit = DecodeParams::SFU;
+            else if (instr->ddd.fp)
+                instr->ddd.sel_execunit = DecodeParams::VFPU;
+            else if (instr->ddd.csr != 0)
+                instr->ddd.sel_execunit = DecodeParams::CSR;
+            else if (instr->ddd.mul)
+                instr->ddd.sel_execunit = DecodeParams::MUL;
+            else if (instr->ddd.mem_cmd != 0)
+                instr->ddd.sel_execunit = DecodeParams::LSU;
+            else if (instr->ddd.isvec) {
+                if (instr->op == JOIN_)
+                    instr->ddd.sel_execunit = DecodeParams::SIMTSTK;
+                else
+                    instr->ddd.sel_execunit = DecodeParams::VALU;
+            } else if (instr->ddd.barrier)
+                instr->ddd.sel_execunit = DecodeParams::WPSCHEDLER;
+            else
+                instr->ddd.sel_execunit = DecodeParams::SALU;
+
+            instr->s1 = extractBits32(instr->origin32bit, 19, 15);
+            instr->s2 = extractBits32(instr->origin32bit, 24, 20);
+            instr->s3 = (instr->ddd.fp && !instr->ddd.isvec)
+                ? extractBits32(instr->origin32bit, 31, 27)
+                : extractBits32(instr->origin32bit, 11, 7);
+            instr->d = extractBits32(instr->origin32bit, 11, 7);
+            const bool has_regext = regext.valid;
+            const bool has_regext_imm = has_regext && regext.extimm_valid;
+            const int regext_extimm = regext.extimm;
+            if (regext.valid) {
+                instr->is_extended = true;
+                instr->s1 += regext.ext1 << 5;
+                instr->s2 += regext.ext2 << 5;
+                // 这里与Chisel实现有所不同，Chisel要么使用extd，要么就不扩展（认定ext3=0）
+                // c.reg_idx3 := Mux(c.fp & !c.isvec, Cat(0.U(3.W),io.inst(i)(31, 27)),
+                // Cat(regextInfo(i).regPrefix(0) ,io.inst(i)(11, 7)))
+                instr->s3 += ((instr->ddd.fp && !instr->ddd.isvec) ? regext.ext3 : regext.extd)
+                    << 5;
+                instr->d += regext.extd << 5;
+                regext.valid = false;
+#ifdef SPIKE_OUTPUT
+                SPDLOG_LOGGER_TRACE(
+                    m_logger,
+                    "SM {} warp {} 0x{:x} {} REGEXT(s3,s2,s1,d)={},{},{},{} is used to set "
+                    "s3,s2,s1,d={},{},{},{}",
+                    m_sm_id, warpid_convert(m_subcore_id, warp_id), instr->currentpc, *instr,
+                    regext.ext3, regext.ext2, regext.ext1, regext.extd, instr->s3, instr->s2,
+                    instr->s1, instr->d
+                );
+#endif
+            }
+
+            // immediate extraction
+            scinsbit = instr->origin32bit;
+            switch (instr->ddd.sel_imm) {
+            case DecodeParams::sel_imm_t::IMM_I:
+                instr->imm = sign_extend(scinsbit.range(31, 20).to_uint(), I_IMM_BITS);
+                break;
+            case DecodeParams::sel_imm_t::IMM_S:
+                instr->imm = sign_extend(
+                    (scinsbit.range(31, 25).to_uint() << 5) | scinsbit.range(11, 7).to_uint(),
+                    S_IMM_BITS
+                );
+                break;
+            case DecodeParams::sel_imm_t::IMM_B:
+                instr->imm = sign_extend(
+                    (scinsbit.range(31, 31).to_uint() << 12)
+                        | (scinsbit.range(7, 7).to_uint() << 11)
+                        | (scinsbit.range(30, 25).to_uint() << 5)
+                        | (scinsbit.range(11, 8).to_uint() << 1),
+                    B_IMM_BITS
+                );
+                break;
+            case DecodeParams::sel_imm_t::IMM_U:
+                instr->imm = static_cast<int32_t>(u_imm(instr->origin32bit));
+                break;
+            case DecodeParams::sel_imm_t::IMM_J:
+                instr->imm = sign_extend(
+                    (scinsbit.range(31, 31).to_uint() << 20)
+                        | (scinsbit.range(19, 12).to_uint() << 12)
+                        | (scinsbit.range(20, 20).to_uint() << 11)
+                        | (scinsbit.range(30, 21).to_uint() << 1),
+                    J_IMM_BITS
+                );
+                break;
+            case DecodeParams::sel_imm_t::IMM_Z:
+                instr->imm = (scinsbit.range(19, 15)).to_uint();
+                break;
+            case DecodeParams::sel_imm_t::IMM_2:
+                instr->imm = scinsbit.range(24, 20).to_uint() & ((1u << SHIFT_IMM_BITS) - 1u);
+                break;
+            case DecodeParams::sel_imm_t::IMM_V: // 和scala不一样，需要修改，加位拓展
+                if (has_regext_imm) {
+                    const uint32_t imm11 = (static_cast<uint32_t>(regext_extimm)
+                                            << VECTOR_IMM_LOW_BITS)
+                        | scinsbit.range(19, 15).to_uint();
+                    instr->imm = sign_extend(imm11, VECTOR_IMM_BITS);
+                } else {
+                    instr->imm = sign_extend(
+                        scinsbit.range(19, 15).to_uint(), VECTOR_IMM_LOW_BITS
+                    );
+                }
+                break;
+            case DecodeParams::sel_imm_t::IMM_L11:
+                instr->imm = sign_extend(scinsbit.range(30, 20).to_uint(), L11_IMM_BITS);
+                break;
+            case DecodeParams::sel_imm_t::IMM_S11:
+                instr->imm = sign_extend(
+                    (scinsbit.range(30, 25).to_uint() << 5) | scinsbit.range(11, 7).to_uint(),
+                    S11_IMM_BITS
+                );
+                break;
+            default:
+                break;
+            }
+            // hwarp->decode_ins = tmpins;
+            decode_output.instr = std::move(instr);
+        } else {
+            // 发现非法指令，但不能直接报错，因为这条指令可能后续不会实际发射执行
+            // 例如，可能是.text段之后的垃圾数据，在执行前就会跳转走
+            instr->op = INVALID_;
+            decode_output.instr = std::move(instr);
+        }
+        ev_decode_finish.notify(); // decode finish, notify IBUF to process input
     }
 }

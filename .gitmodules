@@ -1,3 +1,6 @@
-[submodule "submodules/membox2"]
-	path = submodules/membox2
-	url = git@github.com:liuxd17thu/membox2.git
+[submodule "dependencies/membox"]
+	path = dependencies/membox
+	url = https://github.com/THU-DSP-LAB/membox.git
+[submodule "dependencies/ramulator2"]
+	path = dependencies/ramulator2
+	url = https://github.com/THU-DSP-LAB/ramulator2.git

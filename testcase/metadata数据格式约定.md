@@ -12,16 +12,16 @@ struct meta_data{  // 这个metadata是供驱动使用的，而不是给硬件�
     uint64_t pdsSize;///> 每个thread用到的private memory大小
     uint64_t sgprUsage;///> 每个warp使用的标量寄存器数目
     uint64_t vgprUsage;///> 每个warp使用的向量寄存器数目
-    uint64_t pdsBaseAddr;///> private memory的基址，要转成每个workgroup的基地址， wf_size*wg_size*pdsSize
+    uint64_t pdsBaseAddr;///> resident private-memory pool基址；每个驻留workgroup槽位步长为wf_size*wg_size*pdsSize
     uint64_t num_buffer; ///> buffer的数目，包括指令buffer、privatemem
     uint64_t buffer_base[num_buffer];//各buffer的基址。第一块buffer是给硬件用的metadata
     uint64_t buffer_size[num_buffer];//各buffer的size，以Bytes为单位
     uint64_t buffer_allocsize[num_buffer];//各buffer的size，以Bytes为单位
 };
 
-// CSR是每个workgroup一个，所以pdsBaseAddr转换成CSR_PDS，每个workgroup有自己的pdsbaseaddr（分配block时计算偏移）。
-// 硬件保证每个线程访问privatemem映射到相应地址。用专用指令访问。
-// allocSize是整个kernel的privatemem的大小。matadd例子因为只有一个workgroup所以其大小等于wf_size*wg_size*pdsSize
+// CSR_PDS是当前驻留workgroup PDS槽位基址，由pdsBaseAddr加上驻留槽位偏移得到。
+// 私有向量指令按CSR_NUMW*CSR_NUMT的workgroup级交错布局，把每个线程的privatemem映射到相应地址。
+// pdsSize是每个thread的privatemem大小。matadd例子因为只有一个workgroup所以其驻留槽位大小等于wf_size*wg_size*pdsSize
 // privatemem和globalmem是一个层级的，需要用L2cache访问
 
 // localmem是SM内共享的空间，每个workgroup的CSR的CSR_LDS在block分配时加上偏移量。编译器保证访存时加上偏移。
@@ -51,7 +51,7 @@ c3434cca
   io.host2cta.bits.host_vgpr_size_per_wf:= vgprUsage
   io.host2cta.bits.host_sgpr_size_per_wf:= sgprUsage
   io.host2cta.bits.host_gds_baseaddr := 0.U
-  io.host2cta.bits.host_pds_baseaddr := i * pdsSize  * wf_size * wg_size， for i in 0 until kernel_size[0]*[1]*[2]
+  io.host2cta.bits.host_pds_baseaddr := pdsBaseAddr
   io.host2cta.bits.host_csr_knl:= metaDataBaseAddr
   io.host2cta.bits.host_kernel_size_3d:= kernel_size[i][j][k]  //遍历即可
 ```

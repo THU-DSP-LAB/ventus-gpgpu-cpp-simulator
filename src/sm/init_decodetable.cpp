@@ -1,6 +1,8 @@
-#include "BASE.h"
-void BASE::INIT_DECODETABLE(){
-decode_table = {
+#include "../parameters.h"
+#include <map>
+#include <memory>
+std::shared_ptr<std::map<OP_TYPE, decodedat>> gen_decodetable(){
+return std::make_shared<std::map<OP_TYPE, decodedat>>(std::map<OP_TYPE, decodedat>({
 {BNE_, {0, 0, 0, DecodeParams::B_B, 0, 0, DecodeParams::CSR_N, 0, DecodeParams::A3_PC, DecodeParams::A2_RS2, DecodeParams::A1_RS1, DecodeParams::IMM_B, DecodeParams::MEM_X, DecodeParams::FN_SNE, 0, DecodeParams::M_X, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}}, 
 {BEQ_, {0, 0, 0, DecodeParams::B_B, 0, 0, DecodeParams::CSR_N, 0, DecodeParams::A3_PC, DecodeParams::A2_RS2, DecodeParams::A1_RS1, DecodeParams::IMM_B, DecodeParams::MEM_X, DecodeParams::FN_SEQ, 0, DecodeParams::M_X, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}}, 
 {BLT_, {0, 0, 0, DecodeParams::B_B, 0, 0, DecodeParams::CSR_N, 0, DecodeParams::A3_PC, DecodeParams::A2_RS2, DecodeParams::A1_RS1, DecodeParams::IMM_B, DecodeParams::MEM_X, DecodeParams::FN_SLT, 0, DecodeParams::M_X, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}}, 
@@ -16,6 +18,7 @@ decode_table = {
 {CSRRWI_, {0, 0, 0, DecodeParams::B_N, 0, 0, DecodeParams::CSR_W, 0, DecodeParams::A3_X, DecodeParams::A2_X, DecodeParams::A1_IMM, DecodeParams::IMM_Z, DecodeParams::MEM_X, DecodeParams::FN_ADD, 0, DecodeParams::M_X, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0}}, 
 {CSRRSI_, {0, 0, 0, DecodeParams::B_N, 0, 0, DecodeParams::CSR_S, 0, DecodeParams::A3_X, DecodeParams::A2_X, DecodeParams::A1_IMM, DecodeParams::IMM_Z, DecodeParams::MEM_X, DecodeParams::FN_ADD, 0, DecodeParams::M_X, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0}}, 
 {CSRRCI_, {0, 0, 0, DecodeParams::B_N, 0, 0, DecodeParams::CSR_C, 0, DecodeParams::A3_X, DecodeParams::A2_X, DecodeParams::A1_IMM, DecodeParams::IMM_Z, DecodeParams::MEM_X, DecodeParams::FN_ADD, 0, DecodeParams::M_X, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0}}, 
+{CSRRSV_, {0, 0, 0, DecodeParams::B_N, 0, 0, DecodeParams::CSR_S, 0, DecodeParams::A3_X, DecodeParams::A2_X, DecodeParams::A1_RS1, DecodeParams::IMM_X, DecodeParams::MEM_X, DecodeParams::FN_ADD, 0, DecodeParams::M_X, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0}}, 
 {FENCE_, {0, 0, 0, DecodeParams::B_N, 0, 0, DecodeParams::CSR_N, 0, DecodeParams::A3_X, DecodeParams::A2_X, DecodeParams::A1_X, DecodeParams::IMM_I, DecodeParams::MEM_X, DecodeParams::FN_ADD, 0, DecodeParams::M_X, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0}}, 
 {LW_, {0, 0, 0, DecodeParams::B_N, 0, 0, DecodeParams::CSR_N, 0, DecodeParams::A3_X, DecodeParams::A2_IMM, DecodeParams::A1_RS1, DecodeParams::IMM_I, DecodeParams::MEM_W, DecodeParams::FN_ADD, 0, DecodeParams::M_XRD, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0}}, 
 {LH_, {0, 0, 0, DecodeParams::B_N, 0, 0, DecodeParams::CSR_N, 0, DecodeParams::A3_X, DecodeParams::A2_IMM, DecodeParams::A1_RS1, DecodeParams::IMM_I, DecodeParams::MEM_H, DecodeParams::FN_ADD, 0, DecodeParams::M_XRD, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0}}, 
@@ -151,12 +154,12 @@ decode_table = {
 {VMSLEU_VI_, {1, 0, 0, DecodeParams::B_N, 0, 0, DecodeParams::CSR_N, 0, DecodeParams::A3_X, DecodeParams::A2_VRS2, DecodeParams::A1_IMM, DecodeParams::IMM_Z, DecodeParams::MEM_X, DecodeParams::FN_SGEU, 0, DecodeParams::M_X, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0}}, 
 {VMSLEU_VX_, {1, 0, 0, DecodeParams::B_N, 0, 0, DecodeParams::CSR_N, 0, DecodeParams::A3_X, DecodeParams::A2_VRS2, DecodeParams::A1_RS1, DecodeParams::IMM_X, DecodeParams::MEM_X, DecodeParams::FN_SGEU, 0, DecodeParams::M_X, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0}}, 
 {VMSLE_VV_, {1, 0, 0, DecodeParams::B_N, 0, 0, DecodeParams::CSR_N, 0, DecodeParams::A3_X, DecodeParams::A2_VRS2, DecodeParams::A1_VRS1, DecodeParams::IMM_X, DecodeParams::MEM_X, DecodeParams::FN_SGE, 0, DecodeParams::M_X, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0}}, 
-{VMSLE_VI_, {1, 0, 0, DecodeParams::B_N, 0, 0, DecodeParams::CSR_N, 1, DecodeParams::A3_X, DecodeParams::A2_VRS2, DecodeParams::A1_IMM, DecodeParams::IMM_V, DecodeParams::MEM_X, DecodeParams::FN_SGE, 0, DecodeParams::M_X, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0}}, 
+{VMSLE_VI_, {1, 0, 0, DecodeParams::B_N, 0, 0, DecodeParams::CSR_N, 0, DecodeParams::A3_X, DecodeParams::A2_VRS2, DecodeParams::A1_IMM, DecodeParams::IMM_V, DecodeParams::MEM_X, DecodeParams::FN_SGE, 0, DecodeParams::M_X, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0}}, 
 {VMSLE_VX_, {1, 0, 0, DecodeParams::B_N, 0, 0, DecodeParams::CSR_N, 0, DecodeParams::A3_X, DecodeParams::A2_VRS2, DecodeParams::A1_RS1, DecodeParams::IMM_X, DecodeParams::MEM_X, DecodeParams::FN_SGE, 0, DecodeParams::M_X, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0}}, 
 {VMSGTU_VI_, {1, 0, 0, DecodeParams::B_N, 0, 0, DecodeParams::CSR_N, 0, DecodeParams::A3_X, DecodeParams::A2_VRS2, DecodeParams::A1_IMM, DecodeParams::IMM_Z, DecodeParams::MEM_X, DecodeParams::FN_SLTU, 0, DecodeParams::M_X, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0}}, 
 {VMSGTU_VX_, {1, 0, 0, DecodeParams::B_N, 0, 0, DecodeParams::CSR_N, 0, DecodeParams::A3_X, DecodeParams::A2_VRS2, DecodeParams::A1_VRS1, DecodeParams::IMM_X, DecodeParams::MEM_X, DecodeParams::FN_SLTU, 0, DecodeParams::M_X, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0}}, 
-{VMSGT_VI_, {1, 0, 0, DecodeParams::B_N, 0, 0, DecodeParams::CSR_N, 0, DecodeParams::A3_X, DecodeParams::A2_VRS2, DecodeParams::A1_IMM, DecodeParams::IMM_V, DecodeParams::MEM_X, DecodeParams::FN_SLTU, 0, DecodeParams::M_X, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0}}, 
-{VMSGT_VX_, {1, 0, 0, DecodeParams::B_N, 0, 0, DecodeParams::CSR_N, 0, DecodeParams::A3_X, DecodeParams::A2_VRS2, DecodeParams::A1_VRS1, DecodeParams::IMM_X, DecodeParams::MEM_X, DecodeParams::FN_SLTU, 0, DecodeParams::M_X, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0}}, 
+{VMSGT_VI_, {1, 0, 0, DecodeParams::B_N, 0, 0, DecodeParams::CSR_N, 0, DecodeParams::A3_X, DecodeParams::A2_VRS2, DecodeParams::A1_IMM, DecodeParams::IMM_V, DecodeParams::MEM_X, DecodeParams::FN_SLT, 0, DecodeParams::M_X, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0}}, 
+{VMSGT_VX_, {1, 0, 0, DecodeParams::B_N, 0, 0, DecodeParams::CSR_N, 0, DecodeParams::A3_X, DecodeParams::A2_VRS2, DecodeParams::A1_VRS1, DecodeParams::IMM_X, DecodeParams::MEM_X, DecodeParams::FN_SLT, 0, DecodeParams::M_X, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0}}, 
 {VREM_VV_, {1, 0, 0, DecodeParams::B_N, 0, 0, DecodeParams::CSR_N, 1, DecodeParams::A3_X, DecodeParams::A2_VRS2, DecodeParams::A1_VRS1, DecodeParams::IMM_X, DecodeParams::MEM_X, DecodeParams::FN_REM, 0, DecodeParams::M_X, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0}}, 
 {VREM_VX_, {1, 0, 0, DecodeParams::B_N, 0, 0, DecodeParams::CSR_N, 1, DecodeParams::A3_X, DecodeParams::A2_VRS2, DecodeParams::A1_RS1, DecodeParams::IMM_X, DecodeParams::MEM_X, DecodeParams::FN_REM, 0, DecodeParams::M_X, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0}}, 
 {VREMU_VV_, {1, 0, 0, DecodeParams::B_N, 0, 0, DecodeParams::CSR_N, 1, DecodeParams::A3_X, DecodeParams::A2_VRS2, DecodeParams::A1_VRS1, DecodeParams::IMM_X, DecodeParams::MEM_X, DecodeParams::FN_REMU, 0, DecodeParams::M_X, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0}}, 
@@ -274,7 +277,8 @@ decode_table = {
 {BARRIERSUB_, {0, 0, 1, DecodeParams::B_N, 0, 0, DecodeParams::CSR_N, 0, DecodeParams::A3_X, DecodeParams::A2_X, DecodeParams::A1_IMM, DecodeParams::IMM_Z, DecodeParams::MEM_X, DecodeParams::FN_ADD, 0, DecodeParams::M_X, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}}, 
 {ENDPRG_, {0, 0, 1, DecodeParams::B_N, 0, 1, DecodeParams::CSR_N, 0, DecodeParams::A3_X, DecodeParams::A2_X, DecodeParams::A1_X, DecodeParams::IMM_X, DecodeParams::MEM_X, DecodeParams::FN_ADD, 0, DecodeParams::M_X, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}}, 
 {VADD12_VI_, {1, 0, 0, DecodeParams::B_N, 0, 0, DecodeParams::CSR_N, 1, DecodeParams::A3_X, DecodeParams::A2_IMM, DecodeParams::A1_VRS1, DecodeParams::IMM_I, DecodeParams::MEM_X, DecodeParams::FN_ADD, 0, DecodeParams::M_X, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0}}, 
+{VSUB12_VI_, {1, 0, 0, DecodeParams::B_N, 0, 0, DecodeParams::CSR_N, 0, DecodeParams::A3_X, DecodeParams::A2_IMM, DecodeParams::A1_VRS1, DecodeParams::IMM_I, DecodeParams::MEM_X, DecodeParams::FN_SUB, 0, DecodeParams::M_X, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0}}, 
 {VFTTA_VV_, {1, 1, 0, DecodeParams::B_N, 0, 0, DecodeParams::CSR_N, 0, DecodeParams::A3_VRS3, DecodeParams::A2_VRS2, DecodeParams::A1_VRS1, DecodeParams::IMM_X, DecodeParams::MEM_X, DecodeParams::FN_TTF, 0, DecodeParams::M_X, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0}}, 
-{VFEXP_V_, {1, 1, 0, DecodeParams::B_N, 0, 0, DecodeParams::CSR_N, 0, DecodeParams::A3_X, DecodeParams::A2_VRS2, DecodeParams::A1_X, DecodeParams::IMM_X, DecodeParams::MEM_X, DecodeParams::FN_EXP, 0, DecodeParams::M_X, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0}}, 
-};
+{VFEXP_V_, {1, 1, 0, DecodeParams::B_N, 0, 0, DecodeParams::CSR_N, 1, DecodeParams::A3_X, DecodeParams::A2_VRS2, DecodeParams::A1_X, DecodeParams::IMM_X, DecodeParams::MEM_X, DecodeParams::FN_EXP, 0, DecodeParams::M_X, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0}},
+}));
 }

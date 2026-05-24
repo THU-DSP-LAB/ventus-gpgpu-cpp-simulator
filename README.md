@@ -1,16 +1,50 @@
-Requirements:
+This project generates two key artifacts:
+* The libVentusCycleSim.so dynamic library, providing a SystemC-based cycle-level model of the Ventus GPGPU through the C API specified in ventus_cyclesim.h. The Ventus Driver can utilize this library for hardware simulation.
+* A lightweight driver that interfaces with the simulation model, campatible of executing test cases defined in `.metadata` and `.data` file formats.
 
-- GCC version >= 11  
-- enable C++20 support
-- to use the latest release of SystemC is highly recommended
+It is recommended to use the [ventus-env](https://github.com/THU-DSP-LAB/ventus-env) project to access the complete Ventus toolchain for simulation.   
+`.metadata` and `.data` files are legacy method for providing testcases in simulation.
 
----
 
 ## Quick Start
 
+**It is recommended to use the [ventus-env](https://github.com/THU-DSP-LAB/ventus-env) project** to access the complete Ventus toolchain (including this repo) for simulation. 
+
+Alternatively, you can build this repository on its own as follows.
+
+Requirements:
+- GCC version >= 11, enable C++20 support
+- systemC v2.3.4 (compiled with C++20)
+- `apt install libspdlog-dev libfmt-dev libyaml-cpp-dev`
+- Ubuntu 24.04 recommended
+
+
 配置SystemC可以参考我的[博文](https://zhuanlan.zhihu.com/p/638360098)（也参考了很多别人的经验，但这篇比较适合本工程）。
 
-运行`make -j $(nproc)`编译程序。运行`make run`进行仿真测试。如果运行报错，可以先尝试`make clean`.
+Get and build SystemC (change `SYSTEMC_HOME` as you like): 
+```bash
+SYSTEMC_HOME=$HOME/.local/systemc/v2.3.4_dbg_cpp20
+git clone https://github.com/accellera-official/systemc.git
+cd systemc
+git checkout 2.3.4
+./config/bootstrap
+mkdir -p build/ && cd build/
+../configure 'CXXFLAGS=-std=c++20' --prefix=${SYSTEMC_HOME} --enable-debug
+make -j`nproc`
+make -j`nproc` check
+make install
+```
+
+Build this project with cmake:
+```bash
+cd ${CYCLESIM_DIR}
+cmake -G Ninja -B build/ -S . \
+  -DSYSTEMC_HOME=${SYSTEMC_HOME} \
+  -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+  -DCMAKE_INSTALL_PREFIX=./install
+cmake --build build/
+cmake --install build/
+```
 
 ### Understanding Program Output in Our Project
 
@@ -47,38 +81,6 @@ SM1 warp 1 0x80000034               BEQ_0x00c50863 jump=true, jumpTO 0x80000044 
 ```
 
 - **`jump=true, jumpTO 0x80000044`** indicates a conditional jump to the address `0x80000044` depending on the evaluation of the preceding condition.
-
-### Debug
-
-出现Segmentation fault的调试方法：  
-参考[Linux下Segmentation Fault的定位方法](https://blog.csdn.net/whahu1989/article/details/110881842)、[linux下不产生core文件的原因](https://blog.csdn.net/qq_35621436/article/details/120870746)。  
-调试步骤（调试完记得把core文件删除，文件太大上传到github会报错）：
-
-```bash
-make gdb
-```
-
-根据行号设置断点：
-
-```text
-(gdb) b 5
-```
-
-运行和继续
-
-```text
-运行 r
-继续单步调试 n
-继续执行到下一个断点 c
-```
-
----
-
-To configure SystemC, you can refer to my [blog post](https://zhuanlan.zhihu.com/p/638360098).
-
-Run `make -j $(nproc)` to compile the program. Run `make run` to start simulation. If you encounters an error, you can try `make clean` command first.
-
----
 
 ## Acknowledgement
 

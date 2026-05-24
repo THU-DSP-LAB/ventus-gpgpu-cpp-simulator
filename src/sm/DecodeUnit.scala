@@ -186,6 +186,7 @@ object IDecodeLUT_IMF{
     CSRRWI-> List(N,N,N,B_N,N,N,CSR.W,N,A3_X,A2_X,A1_IMM,IMM_Z,MEM_X,FN_ADD,N,M_X,N,N,N,N,N,N,Y,N,N,N,N),
     CSRRSI-> List(N,N,N,B_N,N,N,CSR.S,N,A3_X,A2_X,A1_IMM,IMM_Z,MEM_X,FN_ADD,N,M_X,N,N,N,N,N,N,Y,N,N,N,N),
     CSRRCI-> List(N,N,N,B_N,N,N,CSR.C,N,A3_X,A2_X,A1_IMM,IMM_Z,MEM_X,FN_ADD,N,M_X,N,N,N,N,N,N,Y,N,N,N,N),
+    CSRRSV-> List(N,N,N,B_N,N,N,CSR.S,N,A3_X,A2_X,A1_RS1,IMM_X,MEM_X,FN_ADD,N,M_X,N,N,N,Y,N,N,N,N,N,N,N),
 
     FENCE->  List(N,N,N,B_N,N,N,CSR.N,N,A3_X,A2_X,A1_X,IMM_I,MEM_X,FN_ADD,N,M_X,N,Y,N,N,N,N,Y,N,N,N,N),
     LW->     List(N,N,N,B_N,N,N,CSR.N,N,A3_X,A2_IMM,A1_RS1,IMM_I,MEM_W,FN_ADD,N,M_XRD,N,N,N,N,N,N,Y,N,N,N,N),
@@ -334,12 +335,12 @@ object IDecodeLUT_V{
     VMSLEU_VI-> List(Y,N,N,B_N,N,N,CSR.N,N,A3_X,A2_VRS2,A1_IMM,IMM_Z,MEM_X,FN_SGEU,N,M_X,N,N,N,Y,N,Y,N,N,N,N,N),
     VMSLEU_VX-> List(Y,N,N,B_N,N,N,CSR.N,N,A3_X,A2_VRS2,A1_RS1,IMM_X,MEM_X,FN_SGEU,N,M_X,N,N,N,Y,N,Y,N,N,N,N,N),
     VMSLE_VV->  List(Y,N,N,B_N,N,N,CSR.N,N,A3_X,A2_VRS2,A1_VRS1,IMM_X,MEM_X,FN_SGE,N,M_X,N,N,N,Y,N,Y,N,N,N,N,N),
-    VMSLE_VI->  List(Y,N,N,B_N,N,N,CSR.N,Y,A3_X,A2_VRS2,A1_IMM,IMM_V,MEM_X,FN_SGE,N,M_X,N,N,N,Y,N,Y,N,N,N,N,N),//VMSLE_VI->  List(Y,N,N,B_N,N,N,CSR.N,N,A3_X,A2_VRS2,A1_IMM,IMM_V,MEM_X,FN_SGE,N,M_X,N,N,N,Y,N,Y,N,N,N,N,N),
+    VMSLE_VI->  List(Y,N,N,B_N,N,N,CSR.N,N,A3_X,A2_VRS2,A1_IMM,IMM_V,MEM_X,FN_SGE,N,M_X,N,N,N,Y,N,Y,N,N,N,N,N),
     VMSLE_VX->  List(Y,N,N,B_N,N,N,CSR.N,N,A3_X,A2_VRS2,A1_RS1,IMM_X,MEM_X,FN_SGE,N,M_X,N,N,N,Y,N,Y,N,N,N,N,N),
     VMSGTU_VI-> List(Y,N,N,B_N,N,N,CSR.N,N,A3_X,A2_VRS2,A1_IMM,IMM_Z,MEM_X,FN_SLTU,N,M_X,N,N,N,Y,N,Y,N,N,N,N,N),
     VMSGTU_VX-> List(Y,N,N,B_N,N,N,CSR.N,N,A3_X,A2_VRS2,A1_VRS1,IMM_X,MEM_X,FN_SLTU,N,M_X,N,N,N,Y,N,Y,N,N,N,N,N),
-    VMSGT_VI->  List(Y,N,N,B_N,N,N,CSR.N,N,A3_X,A2_VRS2,A1_IMM,IMM_V,MEM_X,FN_SLTU,N,M_X,N,N,N,Y,N,Y,N,N,N,N,N),
-    VMSGT_VX->  List(Y,N,N,B_N,N,N,CSR.N,N,A3_X,A2_VRS2,A1_VRS1,IMM_X,MEM_X,FN_SLTU,N,M_X,N,N,N,Y,N,Y,N,N,N,N,N),
+    VMSGT_VI->  List(Y,N,N,B_N,N,N,CSR.N,N,A3_X,A2_VRS2,A1_IMM,IMM_V,MEM_X,FN_SLT,N,M_X,N,N,N,Y,N,Y,N,N,N,N,N),
+    VMSGT_VX->  List(Y,N,N,B_N,N,N,CSR.N,N,A3_X,A2_VRS2,A1_VRS1,IMM_X,MEM_X,FN_SLT,N,M_X,N,N,N,Y,N,Y,N,N,N,N,N),
 
     VREM_VV->   List(Y,N,N,B_N,N,N,CSR.N,Y,A3_X,A2_VRS2,A1_VRS1,IMM_X,MEM_X,FN_REM,N,M_X,N,N,Y,Y,N,N,N,N,N,N,N),
     VREM_VX->   List(Y,N,N,B_N,N,N,CSR.N,Y,A3_X,A2_VRS2,A1_RS1,IMM_X,MEM_X,FN_REM,N,M_X,N,N,Y,Y,N,N,N,N,N,N,N),
@@ -483,9 +484,9 @@ object IDecodeLUT_VC{
     ENDPRG-> List(N,N,Y,B_N,N,Y,CSR.N,N,A3_X,A2_X,A1_X,IMM_X,MEM_X,FN_ADD,N,M_X,N,N,N,N,N,N,N,N,N,N,N),
 
     VADD12_VI->   List(Y,N,N,B_N,N,N,CSR.N,Y,A3_X,A2_IMM,A1_VRS1,IMM_I,MEM_X,FN_ADD,N,M_X,N,N,N,Y,N,N,N,N,Y,N,N),
-    //VSUB12_VI->   List(Y,N,N,B_N,N,N,CSR.N,Y,A3_X,A2_IMM,A1_VRS1,IMM_I,MEM_X,FN_SUB,N,M_X,N,N,N,Y,N,N,N,N,Y,N,N),
+    VSUB12_VI->   List(Y,N,N,B_N,N,N,CSR.N,N,A3_X,A2_IMM,A1_VRS1,IMM_I,MEM_X,FN_SUB,N,M_X,N,N,N,Y,N,N,N,N,Y,N,N),
     VFTTA_VV->List(Y,Y,N,B_N,N,N,CSR.N,N,A3_VRS3,A2_VRS2,A1_VRS1,IMM_X,MEM_X,FN_TTF,N,M_X,N,N,N,Y,N,N,N,Y,N,N,N),
-    VFEXP_V ->List(Y,Y,N,B_N,N,N,CSR.N,N,A3_X,A2_VRS2,A1_X,IMM_X,MEM_X,FN_EXP,N,M_X,N,N,Y,Y,N,N,N,N,N,N,N)
+    VFEXP_V ->List(Y,Y,N,B_N,N,N,CSR.N,Y,A3_X,A2_VRS2,A1_X,IMM_X,MEM_X,FN_EXP,N,M_X,N,N,Y,Y,N,N,N,N,N,N,N)
     //VHTTA_VV->List(Y,Y,N,B_N,N,N,CSR.N,N,A3_VRS3,A2_VRS2,A1_VRS1,IMM_X,MEM_X,FN_TTH,N,M_X,N,N,N,Y,N,N,N,Y,N,N,N),
     //VBTTA_VV->List(Y,Y,N,B_N,N,N,CSR.N,N,A3_VRS3,A2_VRS2,A1_VRS1,IMM_X,MEM_X,FN_TTB,N,M_X,N,N,N,Y,N,N,N,Y,N,N,N),
 
@@ -501,6 +502,7 @@ class InstrDecodeV2 extends Module {
     val inst_mask = Input(Vec(num_fetch, Bool()))
     val pc = Input(UInt(addrLen.W))
     val wid = Input(UInt(depth_warp.W))
+    val sm_id = Input(UInt(8.W))
     val flush_wid = Flipped(ValidIO(UInt(depth_warp.W)))
     val control = Output(Vec(num_fetch, new CtrlSigs))
     val control_mask = Output(Vec(num_fetch, Bool()))
@@ -559,6 +561,7 @@ class InstrDecodeV2 extends Module {
     }
     ListLookup(io.inst(i)(6, 0), lut(0),
       Array(
+        BitPat("b1110010") -> lut(0),  //CSRRSV
         BitPat("b1010111") -> lut(1),
         BitPat("b1111011") -> lut(2),
         BitPat("b0?00111") -> lut(2),
@@ -568,6 +571,9 @@ class InstrDecodeV2 extends Module {
       ))
   })
   (ctrlSignals zip io.control).zipWithIndex.foreach{ case((s, c), i) =>
+    if(MMU_ENABLED) {
+      c.asid.get := DontCare
+    }
     c.inst := io.inst(i)
     c.wid := io.wid
     c.pc := io.pc + (i.U << 2.U) // for multi-fetching
@@ -608,9 +614,16 @@ class InstrDecodeV2 extends Module {
     c.reg_idxw := Cat(regextInfo(i).regPrefix(0), io.inst(i)(11, 7))
     c.imm_ext := Cat(regextInfo(i).isExtI, regextInfo(i).immHigh) // pack exti valid bit at MSB
     if (SPIKE_OUTPUT) {
+      c.spike_info.get.sm_id := io.sm_id
       c.spike_info.get.inst := io.inst(i)
       c.spike_info.get.pc := io.pc+ (i.U << 2.U)
+      if (GVM_ENABLED) {
+        c.spike_info.get.dispatch_id.get := 0.U
+        c.spike_info.get.is_extended.get := regextInfo(i).isExt || regextInfo(i).isExtI
+      }
     }
+    require(!(GVM_ENABLED && !SPIKE_OUTPUT), "GVM requires spike_info to run!\n")
+
     c.atomic :=s(26)
     c.aq :=s(26) & io.inst(i)(26)
     c.rl:=s(26) & io.inst(i)(25)

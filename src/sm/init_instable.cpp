@@ -1,9 +1,12 @@
-#include <vector>
+#include "../parameters.h"
+#include <memory>
 #include <unordered_map>
-#include "BASE.h"
+#include <vector>
 
-void BASE::INIT_INSTABLE()
-{
+std::shared_ptr<std::vector<instable_t>> gen_instruction_table() {
+    std::shared_ptr<std::vector<instable_t>> instruction_table
+        = std::make_shared<std::vector<instable_t>>();
+    auto& instable_vec = *instruction_table;
     std::unordered_map<std::bitset<32>, OP_TYPE> map_11111110000000000111000001111111;
     map_11111110000000000111000001111111.insert(std::make_pair(std::bitset<32>("00000000000000000000000000110011"), ADD_));
     map_11111110000000000111000001111111.insert(std::make_pair(std::bitset<32>("00000000000000000111000000110011"), AND_));
@@ -79,6 +82,7 @@ void BASE::INIT_INSTABLE()
     map_00000000000000000111000001111111.insert(std::make_pair(std::bitset<32>("00000000000000000011000001110011"), CSRRC_));
     map_00000000000000000111000001111111.insert(std::make_pair(std::bitset<32>("00000000000000000111000001110011"), CSRRCI_));
     map_00000000000000000111000001111111.insert(std::make_pair(std::bitset<32>("00000000000000000010000001110011"), CSRRS_));
+    map_00000000000000000111000001111111.insert(std::make_pair(std::bitset<32>("00000000000000000010000001110010"), CSRRSV_));
     map_00000000000000000111000001111111.insert(std::make_pair(std::bitset<32>("00000000000000000110000001110011"), CSRRSI_));
     map_00000000000000000111000001111111.insert(std::make_pair(std::bitset<32>("00000000000000000001000001110011"), CSRRW_));
     map_00000000000000000111000001111111.insert(std::make_pair(std::bitset<32>("00000000000000000101000001110011"), CSRRWI_));
@@ -674,4 +678,5 @@ void BASE::INIT_INSTABLE()
     std::unordered_map<std::bitset<32>, OP_TYPE> map_11000000000000000111000001111111;
     map_11000000000000000111000001111111.insert(std::make_pair(std::bitset<32>("11000000000000000111000001010111"), VSETIVLI_));
     instable_vec.push_back(instable_t{std::bitset<32>("11000000000000000111000001111111"), map_11000000000000000111000001111111});
+    return instruction_table;
 };
